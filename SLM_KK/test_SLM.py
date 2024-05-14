@@ -15,7 +15,6 @@ from time import sleep
 import ctypes
 import math as m
 import matplotlib.pyplot as plt
-from PIL import Image as im 
 
 import SLM_functions_KK as SLM
 
