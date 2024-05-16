@@ -47,7 +47,7 @@ class Beam:
         """
         return co.angFreqToWave(self.compressionCarrierFreq)
     
-    def generate_1Dgrating(self,amplitude,period,phase,num):
+    def generate_1Dgrating(amplitude,period,phase,num):
         '''
             Generates a sawtooth pattern for Diffraction-based spatiotemporal pulse shaping
             input:
