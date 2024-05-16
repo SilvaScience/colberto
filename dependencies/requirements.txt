@@ -33,6 +33,7 @@ gst-plugins-base=1.24.3=h9ad1361_0
 gstreamer=1.24.3=haf2f30d_0
 harfbuzz=8.5.0=hfac3d4d_0
 icu=73.2=h59595ed_0
+imageio=2.34.1=pyh4b66e23_0
 keyutils=1.6.1=h166bdaf_0
 kiwisolver=1.4.5=py312h8572e83_1
 krb5=1.21.2=h659d440_0
