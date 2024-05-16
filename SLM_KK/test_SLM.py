@@ -15,147 +15,113 @@ from time import sleep
 import ctypes
 import math as m
 import matplotlib.pyplot as plt
+from scipy.constants import pi
+from scipy.signal import sawtooth
 
-import SLM_functions_KK as SLM
+import Fonction_SLM as SLM
 
-[height, width, depth, image_lib]=SLM.initialize_SLM()
+#Importation of the Class SLM in the slm.py file. This class contains all the functions of the
+#CDLL library. it need to specify the path for the CDLL files. 
+from Fonction_SLM import SLM
+from Fonction_SLM import ImageGen
 
-center_x = c_uint(width.value//2);
-center_y = c_uint(height.value//2);
+#%%
+# Path to the DLL file
+path_blink_c_wrapper = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_wrapper"
+path_image_gen = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen"
 
-################ Generating a new image - SLM Image Library #########################
-width = width.value
-height = height.value
-depth = depth.value
+# Initiate the SLM class
+slm = SLM(path_blink_c_wrapper)
+Image=ImageGen(path_image_gen)
 
-# needed for testing purposes
-RGB = c_uint(0);
+# Call the constructor to create the Blink SDK
+slm.Create_SDK()
+print("Blink SDK was successfully constructed")
 
-test_grating = np.empty([width*height], dtype=np.uint8);
+# Get the dimensions of the SLM
+height = slm.Get_Height()
+width = slm.Get_Width()
+depth = slm.Get_Depth()
 
-# print(np.shape(test_grating))
-# print('---------------------')
-# print(np.size(test_grating))
-# print('---------------------')
+RGB = c_uint(0)
+isEightBitImage = c_uint(1)
+
+################ Generating a new image - SLM Image Library ###################
+
+grating = np.empty([width*height], dtype=np.uint8);
 
 WFC = np.empty([width*height], dtype=np.uint8);
-#print(WFC.shape)
 
 Period = 128 
 increasing = 0 #0 or 1
 horizontal = 0 #0 or 1
 
-test = test_grating.ctypes.data_as(POINTER(c_ubyte))
-
-image_lib.Generate_Grating(test_grating.ctypes.data_as(POINTER(c_ubyte)), WFC.ctypes.data_as(POINTER(c_ubyte)), 
+## using image class to generate grating ##
+Image.generate_grating(grating.ctypes.data_as(POINTER(c_ubyte)), WFC.ctypes.data_as(POINTER(c_ubyte)), 
                             width, height, depth, Period, increasing, horizontal, RGB);
 
-# slm_lib.Write_image(test_grating.ctypes.data_as(POINTER(c_ubyte)), is_eight_bit_image);
-# sleep(5.0)
+grating_img = grating.ctypes.data_as(POINTER(c_ubyte))
 
-SLM.display_SLM(test_grating)
-sleep(3.0)
+slm.Write_image(grating_img, isEightBitImage);
+sleep(1.0)
 
-SLM.clear_SLM()
+#slm.Delete_SDK()
 
-################ Generating a new image - Python #########################
+################### Generating a new image - Python ###########################
 
-############## Image generation code is from Esteban #######################
-############################################################################
-A = 2
-d = 128
+######## Image generation code is from Felix (beams.py in Git) ################
+###############################################################################
+def generate_1Dgrating(amplitude,period,phase,num):
+        '''
+            Generates a sawtooth pattern for Diffraction-based spatiotemporal pulse shaping
+            input:
+                amplitude: (float) number between 0 and 1 setting the amplitude of the grating to amplitude*2*pi
+                period: period of the sawtooth pattern in units of pixels
+                phase: phase to be imparted on the diffracted beam (see eq. 13 of Turner et al. Rev. Sci. Instr. 2011)
+                num: the number of pixels in the sawtooth pattern  
+        '''
+        indices=np.arange(num)
+        offset=phase/(2*pi)*period
+        y=amplitude*sawtooth(2*pi*(indices-offset)/period,width=0) % 2*pi
+        return y
 
-chirp = [0, 0, 0, 0] # 3 2, 1, 0 order  
-#chirp = [100000, 0, 0, 0] ### adding chirp doesn't match up on SLM
+###############################################################################
 
-coeff_wavepix = np.array([0.06313, 485])
-w_c = 505
-w_c_delay = 505
+A = 1
+period = 128
+phase = 0
+num = slm.Get_Size() #new function I added to SLM class Mathieu created
 
-#taille = size
-#taille = np.array([792, 596]) #GT SLM dimensions 
-taille = np.array([1920, 1200])
+grating_pattern = generate_1Dgrating(A,period,phase,num)
 
+# reshaping to a 1D array to a 2D array to view image in python
+data = np.reshape(grating_pattern,(1200,1920)) 
 
-#active = np.array([1, 792, 1, 792]) #GT SLM dimensions
-active = np.array([1, 1920, 1, 1920])
+data = np.transpose(data)
 
-
-micaslope = 0
-
-end = len(chirp)-1
-for i in range(len(chirp)):
-    chirp[end-i] = chirp[end-i]*(1e-15)**i/m.factorial(i)
-    
-chirp_delay = np.array([chirp[end-1], 0])
-chirp[end-1] = 0
-chirp_mica = np.array([micaslope*1e-15, 0])
-
-
-c=299792458 # Speed of light
-A = A*np.pi
-w_c=2*np.pi*c/(w_c*1e-9)
-w_c_delay=2*np.pi*c/(w_c_delay*1e-9)
-
-Image = []
-
-#print(np.polyval(coeff_wavepix, 300))
-
-if active[0]==1:
-    w = 2*np.pi*c/(np.polyval(coeff_wavepix, 1)*1e-9)
-    offset = np.polyval(chirp,(w-w_c))/(2*np.pi)
-    offset = offset + np.polyval(chirp_delay, (w-w_c_delay))/(2*np.pi)
-    image = A*np.remainder(1/d*np.arange(active[2]-1, active[3], 1)-offset, 1)
-    image = np.append(np.append(np.zeros(active[2]-1), image), np.zeros(taille[0]-active[3]))
-
-else:
-    image=np.zeros(taille[0])
-
-Image.append(image)
-
-for i in np.arange(2, taille[1]+1, 1):
-    if active[0] <= i <= active[1]:
-        w = 2*np.pi*c/(np.polyval(coeff_wavepix, i)*1e-9)
-        if micaslope != 0 and np.mod(i, 2) ==0:
-            offset = np.polyval(chirp, (w-w_c))/(2*np.pi)
-            offset = offset + np.polyval(chirp_mica, (w-w_c_delay))/(2*np.pi)
-        else:
-            offset=np.polyval(chirp,(w-w_c))/(2*np.pi)
-            offset=offset+np.polyval(chirp_delay,(w-w_c_delay))/(2*np.pi)
-        temp = A*np.remainder(1/d*np.arange(active[2]-1, active[3], 1)-offset, 1)
-        temp = np.append(np.append(np.zeros(active[2]-1), temp), np.zeros(taille[0]-active[3]))
-    else:
-        temp = np.zeros(taille[0])
-    Image.append(temp)
-
-Image = np.transpose(np.array(Image))
-
-ax1 = plt.contourf(Image)
+ax1 = plt.contourf(data)
 ax1.axes.get_xaxis().set_visible(False)
 ax1.axes.get_yaxis().set_visible(False)
 
 plt.show()
-# end of code from Esteban
-############################################################################
+###############################################################################
 
-############## Sending Image to SLM #######################
+####################### Sending Image to SLM ##################################
 
-# reshaping to a 1D array to send to SLM 
-data = np.reshape(Image,(1200*1920,)) 
+# generate 1D grating already produces 1D array so no need to reshape just relabeling
+data = grating_pattern 
 
 # changing data type from np.float64 to np.uint8
+# need to phase to greyscale calibration file to make this conversion accurate
+# using normalization method for now - just for testing purposes 
+
 data = data.astype(np.float64) / np.max(data) # normalize the data to 0 - 1
 data = 255 * data # Now scale by 255
 img = data.astype(np.uint8)
 
-# print(np.shape(img))
-# print('---------------------')
-# print(np.size(img))
+img = img.ctypes.data_as(POINTER(c_ubyte))
 
-[height, width, depth, image_lib]=SLM.initialize_SLM()
+slm.Write_image(img ,isEightBitImage)
+sleep(1.0)
 
-SLM.display_SLM(img)
-sleep(5.0)
-
-SLM.clear_SLM()
-
+slm.Delete_SDK()
