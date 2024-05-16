@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from scipy.constants import pi
 from scipy.signal import sawtooth
 
-import Fonction_SLM as SLM
+import Functions_SLM_KK as SLM
 
 #Importation of the Class SLM in the slm.py file. This class contains all the functions of the
 #CDLL library. it need to specify the path for the CDLL files. 
