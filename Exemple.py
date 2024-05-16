@@ -3,6 +3,9 @@
 Created on  14 mai 2024
 @author: Mathieu
 """
+#########################################################################
+############ Importation of the package #################################
+#########################################################################
 import os
 import numpy as np
 from ctypes import *
@@ -27,47 +30,44 @@ Image=ImageGen(path_image_gen)
 
 
 #######################################################################################################################
-
+#################### Creation of the SDK and extraction of the parameter ##############################################
+#######################################################################################################################
 # Call the constructor to create the Blink SDK
 slm.Create_SDK()
 print("Blink SDK was successfully constructed")
 
 # Get the dimensions of the SLM
-height = slm.Get_Height()
-width = slm.Get_Width()
-depth = slm.Get_Depth()
-RGB = c_uint(0)
-isEightBitImage = c_uint(1)
+
+rgb=0
+bit=1
+height ,width, depth,RGB, isEightBitImage = slm.Parameter_SLM(rgb,bit)
 
 
-
+#############################################################################################################################
+###################### generation of a image with the SLM function ##########################################################
+#########################################################################3###################################################
 test_grating = np.empty([width*height], dtype=np.uint8);
 WFC = np.empty([width*height], dtype=np.uint8);
-#print(WFC.shape)
-
 Period = 128 
 increasing = 0 #0 or 1
 horizontal = 0 #0 or 1
-
-
-print("array:",test_grating.ctypes.data_as(POINTER(c_ubyte)),"WFC:",WFC.ctypes.data_as(POINTER(c_ubyte)),"width:",width,"height:",height,"depth:",depth,"increasing:",increasing,"horizontal:",horizontal,"rgb:",RGB)
-
-print("test_grating:", test_grating)
-print("WFC:", WFC)
 Image.generate_grating(test_grating.ctypes.data_as(POINTER(c_ubyte)), WFC.ctypes.data_as(POINTER(c_ubyte)), 
                             width, height, depth, Period, increasing, horizontal, RGB);
 
+##############################################################################################################################
+############################## Write of the image ############################################################################
+##############################################################################################################################
 
+slm.Write_image(test_grating.ctypes.data_as(POINTER(c_ubyte)), isEightBitImage); # Write_image take 2 arguments. the first parameter is a 1D array of the image data. The second parameter
+sleep(5.0)                                                                       # is 0 if a RGB array is pass and 1 otherwise.
 
-slm.Write_image(test_grating.ctypes.data_as(POINTER(c_ubyte)), isEightBitImage);
-sleep(5.0)
+############# Clear the SDK ##################################################################################################
 
 slm.Delete_SDK()
 
 
-
-################ Generating a new image - Python #########################
-
+############################################################################
+################ Generating a new image - Python ###########################
 ############## Image generation code is from Esteban #######################
 ############################################################################
 A = 2

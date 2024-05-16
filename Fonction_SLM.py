@@ -2,7 +2,7 @@
 Created on  14 mai 2024
 @author: Mathieu
 '''
-import ctypes
+import ctypes 
 
 
 awareness = ctypes.c_int()
@@ -88,6 +88,15 @@ class SLM:
 
     def Get_COMFound(self):
         return self.blink_dll.Get_COMFound()
+    
+    def Parameter_SLM(self,rgb,bit):
+        height= SLM.Get_Height(self)
+        width = SLM.Get_Width(self)
+        depth = SLM.Get_Depth(self)
+        RGB   = ctypes.c_uint(rgb)
+        isEightBitImage = ctypes.c_uint(bit)
+        return height,width,depth,RGB,isEightBitImage
+
 
 
 class ImageGen:
