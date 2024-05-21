@@ -2,8 +2,8 @@
 Created on  14 mai 2024
 @author: Mathieu
 '''
-import ctypes 
-
+from ctypes import *
+import ctypes
 
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
@@ -50,8 +50,12 @@ class SLM:
     def Delete_SDK(self):
         self.blink_dll.Delete_SDK()
 
+
+
     def Write_image(self, image_data, is_8_bit):
-        return self.blink_dll.Write_image(image_data, is_8_bit)
+        return self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+
+
 
     def Load_lut(self, file_path):
         return self.blink_dll.Load_lut(file_path.encode())

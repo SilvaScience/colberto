@@ -58,7 +58,7 @@ Image.generate_grating(test_grating.ctypes.data_as(POINTER(c_ubyte)), WFC.ctypes
 ############################## Write of the image ############################################################################
 ##############################################################################################################################
 
-slm.Write_image(test_grating.ctypes.data_as(POINTER(c_ubyte)), isEightBitImage); # Write_image take 2 arguments. the first parameter is a 1D array of the image data. The second parameter
+slm.Write_image(test_grating, isEightBitImage); # Write_image take 2 arguments. the first parameter is a 1D array of the image data. The second parameter
 sleep(5.0)                                                                       # is 0 if a RGB array is pass and 1 otherwise.
 
 ############# Clear the SDK ##################################################################################################
@@ -169,7 +169,7 @@ height = slm.Get_Height()
 width = slm.Get_Width()
 depth = slm.Get_Depth()
 
-slm.Write_image(img.ctypes.data_as(POINTER(c_ubyte)),c_uint(1))
+slm.Write_image(img,c_uint(1))
 sleep(5.0)
 
 slm.Delete_SDK();
