@@ -24,4 +24,5 @@ plt.plot(bm.generate_1Dgrating(amplitude,period,0,num),'s',label='0')
 plt.plot(bm.generate_1Dgrating(amplitude,period,pi,num),'s',label='Pi')
 plt.ylabel('Phase (rad.)')
 plt.xlabel('Pixel index')
+
 plt.show()

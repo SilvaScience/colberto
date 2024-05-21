@@ -46,7 +46,8 @@ class Beam:
             wavelength: Compression carrier wavelength in m
         """
         return co.angFreqToWave(self.compressionCarrierFreq)
-    
+
+    @staticmethod 
     def generate_1Dgrating(amplitude,period,phase,num):
         '''
             Generates a sawtooth pattern for Diffraction-based spatiotemporal pulse shaping
