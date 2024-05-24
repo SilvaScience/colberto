@@ -4,7 +4,8 @@ Modules and code related to Colbert experiment
 ## Setting up your Python environnement
 1. Install [miniconda](https://docs.anaconda.com/free/miniconda/miniconda-install/) or [Anaconda](https://docs.anaconda.com/free/anaconda/install/) environnement managers
 2. Create a virtual environnement for the Colberto project using `conda create -n colberto_mybranch` or the Anaconda GUI interface and active it `conda activate colberto_mybranch`
-3. Navigate to the dependencies folder and update the virtual environnement using `conda install --yes --file requirements.txt`. Conda will install the packages required for the current branch.
+3. Navigate to the dependencies folder and update the virtual environnement using `conda install --yes --file requirements.txt`. Conda will install the packages required for the current branch. You might need to run `conda config --add channels conda-forge` and `conda config --set channel_priority strict` to add a channel where some pacakge are available.
+
 4. You can then locate your environnement using which `which python` in Linux or `where python` in Windows and import it into your IDE (e.g. VCode with Python pluggin)
 ## Updating python environnement
 
