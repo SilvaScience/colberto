@@ -5,5 +5,5 @@ class SLM:
     def __init__(self,width,height):
         self.width=width
         self.height=height
-    def getSize(self):
+    def get_size(self):
         return self.width,self.height

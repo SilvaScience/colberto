@@ -23,3 +23,15 @@ def angFreqToWave(angFreq):
     Converts angular frequency in rad.Hz to vacuum wavelengths (m)
     """ 
     return 2*pi*c/angFreq
+
+def angFreqToFreq(angFreq):
+    """
+    Converts angular frequency in rad.Hz to frequency (Hz)
+    """ 
+    return waveToFreq(angFreqToWave(angFreq))
+
+def angFreqToeV(angFreq):
+    """
+    Converts angular frequency in rad.Hz to frequency (Hz)
+    """ 
+    return waveToeV(angFreqToWave(angFreq))
