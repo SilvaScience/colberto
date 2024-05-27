@@ -25,10 +25,17 @@ import Functions_SLM_KK as SLM
 from Fonction_SLM import SLM
 from Fonction_SLM import ImageGen
 
-#%%
+#folder_path = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\"
+
+folder_path = "G:\\My Drive\\SLM\\SLM_KK\\SDK\\"
+
 # Path to the DLL file
-path_blink_c_wrapper = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_wrapper"
-path_image_gen = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen"
+path_blink_c_wrapper = folder_path + "Blink_C_wrapper"
+path_image_gen = folder_path + "ImageGen"
+
+# Path to the DLL file
+#path_blink_c_wrapper = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_wrapper"
+#path_image_gen = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen"
 
 # Initiate the SLM class
 slm = SLM(path_blink_c_wrapper)
