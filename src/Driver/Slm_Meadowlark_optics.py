@@ -6,6 +6,7 @@ Created on Mon May 13 15:06:04 2024
 """
 import ctypes
 from ctypes import *
+from pathlib import Path
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
 print(awareness.value)
@@ -20,11 +21,22 @@ success = ctypes.windll.user32.SetProcessDPIAware()
 # behaviour on later OSes is undefined, although when I run it on my Windows 10 machine, it seems to work with effects identical to SetProcessDpiAwareness(1)
 
 
+
+folder_path = Path(__file__).resolve().parent.parent.parent
+
+# Path to the DLL file
+path_blink_c_wrapper = folder_path / "src" / "Driver" / "SDK" / "Blink_C_Wrapper.dll"
+path_image_gen = folder_path / "src" / "Driver" / "SDK" / "Imagegen.dll"
+path_blink_c_wrapper = str(path_blink_c_wrapper)
+path_image_gen = str(path_image_gen)
+
+
+
 class SLM:
-    def __init__(self, dll_path):
+    def __init__(self):
         # Chargement de la DLL
         # Loading the DLL
-        self.blink_dll = ctypes.CDLL(dll_path)
+        self.blink_dll = ctypes.CDLL(path_blink_c_wrapper)
 
         # Définition des types de données attendus pour les fonctions
         # Defining expected data types for functions 
@@ -110,9 +122,9 @@ class SLM:
 
 
 class ImageGen:
-    def __init__(self, dll_path):
+    def __init__(self):
         # Load the DLL
-        self.image_gen_dll = ctypes.CDLL(dll_path)
+        self.image_gen_dll = ctypes.CDLL(path_image_gen)
         #print("Le DDL est chargé ")
         print("The DDL is loaded")
         # Define function prototypes for the image generation functions

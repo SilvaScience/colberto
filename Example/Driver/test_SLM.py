@@ -20,27 +20,17 @@ from scipy.signal import sawtooth
 from pathlib import Path
 import sys
 
-#Importation of the Class SLM in the slm.py file. This class contains all the functions of the
-#CDLL library. it need to specify the path for the CDLL files. 
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from src.Driver.Functions_SLM import SLM
-from src.Driver.Functions_SLM import ImageGen
-
-#folder_path = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\"
-
-folder_path = Path(__file__).resolve().parent.parent
-
-# Path to the DLL file
-path_blink_c_wrapper = folder_path / "src" / "Driver" / "SDK" / "Blink_C_Wrapper.dll"
-path_image_gen = folder_path / "src" / "Driver" / "SDK" / "Imagegen.dll"
-path_blink_c_wrapper = str(path_blink_c_wrapper)
-path_image_gen = str(path_image_gen)
-
+########################################################################################################################
+##################### Importing the SLM class and the ImageGen class from the Functions_SLM file ####################### 
+########################################################################################################################
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
+from src.Driver.Slm_Meadowlark_optics import SLM
+from src.Driver.Slm_Meadowlark_optics import ImageGen
 
 # Initiate the SLM class
-slm = SLM(path_blink_c_wrapper)
-Image=ImageGen(path_image_gen)
+slm = SLM()
+Image=ImageGen()
 
 
 #######################################################################################################################
