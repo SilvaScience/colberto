@@ -24,16 +24,16 @@ import sys
 #CDLL library. it need to specify the path for the CDLL files. 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from Driver.Functions_SLM import SLM
-from Driver.Functions_SLM import ImageGen
+from src.Driver.Functions_SLM import SLM
+from src.Driver.Functions_SLM import ImageGen
 
 #folder_path = "C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\"
 
 folder_path = Path(__file__).resolve().parent.parent
 
 # Path to the DLL file
-path_blink_c_wrapper = folder_path / "Driver" / "SDK" / "Blink_C_Wrapper.dll"
-path_image_gen = folder_path / "Driver" / "SDK" / "Imagegen.dll"
+path_blink_c_wrapper = folder_path / "src" / "Driver" / "SDK" / "Blink_C_Wrapper.dll"
+path_image_gen = folder_path / "src" / "Driver" / "SDK" / "Imagegen.dll"
 path_blink_c_wrapper = str(path_blink_c_wrapper)
 path_image_gen = str(path_image_gen)
 
