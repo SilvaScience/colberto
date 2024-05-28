@@ -37,14 +37,14 @@ Image=ImageGen()
 #################### Creation of the SDK and extraction of the parameter ##############################################
 #######################################################################################################################
 # Call the constructor to create the Blink SDK
-slm.Create_SDK()
+slm.create_sdk()
 print("Blink SDK was successfully constructed")
 
 # Get the dimensions of the SLM
 
 rgb=0
 bit=1
-height ,width, depth,RGB, isEightBitImage = slm.Parameter_SLM(rgb,bit)
+height ,width, depth,RGB, isEightBitImage = slm.parameter_slm(rgb,bit)
 
 
 #############################################################################################################################
@@ -62,12 +62,12 @@ Image.generate_grating(test_grating.ctypes.data_as(POINTER(c_ubyte)), WFC.ctypes
 ############################## Write of the image ############################################################################
 ##############################################################################################################################
 
-slm.Write_image(test_grating, isEightBitImage); # Write_image take 2 arguments. the first parameter is a 1D array of the image data. The second parameter
+slm.write_image(test_grating, isEightBitImage); # Write_image take 2 arguments. the first parameter is a 1D array of the image data. The second parameter
 sleep(5.0)                                                                       # is 0 if a RGB array is pass and 1 otherwise.
 
 ############# Clear the SDK ##################################################################################################
 
-slm.Delete_SDK()
+slm.delete_sdk()
 
 
 ############################################################################
@@ -165,15 +165,15 @@ img = data.astype(np.uint8)
 # print(np.size(img))
 
 # Call the constructor to create the Blink SDK
-slm.Create_SDK()
+slm.create_sdk()
 print("Blink SDK was successfully constructed")
 
 # Get the dimensions of the SLM
-height = slm.Get_Height()
-width = slm.Get_Width()
-depth = slm.Get_Depth()
+height = slm.get_height()
+width = slm.get_width()
+depth = slm.get_depth()
 
-slm.Write_image(img,c_uint(1))
+slm.write_image(img,c_uint(1))
 sleep(5.0)
 
-slm.Delete_SDK();
+slm.delete_sdk();

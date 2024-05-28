@@ -2,8 +2,9 @@
 """
 Created on Mon May 13 15:06:04 2024
 
-@author: NanoUltrafast2
+@author: Mathieu Desmarais, Katherine Kosh
 """
+# importation of the necessary libraries
 import ctypes
 from ctypes import *
 from pathlib import Path
@@ -21,8 +22,8 @@ success = ctypes.windll.user32.SetProcessDPIAware()
 # behaviour on later OSes is undefined, although when I run it on my Windows 10 machine, it seems to work with effects identical to SetProcessDpiAwareness(1)
 
 
-
-folder_path = Path(__file__).resolve().parent.parent.parent
+########### Path to the DLL file ############
+folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
 # Path to the DLL file
 path_blink_c_wrapper = folder_path / "src" / "Driver" / "SDK" / "Blink_C_Wrapper.dll"
@@ -31,7 +32,7 @@ path_blink_c_wrapper = str(path_blink_c_wrapper)
 path_image_gen = str(path_image_gen)
 
 
-
+# Definition of the SLM class
 class SLM:
     def __init__(self):
         # Chargement de la DLL
@@ -56,66 +57,61 @@ class SLM:
         self.blink_dll.Get_SLMFound.restype = ctypes.c_int
         self.blink_dll.Get_COMFound.restype = ctypes.c_int
 
-    def Create_SDK(self):
+    def create_sdk(self):
         '''
         Crée le SDK
         '''
         self.blink_dll.Create_SDK()
 
-    def Delete_SDK(self):
+    def delete_sdk(self):
         self.blink_dll.Delete_SDK()
 
-    def Write_image(self, image_data, is_8_bit):
+    def write_image(self, image_data, is_8_bit):
         return self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
 
-    def Load_lut(self, file_path):
+    def load_lut(self, file_path):
         print ("LoadLUT Successful")
         return self.blink_dll.Load_lut(file_path.encode())
 
-    def SetPostRampSlope(self, postRampSlope):
+    def set_post_ramp_slope(self, postRampSlope):
         return self.blink_dll.SetPostRampSlope(postRampSlope)
 
-    def SetPreRampSlope(self, preRampSlope):
+    def set_pre_ramp_slope(self, preRampSlope):
         return self.blink_dll.SetPreRampSlope(preRampSlope)
 
-    def Set_channel(self, channel):
+    def set_channel(self, channel):
         return self.blink_dll.Set_channel(channel)
 
-    def Get_SLMTemp(self):
+    def get_slm_temp(self):
         return self.blink_dll.Get_SLMTemp()
 
-    def Get_SLMVCom(self):
+    def get_slm_vcom(self):
         return self.blink_dll.Get_SLMVCom()
 
-    def Set_SLMVCom(self, volts):
+    def set_slm_vcom(self, volts):
         return self.blink_dll.Set_SLMVCom(ctypes.c_float(volts))
 
-    def Get_Height(self):
+    def get_height(self):
         return self.blink_dll.Get_Height()
 
-    def Get_Width(self):
+    def get_width(self):
         return self.blink_dll.Get_Width()
 
-    def Get_Depth(self):
+    def get_depth(self):
         return self.blink_dll.Get_Depth()
     
-    # returns size of array that needs to be sent to SLM 
-    def Get_Size(self):
-        width = self.blink_dll.Get_Width()
-        height = self.blink_dll.Get_Height()
-        size = width*height
-        return size 
 
-    def Get_SLMFound(self):
+
+    def get_slm_found(self):
         return self.blink_dll.Get_SLMFound()
 
-    def Get_COMFound(self):
+    def get_com_found(self):
         return self.blink_dll.Get_COMFound()
     
-    def Parameter_SLM(self,rgb,bit):
-        height= SLM.Get_Height(self)
-        width = SLM.Get_Width(self)
-        depth = SLM.Get_Depth(self)
+    def parameter_slm(self,rgb,bit):
+        height= SLM.get_height(self)
+        width = SLM.get_width(self)
+        depth = SLM.get_depth(self)
         RGB   = ctypes.c_uint(rgb)
         isEightBitImage = ctypes.c_uint(bit)
         return height,width,depth,RGB,isEightBitImage
