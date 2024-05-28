@@ -10,3 +10,21 @@ Modules and code related to Colbert experiment
 ## Updating python environnement
 
 When developping new features in your branch, it is very likely that you will need to add python packages. You can do this using `conda install packagename`. You will then need to update the required package list by naviguating to /dependencies/ and using the command `conda list -e > requirements.txt`. This will dump your current package list into the file so that the packages will be appended to the project requirements. Don't forget to add requirements.txt to your commit.
+
+Naming Conventions
+In this project, we follow standard Python naming conventions to ensure that our code is readable and consistent. Below are the guidelines for naming functions and classes:
+
+Classes
+Classes are named using the CamelCase convention. This means that each word within the class name starts with a capital letter and there are no underscores between words. This helps in distinguishing class names from function and variable names.
+
+Examples:
+ImageGenerator
+EmployeeRecord
+
+Functions and Methods
+Functions and methods are named using the snake_case convention. This means that all letters are in lowercase and words are separated by underscores. This makes function and method names easy to read and understand.
+
+Examples:
+get_depth()
+write_image()
+send_email()
