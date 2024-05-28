@@ -25,8 +25,8 @@ import sys
 ##################### Importing the SLM class and the ImageGen class from the Functions_SLM file ####################### 
 ########################################################################################################################
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
-from src.Driver.Slm_Meadowlark_optics import SLM
-from src.Driver.Slm_Meadowlark_optics import ImageGen
+from src.drivers.Slm_Meadowlark_optics import SLM
+from src.drivers.Slm_Meadowlark_optics import ImageGen
 
 # Initiate the SLM class
 slm = SLM()

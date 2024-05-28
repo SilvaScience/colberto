@@ -26,8 +26,8 @@ success = ctypes.windll.user32.SetProcessDPIAware()
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
 # Path to the DLL file
-path_blink_c_wrapper = folder_path / "src" / "Driver" / "SDK" / "Blink_C_Wrapper.dll"
-path_image_gen = folder_path / "src" / "Driver" / "SDK" / "Imagegen.dll"
+path_blink_c_wrapper = folder_path / "src" / "drivers" / "SDK" / "Blink_C_Wrapper.dll"
+path_image_gen = folder_path / "src" / "drivers" / "SDK" / "Imagegen.dll"
 path_blink_c_wrapper = str(path_blink_c_wrapper)
 path_image_gen = str(path_image_gen)
 
