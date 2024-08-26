@@ -6,7 +6,7 @@ import src.compute.colbertoutils as co
 
 class Calibration():
 
-    def __init__(self,SLM):
+    def __init__(self,SLM,stresing):
         """
         This builds an instance of a Calibration object without loading a file.
         Input:
@@ -14,8 +14,12 @@ class Calibration():
 
         """
         self.SLM=SLM # SLM Hosts all parameters related to the SLM currently in use
+
+        self.CAM=stresing
+        
         self.pixelToWavelength=None
         self.phaseToGrayscale=None
+        
     def set_pixelToWavelength(self,polynomial):
         '''
         Sets the pixel to wavelength calibration polynomial
