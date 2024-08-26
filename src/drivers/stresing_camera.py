@@ -77,7 +77,6 @@ path_camera_dll = folder_path / "Stresing" / "stresing_python" / "ESLSCDLL.dll"
 
 path_camera_dll = str(path_camera_dll)
 
-
 class stresing:
 
     def __init__(self):
@@ -148,7 +147,6 @@ class stresing:
         
         # Load ESLSCDLL.dll
         self.camera_dll = WinDLL(path_camera_dll)
-        #self.camera_dll = WinDLL(test)
         
         # Set the return type of DLLConvertErrorCodeToMsg to c-string pointer
         self.camera_dll.DLLConvertErrorCodeToMsg.restype = c_char_p
@@ -240,13 +238,11 @@ class stresing:
         		self.camera_dll.DLLGetCurrentScanNumber(self.settings.drvno, self.ptr_cur_sample, self.ptr_cur_block)
         		print("sample: "+str(self.cur_sample.value)+" block: "+str(self.cur_block.value))
 
-
     def stop(self):
         
         '''DLLAbortMeasurement: Use this call, if you want to abort the measurement.'''
         
         return self.camera_dll.DLLAbortMeasurement
-    
     
 # DLLReturnFrame, DLLCopyAllData, or DLLCopyOneBlock: Get the data with one of the following 3 calls. Call it how many times you want.
 
@@ -284,7 +280,6 @@ class stresing:
         
         return self.list_frame_buffer
 
-    
     def get_data_one_block(self, block):
         
         ''' Copies one block of pixel data to pdest
