@@ -7,6 +7,8 @@ import datetime
 import tkinter as tk
 from tkinter import filedialog
 
+import numpy as np
+
 def waveToeV(wave):
     """
     Converts vacuum wavelengths (m) to energy in eV
