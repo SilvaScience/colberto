@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 from src.drivers.stresing_camera import stresing
 
+# only need one or the other for SLM class
+#from src.drivers.Slm_Meadowlark_optics import SLM
 from src.compute.SLMBogus import SLM
 
 from src.compute import colbertoutils as co
