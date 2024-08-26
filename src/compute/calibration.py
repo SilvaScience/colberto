@@ -56,31 +56,32 @@ class Calibration():
                     
                 Outputs: wavelength: 1D array of containing the user assigned wavelength '''
     
-        self.wavelength = np.empty(np.shape(self.peak_pos))
+        self.wavelength = np.empty(np.shape(peak_pos))
             
-        for i in range (len(self.peak_pos)):
+        for i in range (len(peak_pos)):
             
-            self.val = input("Input the wavelength value associated with Peak # = {}: ".format(self.peak_pos[i]))
+            self.val = input("Input the wavelength value associated with Peak # = {}: ".format(peak_pos[i]))
             self.wavelength[i] = self.val
                 
             #print(self.wavelength)
     
         return self.wavelength
 
-    def stresing_pixel2wavelength_calib(self,peak_pos,wave,degree):
+    def stresing_pixel2wavelength_calib(self,peak_pos,wave,degree,pixels):
         ''' This function fits inputted data to a polynomial function.  
             
                 Inputs: peak_pos: 1D array containing the pixel number of peaks found in a data 
                         wave: 1D array containing the wavelength of peak
                         degree: degree of polynomial fitting 
                             #3 should be fine for this calibration
+                        pixels: array of pixel numbers (size = 1024)
                     
                 Outputs: calibrated wavelength array'''
     
-        self.fit_vals = np.polyfit(self.peak_pos,self.wave,self.degree)
+        self.fit_vals = np.polyfit(peak_pos,wave,degree)
         self.f = np.poly1d(self.fit_vals)
 
-        self.wavelength_calib = self.f(self.pixels)
+        self.wavelength_calib = self.f(pixels)
             
             
         return self.wavelength_calib
