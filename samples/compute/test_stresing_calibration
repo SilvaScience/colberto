@@ -1,0 +1,42 @@
+
+
+direc = r'/Users/katiekoch/Library/CloudStorage/GoogleDrive-fastlab@wfu.edu/My Drive/codes/COLBERT/'
+Data = np.loadtxt(direc + r'txt files/mercury_lamp_calib_August2024')
+Data = np.transpose(Data)
+
+pixels = Data[:,0]
+test_spectra = Data[:,1]
+
+height = 7000
+peak_pos, peak_heights = peak_finder(test_spectra, height)
+
+plt.plot(pixels,test_spectra)
+plt.plot(peak_pos,peak_heights, 'x')
+plt.xlabel('pixel number')
+plt.ylabel('intensity')
+plt.show()
+
+#wave = user_input_assign_pixelnumber_to_wavelength(peak_pos)
+#for the sample data:
+    #peak 226 = 365
+    #peak 309 = 404
+    #peak 374 = 435
+    #peak 607 = 546
+
+#use this wavelength array for testing to avoid having to input values everytime 
+wavelength = [365, 404, 435, 546]
+#print(wavelength)
+
+degree = 3
+wavelength_calib = stresing_pixel2wavelength_calib(peak_pos,wavelength,degree)
+
+plt.plot(peak_pos,wavelength,'x')
+plt.plot(pixels, wavelength_calib)
+plt.xlabel('pixel number')
+plt.ylabel('wavelength')
+plt.show()
+
+
+filename = 'test_fsave_function'
+
+save_data(filename,wavelength_calib)
