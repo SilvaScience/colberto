@@ -3,7 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from src.drivers.stresing_camera import stresing
-from src.drivers.Slm_Meadowlark_optics import SLM
+
+from src.compute.SLMBogus import SLM
 
 from src.compute import colbertoutils as co
 from src.compute.calibration import Calibration
@@ -12,8 +13,10 @@ cal = Calibration(SLM,stresing)
 
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 path = folder_path / "samples" / "compute" / "test_files" 
+path = str(path)
+#print(path)
 
-Data = np.loadtxt(path + r'mercury_lamp_calib_August2024')
+Data = np.loadtxt(path + r'/mercury_lamp_calib_August2024')
 Data = np.transpose(Data)
 
 pixels = Data[:,0]
@@ -28,7 +31,7 @@ plt.xlabel('pixel number')
 plt.ylabel('intensity')
 plt.show()
 
-wave = cal.user_input_assign_pixelnumber_to_wavelength(peak_pos)
+#wave = cal.user_input_assign_pixelnumber_to_wavelength(peak_pos)
 #for the sample data:
     #peak 226 = 365
     #peak 309 = 404
@@ -40,7 +43,7 @@ wavelength = [365, 404, 435, 546]
 #print(wavelength)
 
 degree = 3
-wavelength_calib = cal.stresing_pixel2wavelength_calib(peak_pos,wavelength,degree)
+wavelength_calib = cal.stresing_pixel2wavelength_calib(peak_pos,wavelength,degree,pixels)
 
 plt.plot(peak_pos,wavelength,'x')
 plt.plot(pixels, wavelength_calib)
@@ -49,6 +52,6 @@ plt.ylabel('wavelength')
 plt.show()
 
 
-filename = 'test_fsave_function'
+filename = 'test_save_function'
 
 co.save_data(filename,wavelength_calib)
