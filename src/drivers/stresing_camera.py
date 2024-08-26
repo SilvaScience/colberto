@@ -72,8 +72,7 @@ class measurement_settings(Structure):
 ########### Path to the DLL file ############
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
-#path_camera_dll = folder_path / "src" / "drivers" / "Stresing" / "ESLSCDLL.dll"
-path_camera_dll = folder_path / "Stresing" / "stresing_python" / "ESLSCDLL.dll" 
+path_camera_dll = folder_path / "src" / "drivers" / "stresing" / "ESLSCDLL.dll"
 
 path_camera_dll = str(path_camera_dll)
 
