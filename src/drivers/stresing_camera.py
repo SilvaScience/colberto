@@ -8,7 +8,6 @@ Created on Wed Jun  5 10:52:39 2024
 
 from ctypes import *
 from pathlib import Path
-import os
 
 
 class camera_settings(Structure):
