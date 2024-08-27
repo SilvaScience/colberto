@@ -13,6 +13,15 @@ When developping new features in your branch, it is very likely that you will ne
 
 ## Naming Conventions
 In this project, we follow standard Python naming conventions to ensure that our code is readable and consistent. Below are the guidelines for naming functions and classes:
+## Folder structure
+
+- `/dependencies` : Put conda dependencies list here
+- `/src` : This is where the code goes and is further divided into subcategories
+-- `/src/drivers` : Let's put all the driver modules in here e.g. SLM.py or Streising.py etc...
+-- `/src/gui`: Code related to the graphical user interface
+-- `/src/compute`: Code that perform internal various computations such as fitting, computing quantitie etc...
+-- `/src/io` : Code related to loading and saving various types of data or calibrations
+- `/samples` : Code showing how to use the different modules using `import modulename.` Keep same subdirectory structure as /src
 
 ### Classes
 Classes are named using the CamelCase convention. This means that each word within the class name starts with a capital letter and there are no underscores between words. This helps in distinguishing class names from function and variable names.
