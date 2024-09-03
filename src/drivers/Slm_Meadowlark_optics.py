@@ -34,6 +34,82 @@ path_image_gen = str(path_image_gen)
 
 # Definition of the SLM class
 class SLM:
+    '''
+    A class to interface with a Spatial Light Modulator (SLM) via a C-based DLL.
+
+    The SLM class loads the necessary DLL, sets up expected data types for various 
+    functions, and provides methods to interact with the SLM hardware. This includes 
+    creating and deleting the SDK, writing images, loading lookup tables (LUTs), 
+    and retrieving or setting various SLM parameters.
+
+    Attributes:
+    -----------
+    blink_dll : ctypes.CDLL
+        The loaded DLL that contains the functions for controlling the SLM.
+
+    Methods:
+    --------
+    create_sdk():
+        Initializes the SDK for interacting with the SLM.
+
+    delete_sdk():
+        Deletes the SDK and frees associated resources.
+
+    write_image(image_data, is_8_bit):
+        Writes an image to the SLM. The image data is passed as a ctypes pointer, 
+        and a flag indicates whether the image is 8-bit.
+
+    load_lut(file_path):
+        Loads a lookup table (LUT) from a file to the SLM. The file path is provided 
+        as a string.
+
+    set_post_ramp_slope(postRampSlope):
+        Sets the post-ramp slope for the SLM. The slope value is provided as an integer.
+
+    set_pre_ramp_slope(preRampSlope):
+        Sets the pre-ramp slope for the SLM. The slope value is provided as an integer.
+
+    set_channel(channel):
+        Sets the SLM to a specific channel. The channel is specified as an integer.
+
+    get_slm_temp():
+        Retrieves the current temperature of the SLM in degrees Celsius.
+
+    get_slm_vcom():
+        Retrieves the current VCOM (common voltage) of the SLM in volts.
+
+    set_slm_vcom(volts):
+        Sets the VCOM (common voltage) of the SLM. The voltage value is provided as a float.
+
+    get_height():
+        Retrieves the height of the SLM display in pixels.
+
+    get_width():
+        Retrieves the width of the SLM display in pixels.
+
+    get_depth():
+        Retrieves the color depth (bit depth) of the SLM display.
+
+    get_slm_found():
+        Checks whether the SLM hardware was found and initialized successfully.
+
+    get_com_found():
+        Checks whether the COM (communication) port for the SLM was found.
+
+    parameter_slm():
+        Retrieves and returns key SLM parameters such as height, width, depth, 
+        along with default RGB and bit-depth settings.
+
+    Usage:
+    ------
+    slm = SLM()
+    slm.create_sdk()
+    slm.set_channel(1)
+    image_data = np.array([...], dtype=np.uint8)
+    slm.write_image(image_data, is_8_bit=True)
+    slm.delete_sdk()
+'''
+
     def __init__(self):
         # Chargement de la DLL
         # Loading the DLL
@@ -58,9 +134,6 @@ class SLM:
         self.blink_dll.Get_COMFound.restype = ctypes.c_int
 
     def create_sdk(self):
-        '''
-        Crée le SDK
-        '''
         self.blink_dll.Create_SDK()
 
     def delete_sdk(self):
