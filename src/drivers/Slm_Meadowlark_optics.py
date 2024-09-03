@@ -108,7 +108,9 @@ class SLM:
     def get_com_found(self):
         return self.blink_dll.Get_COMFound()
     
-    def parameter_slm(self,rgb,bit):
+    def parameter_slm(self):
+        rgb=1
+        bit=1
         height= SLM.get_height(self)
         width = SLM.get_width(self)
         depth = SLM.get_depth(self)
