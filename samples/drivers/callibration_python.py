@@ -29,13 +29,10 @@ from sklearn.preprocessing import MinMaxScaler
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from src.drivers.Oscilloscope_Keysight_DSOX1202A import OscilloscopeController
 
-# Configuration de l'oscilloscope
-oscilloscope = OscilloscopeController()
-# Connexion à l'oscilloscope
-oscilloscope.connect()
-# Configurer la source et le format de la forme d'onde
-oscilloscope.set_waveform_source('CHAN1')
-oscilloscope.set_waveform_format('ASC')
+
+
+OscilloscopeController=OscilloscopeController()
+OscilloscopeController.initialisation()
 
 ########################################################################################################################
 ##################### Importing the SLM class and the ImageGen class from the Functions_SLM file ####################### 
