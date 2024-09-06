@@ -1,6 +1,8 @@
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from src.drivers.stresing_camera import stresing
 
