@@ -6,7 +6,7 @@ import src.compute.colbertoutils as co
 
 class Calibration():
 
-    def __init__(self,SLM,stresing):
+    def __init__(self,SLM):
         """
         This builds an instance of a Calibration object without loading a file.
         Input:
@@ -14,8 +14,6 @@ class Calibration():
 
         """
         self.SLM=SLM # SLM Hosts all parameters related to the SLM currently in use
-
-        self.CAM=stresing
         
         self.pixelToWavelength=None
         self.phaseToGrayscale=None
@@ -67,7 +65,7 @@ class Calibration():
     
         return self.wavelength
 
-    def stresing_pixel2wavelength_calib(self,peak_pos,wave,degree,pixels):
+    def spectral_camera_pixel2wavelength_calib(self,peak_pos,wave,degree,pixels):
         ''' This function fits inputted data to a polynomial function.  
             
                 Inputs: peak_pos: 1D array containing the pixel number of peaks found in a data 
