@@ -9,6 +9,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from ctypes import *
 import numpy as np
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
 from src.drivers.stresing_camera import camera_settings
 from src.drivers.stresing_camera import measurement_settings
