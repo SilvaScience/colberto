@@ -13,7 +13,7 @@ from src.compute.SLMBogus import SLM
 from src.compute import colbertoutils as co
 from src.compute.calibration import Calibration
 
-cal = Calibration(SLM,stresing)
+cal = Calibration(SLM)
 
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 path = folder_path / "samples" / "compute" / "test_files" 
