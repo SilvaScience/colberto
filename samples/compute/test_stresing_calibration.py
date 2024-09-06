@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
-from src.drivers.stresing_camera import stresing
-
 # only need one or the other for SLM class
 #from src.drivers.Slm_Meadowlark_optics import SLM
 from src.compute.SLMBogus import SLM
@@ -47,7 +45,7 @@ wavelength = [365, 404, 435, 546]
 #print(wavelength)
 
 degree = 3
-wavelength_calib = cal.stresing_pixel2wavelength_calib(peak_pos,wavelength,degree,pixels)
+wavelength_calib = cal.spectral_camera_pixel2wavelength_calib(peak_pos,wavelength,degree,pixels)
 
 plt.plot(peak_pos,wavelength,'x')
 plt.plot(pixels, wavelength_calib)
