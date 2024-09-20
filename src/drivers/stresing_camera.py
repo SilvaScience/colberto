@@ -93,8 +93,8 @@ class stresing:
         self.settings.board_sel = 1 
         
         #number of samples
-        self.settings.nos = 1000 
-        
+        self.settings.nos = 1000
+    
         #number of boards
         self.settings.nob = 1 
         
@@ -107,7 +107,7 @@ class stresing:
             #min = 0/step = 1/ max = 127
         
         #senor_type for camera 
-        self.settings.camera_settings[0].SENSOR_TYPE = 0 
+        self.settings.camera_settings[0].SENSOR_TYPE = 4 
             #0: PDA - Photodiode Array
             
         #type of camera system 
@@ -118,7 +118,7 @@ class stresing:
         self.settings.camera_settings[0].CAMCNT = 1 
        
         #Pixel is the number of pixels in one sensor
-        self.settings.camera_settings[0].PIXEL = 1024 
+        self.settings.camera_settings[0].PIXEL = 1088 
         
         #Size of DMA buffer in scans
         self.settings.camera_settings[0].dma_buffer_size_in_scans = 1000 
@@ -130,9 +130,14 @@ class stresing:
             #min = 1 µs/step: 1 µs/max: 268,435,455 µs = 268.435455 s
         
         #Block timer in microseconds is the time between the start of two blocks of readouts
-        self.settings.camera_settings[0].btime_in_microsec = 1000000 
+        self.settings.camera_settings[0].btime_in_microsec = 10000 
             #min = 1 µs/step: 1 µs/max: 268,435,455 µs = 268.435455 s
-        
+        self.settings.camera_settings[0].number_of_regions = 3
+        self.settings.camera_settings[0].region_size[0] = 10
+        self.settings.camera_settings[0].region_size[1] = 50
+        self.settings.camera_settings[0].region_size[2] = 10
+        self.settings.camera_settings[0].use_software_polling = 0
+        self.settings.camera_settings[0].VFREQ = 7
         #:dac_output[MAXCAMCNT][DACCOUNT] = Array for output levels of each digital to analog converter
         self.settings.camera_settings[0].dac_output[0][0] = 55000
         self.settings.camera_settings[0].dac_output[0][1] = 55000
@@ -233,7 +238,7 @@ class stresing:
         	self.ptr_cur_block = pointer(self.cur_block)
 
         	while self.cur_sample.value < self.settings.nos-1 or self.cur_block.value < self.settings.nob-1:
-        		self.camera_dll.DLLGetCurrentScanNumber(self.settings.drvno, self.ptr_cur_sample, self.ptr_cur_block)
+        		self.camera_dll.DLLGetCurrentScanNumber(self.drvno, self.ptr_cur_sample, self.ptr_cur_block)
         		print("sample: "+str(self.cur_sample.value)+" block: "+str(self.cur_block.value))
 
     def stop(self):
@@ -268,10 +273,10 @@ class stresing:
         self.ptr_frame_buffer = pointer(self.frame_buffer)
                 
         # Get the data of one frame. (camera = 0 in this case b/c we only have one)        
-        self.status = self.camera_dll.DLLReturnFrame(self.settings.board_sel, sample, block, 0, self.ptr_frame_buffer, self.ptr_frame_buffer, self.PIXEL)
+        self.status = self.camera_dll.DLLReturnFrame(self.drvno, sample, block, 0, self.PIXEL, self.ptr_frame_buffer)
 
         if(self.status != 0):
-        	raise BaseException(self.camer_dll.DLLConvertErrorCodeToMsg(self.status))
+        	raise BaseException(self.camera_dll.DLLConvertErrorCodeToMsg(self.status))
         
         # Convert the c-style array to a python list
         self.list_frame_buffer = [self.frame_buffer[i] for i in range(self.PIXEL)]

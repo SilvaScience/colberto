@@ -19,16 +19,15 @@ from src.drivers.stresing_camera import stresing
 # Intitalize stressing camera 
 CAM = stresing()
 
-use_blocking_call = True 
+use_blocking_call = True
     #True = returns data when measurement is finsihed 
     #False = returns data immediatley 
 
 CAM.measure(use_blocking_call)
 
-sample = 10
+sample = 5
 block = 0
 list_frame_buffer = CAM.get_data_one_frame(sample,block)
-
 # Plot the frame
 plt.plot(list_frame_buffer) #pixel number vs intensity 
 plt.title('One Frame')
