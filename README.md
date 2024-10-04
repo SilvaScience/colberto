@@ -10,10 +10,6 @@ Colberto is still in development. You need to configure your python environment 
 4. You can then locate your environnement using which `which python` in Linux or `where python` in Windows and import it into your IDE (e.g. VCode with Python pluggin)
 ## Configuration files
 Many configurations files like manufacturer provided text files, binary driver librairies, databases etc... must be provided or built in order for Colberto to operate correctly. Make sure to carefully set up each of them.
-### Database
-Colberto uses the `Databroker` [database management module](https://blueskyproject.io/databroker/index.html) that is part of BlueSky to save every data and metadata taken with the instrument.
-- If this is the first time setting up Colbert, you will have to place a databroker configuration file in one of the search paths of `databroker` (the actual filename is irrelevant). This search path can be obtained by running `import databroker; print(databroker.catalog_search_path())` in python or by consulting the Error message produced when calling `setup()` from the `runtime` module. An example of the configuration file can be found in `samples/engine/example_databroker_configuration.yml`.
-- Replace the `CATALOG_NAME` placeholder for the desired database name and `DESTINATION_DIRECTORY` by the desired location of the database. Consult this page for more information on [database mangement](https://blueskyproject.io/databroker/how-to/file-backed-catalog.html) in BlueSky.
 
 
 

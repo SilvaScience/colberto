@@ -1,32 +1,27 @@
 from bluesky import RunEngine
 from bluesky.callbacks.best_effort import BestEffortCallback
-import databroker
+from databroker import temp
 from bluesky.utils import ProgressBarManager
 from ophyd.sim import det1, det2  # two simulated detectors
 from ophyd.sim import det,motor
 from bluesky.plans import count,scan
 
-def setup_bluesky():
-    '''
-    Initial configuration of BlueSky engine and requirements
-    '''
-    if not found_catalogs():
-        string_paths=''
-        for path in list(databroker.catalog_search_path()):
-            string_paths+='\n %s'%str(path)
-        raise RuntimeError('No Databroker catalog was found. Make sure a catalog configuration file is present in %s'%string_paths)
+class Runtime():
+    def __init__(self):
+        '''
+        Instantiates the BlueSky runtime and configures it.
+        '''
+        self.RE=RunEngine({})
+        self.setup_catalog()
 
-def found_catalogs():
-    '''
-    Checks if Databroker catalogs exist on the machine
-    see https://blueskyproject.io/databroker/how-to/file-backed-catalog.html
+    def setup_catalog(self):
+        '''
+        Initial configuration of databroker
+        '''
+        catalog=temp()
+        self.RE.subscribe(catalog.v1.insert)
+        
 
-    returns True if catalogs are found locally 
-    '''
-    if list(databroker.catalog)==[]:
-        return False
-    else:
-        return True
 
 #RE=RunEngine({})
 #bec = BestEffortCallback()
