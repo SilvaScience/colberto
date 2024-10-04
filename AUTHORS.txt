@@ -1,2 +1,4 @@
 Félix Thouin
 Esteban Roja-Gatiens
+Katherine Koch
+Mathieu Desmarais

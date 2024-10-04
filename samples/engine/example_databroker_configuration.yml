@@ -1,0 +1,6 @@
+sources:
+  ENTRY_NAME:
+    driver: bluesky-mongo-normalized-catalog
+    args:
+      metadatastore_db: mongodb://HOST:PORT/MDS_DATABASE_NAME
+      asset_registry_db: mongodb://HOST:PORT/ASSETS_DATABASE_NAME
