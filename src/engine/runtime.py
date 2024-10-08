@@ -12,7 +12,7 @@ class Runtime():
         Instantiates the BlueSky runtime and configures it.
         '''
         self.RE=RunEngine({})
-        self.setup_catalog()
+        self.catalog=self.setup_catalog()
 
     def setup_catalog(self):
         '''
@@ -20,6 +20,7 @@ class Runtime():
         '''
         catalog=temp()
         self.RE.subscribe(catalog.v1.insert)
+        return catalog
         
 
 

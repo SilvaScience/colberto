@@ -5,3 +5,4 @@ sys.path.append(str(path_root))
 from src.engine.runtime import Runtime 
 
 engine=Runtime()
+engine.catalog
