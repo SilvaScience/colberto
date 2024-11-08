@@ -1,7 +1,7 @@
 """Example scheme for an Actor for a dummy spectrometer. 'dumSpec'"""
 
 from pyleco.actors.actor import Actor
-from samples.engine.dumSpec import dumSpec1000
+from dumSpec import dumSpec1000
 
 # Parameters
 intTime= 20e-3# Some parameter the device could need on startup
