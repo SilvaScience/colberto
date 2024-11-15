@@ -9,8 +9,9 @@ from pyleco.directors.transparent_director import TransparentDirector
 
 
 try:
-    director=StarterDirector(actor="starter")
+    director=StarterDirector(actor="starter_direc")
     director.start_tasks(["dumSpec1000_controller"])
+    print('Spectrometer online')
 except Exception:
     print(Exception)
 
