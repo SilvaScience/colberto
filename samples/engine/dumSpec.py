@@ -4,7 +4,7 @@ from time import sleep
 class dumSpec1000:
     def __init__(self,integration_time=10e-3):
         self.integration_time=integration_time
-        self.pixnum=1024
+        const self.pixnum=1024
     
     def set_integration_time(self,t):
         self.integration_time=t

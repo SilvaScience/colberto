@@ -1,7 +1,7 @@
 import sys
 from time import sleep
-
-from PyQt5.QtCore import Qt,QObject, QThread,pyqtSignal
+from dumSpec import dumSpec1000
+from PyQt5.QtCore import QObject, QThread, pyqtSignal,Qt
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
@@ -11,19 +11,17 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+
 class Worker(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(int)
 
     def run(self):
         """Long-running task."""
-        # This is where we would put the instrument code or computation
         for i in range(5):
             sleep(1)
-        # To communicate with the top layer, we send signals.
             self.progress.emit(i + 1)
         self.finished.emit()
-
 
 class Window(QMainWindow):
     def __init__(self, parent=None):
