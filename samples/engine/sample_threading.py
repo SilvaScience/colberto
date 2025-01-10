@@ -1,7 +1,14 @@
 import sys
 from time import sleep
-from dumSpec import dumSpec1000
+#import numpy as np
+from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
+from src.drivers.fakeInstruments.dumSpec import dumSpec1000
+from src.engine.threading import run_threaded_task
 from PyQt5.QtCore import QObject, QThread, pyqtSignal,Qt
+import pyqtgraph as pg
+import numpy as np
 from PyQt5.QtWidgets import (
     QApplication,
     QLabel,
@@ -27,10 +34,12 @@ class Window(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.clicksCount = 0
+        self.signal_plotted=np.array([])
+        self.xaxis_plotted=np.array([])
         self.setupUi()
 
     def setupUi(self):
-        self.setWindowTitle("Freezing GUI")
+        self.setWindowTitle("Demo of a spectrometer acquisition")
         self.resize(300, 150)
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
@@ -41,45 +50,49 @@ class Window(QMainWindow):
         self.stepLabel.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         self.countBtn = QPushButton("Click me!", self)
         self.countBtn.clicked.connect(self.countClicks)
-        self.longRunningBtn = QPushButton("Long-Running Task!", self)
+        self.longRunningBtn = QPushButton("Acquire spectrum!", self)
         self.longRunningBtn.clicked.connect(self.runLongTask)
+        # set the plotting
+        self.plot_graph=pg.PlotWidget(labels={'left':'ADU Counts', 'bottom':'Wavelength (nm)'})
+        self.current_curve=self.plot_graph.plot([])
         # Set the layout
         layout = QVBoxLayout()
         layout.addWidget(self.clicksLabel)
         layout.addWidget(self.countBtn)
         layout.addStretch()
+        layout.addWidget(self.plot_graph)
         layout.addWidget(self.stepLabel)
         layout.addWidget(self.longRunningBtn)
         self.centralWidget.setLayout(layout)
+        #Set up fake instrument
+        self.spec=dumSpec1000()
+        self.spec.set_integration_time(2)
+        self.xaxis_plotted=self.spec.get_wave()
+        self.current_curve.setData(self.xaxis_plotted,np.zeros(self.xaxis_plotted.shape))
 
     def countClicks(self):
         self.clicksCount += 1
         self.clicksLabel.setText(f"Counting: {self.clicksCount} clicks")
 
-    def reportProgress(self, n):
-        self.stepLabel.setText(f"Long-Running Step: {n}")
-
+    def plot_data(self,data):
+        self.spectrum_plotted=data
+        self.current_curve.setData(self.xaxis_plotted,self.spectrum_plotted)
+        
     def runLongTask(self):
-        # Step 2: Create a QThread object
-        self.thread = QThread()
-        # Step 3: Create a worker object
-        self.worker = Worker()
-        # Step 4: Move worker to the thread
-        self.worker.moveToThread(self.thread)
-        # Step 5: Connect signals and slots
-        self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.worker.progress.connect(self.reportProgress)
-         # Step 6: Start the thread
-        self.thread.start()
+        '''
+            This interfaces between the data acquisition and the GUI
+        '''
+        self.stepLabel.setText("Acquiring spectrum!!!")
+        self.worker,self.thread=run_threaded_task(self.spec.get_spectrum)
+        self.worker.data.connect(self.plot_data)
+        
         self.longRunningBtn.setEnabled(False)
+        
         self.thread.finished.connect(
             lambda: self.longRunningBtn.setEnabled(True)
         )
         self.thread.finished.connect(
-            lambda: self.stepLabel.setText("Long-Running Step: 0")
+            lambda: self.stepLabel.setText("Waiting for user interaction")
         )
 
 app = QApplication(sys.argv)
