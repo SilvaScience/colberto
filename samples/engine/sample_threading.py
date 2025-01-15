@@ -6,10 +6,10 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
 from src.drivers.fakeInstruments.dumSpec import dumSpec1000
 from src.engine.threading import run_threaded_task
-from PyQt5.QtCore import QObject, QThread, pyqtSignal,Qt
+from PySide6.QtCore import QObject, QThread,Qt
 import pyqtgraph as pg
 import numpy as np
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QLabel,
     QMainWindow,
@@ -17,18 +17,6 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-
-class Worker(QObject):
-    finished = pyqtSignal()
-    progress = pyqtSignal(int)
-
-    def run(self):
-        """Long-running task."""
-        for i in range(5):
-            sleep(1)
-            self.progress.emit(i + 1)
-        self.finished.emit()
 
 class Window(QMainWindow):
     def __init__(self, parent=None):

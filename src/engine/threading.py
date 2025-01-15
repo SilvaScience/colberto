@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 import numpy as np
 
 class DataWorker(QObject):
@@ -6,8 +6,8 @@ class DataWorker(QObject):
         Class that instanstiate a worker to run the provided function in a parrallel thread.
         Designed for a data acquisition function that return a single np array object
     '''
-    finished = pyqtSignal()
-    data = pyqtSignal(np.ndarray)
+    finished = Signal()
+    data = Signal(np.ndarray)
     def __init__(self,function_to_run):
         '''
             Creates an instances of the DataWorker with the inherited attributes of a QObject
