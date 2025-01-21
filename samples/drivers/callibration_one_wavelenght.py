@@ -5,6 +5,7 @@ Created on thursday june 11 16:29:03 2024
 @author: Mathieu Desmarais
 
 Code for the callibration of the SLM and to check the refresh rate of the SLM. 
+For the set-up you can refere to the article in the wiki. 
 """
 
 ## testing SLM functions ##
@@ -30,10 +31,10 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from src.drivers.Oscilloscope_Keysight_DSOX1202A import OscilloscopeController
 
 
-
+'''
 OscilloscopeController=OscilloscopeController()
 OscilloscopeController.initialisation()
-
+'''
 ########################################################################################################################
 ##################### Importing the SLM class and the ImageGen class from the Functions_SLM file ####################### 
 ########################################################################################################################
@@ -56,7 +57,9 @@ print("Blink SDK was successfully constructed")
 height ,width, depth,RGB, isEightBitImage = slm.parameter_slm()
 print("height:",height,"width:",width,"depth:",depth,"is8bit:",isEightBitImage)
 
-slm.load_lut("c:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut");
+lut_path = Path(__file__).resolve().parent.parent / "src" / "Driver" / "SDK" / "19x12_8bit_linearVoltage.lut"
+
+slm.load_lut(str(lut_path));
 
 
 
@@ -132,7 +135,7 @@ data[:, 0] = data[:, 0].astype(int)
 #print(data[:, 1])
 
 # Spécifiez le chemin du fichier CSV
-file_path = r"C:\Users\MathieuDesmarais\OneDrive - Universite de Montreal\Documents\GitHub\colberto\samples\drivers\Raw4.csv"
+file_path = r"Callibration Data / Intensity_vs_voltage.csv"
 
 # Écrire les données dans le fichier CSV
 with open(file_path, mode='w', newline='') as file:
