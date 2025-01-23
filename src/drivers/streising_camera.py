@@ -5,10 +5,9 @@ Created on Wed Jun  5 10:52:39 2024
 
 @author: katiekoch
 """
-
 from ctypes import *
 from pathlib import Path
-
+import configparser
 
 class camera_settings(Structure):
 	_fields_ = [("use_software_polling", c_uint32),
@@ -72,10 +71,12 @@ class measurement_settings(Structure):
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
 path_camera_dll = folder_path / "src" / "drivers" / "stresing" / "ESLSCDLL.dll"
-
 path_camera_dll = str(path_camera_dll)
 
-class stresing:
+path_config = folder_path / "src" / "drivers" / "stresing" / "config_WFU.ini"
+path_config = str(path_config)
+
+class streising:
 
     def __init__(self):
         
@@ -83,7 +84,7 @@ class stresing:
         config = configparser.ConfigParser()
 
         # Read the INI file
-        config.read('config.ini')
+        config.read(path_config)
         
         ''' Initializes camera and camera settings '''
         
@@ -348,8 +349,3 @@ class stresing:
          	raise BaseException(self.camera_dll.DLLConvertErrorCodeToMsg(self.status))
              
         return
-    
-
-    
-    
-
