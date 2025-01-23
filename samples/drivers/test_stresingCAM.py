@@ -12,12 +12,12 @@ import numpy as np
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
-from src.drivers.stresing_camera import camera_settings
-from src.drivers.stresing_camera import measurement_settings
-from src.drivers.stresing_camera import stresing
+from src.drivers.streising_camera import camera_settings
+from src.drivers.streising_camera import measurement_settings
+from src.drivers.streising_camera import streising
 
 # Intitalize stressing camera 
-CAM = stresing()
+CAM = streising()
 
 use_blocking_call = True
     #True = returns data when measurement is finsihed 
