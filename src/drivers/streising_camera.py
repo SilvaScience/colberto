@@ -67,18 +67,9 @@ class measurement_settings(Structure):
 	("cont_pause_in_microseconds", c_uint32),
 	("camera_settings", camera_settings * 5)]
     
-########### Path to the DLL file ############
-folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
-
-path_camera_dll = folder_path / "src" / "drivers" / "stresing" / "ESLSCDLL.dll"
-path_camera_dll = str(path_camera_dll)
-
-path_config = folder_path / "src" / "drivers" / "stresing" / "config_WFU.ini"
-path_config = str(path_config)
-
 class streising:
 
-    def __init__(self):
+    def __init__(self, path_config, path_camera_dll):
         
         # Create a ConfigParser object
         config = configparser.ConfigParser()
