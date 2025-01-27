@@ -16,8 +16,17 @@ from src.drivers.streising_camera import camera_settings
 from src.drivers.streising_camera import measurement_settings
 from src.drivers.streising_camera import streising
 
+########### Path to the DLL file ############
+folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
+
+path_camera_dll = folder_path / "src" / "drivers" / "stresing" / "ESLSCDLL.dll"
+path_camera_dll = str(path_camera_dll)
+
+path_config = folder_path / "src" / "drivers" / "stresing" / "config_WFU.ini"
+path_config = str(path_config)
+
 # Intitalize stressing camera 
-CAM = streising()
+CAM = streising(path_config, path_camera_dll)
 
 use_blocking_call = True
     #True = returns data when measurement is finsihed 
