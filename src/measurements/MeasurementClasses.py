@@ -28,13 +28,13 @@ class AcquireMeasurement(QtCore.QThread):
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
             self.sendProgress.emit(50)
-            self.wls = np.array(self.spectrometer.getWavelength())
+            self.wls = np.array(self.spectrometer.get_wavelength())
             self.take_spectrum()
             print(time.strftime('%H:%M:%S') + ' Finished')
             self.sendProgress.emit(100)
 
     def take_spectrum(self):
-        self.spec = np.array(self.spectrometer.getIntensities())
+        self.spec = np.array(self.spectrometer.get_intensities())
         self.sendSpectrum.emit(self.wls, self.spec)
 
     def stop(self):
@@ -60,8 +60,8 @@ class ViewMeasurement(QtCore.QThread):
         while not self.terminate:  # check whether stopping measurement is called
             t = time.time()
             self.sendProgress.emit(50)
-            self.wls = np.array(self.spectrometer.getWavelength())
-            self.spec = np.array(self.spectrometer.getIntensities())
+            self.wls = np.array(self.spectrometer.get_wavelength())
+            self.spec = np.array(self.spectrometer.get_intensities())
             self.sendClear.emit()
             self.sendSpectrum.emit(self.wls, self.spec)
 
@@ -95,8 +95,8 @@ class RunMeasurement(QtCore.QThread):
     def run(self):
         while not self.terminate:  # loop runs until requested stop
             t1 = time.time()
-            self.wls = np.array(self.spectrometer.getWavelength())
-            self.spec = np.array(self.spectrometer.getIntensities())
+            self.wls = np.array(self.spectrometer.get_wavelength())
+            self.spec = np.array(self.spectrometer.get_intensities())
 
             # send data
             self.sendSpectrum.emit(self.wls, self.spec)
@@ -136,11 +136,11 @@ class BackgroundMeasurement(QtCore.QThread):
 
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
-            self.summedspec = np.array(self.spectrometer.getIntensities())
+            self.summedspec = np.array(self.spectrometer.get_intensities())
             for i in range(self.scans - 1):
                 self.sendProgress.emit((i + 1) / self.scans * 100)
-                self.wls = np.array(self.spectrometer.getWavelength())
-                self.spec = np.array(self.spectrometer.getIntensities())
+                self.wls = np.array(self.spectrometer.get_wavelength())
+                self.spec = np.array(self.spectrometer.get_intensities())
                 self.summedspec = self.summedspec + self.spec
             self.spec = self.summedspec / self.scans
             self.sendSpectrum.emit(self.wls, self.spec)
@@ -191,7 +191,7 @@ class TSeriesMeasurement(QtCore.QThread):
         print(time.strftime('%H:%M:%S') + ' Run T Series Measurement')
         if not self.terminate:
             self.sendProgress.emit(1)
-            self.wls = np.array(self.Spectrometer.getWavelength())
+            self.wls = np.array(self.Spectrometer.get_wavelength())
             n = 0
             for temperature in self.T_series:
                 n = n + 1
@@ -212,7 +212,7 @@ class TSeriesMeasurement(QtCore.QThread):
                 if not self.terminate:
                     if not self.two_sources:
                         for m in range(self.spectra_avg):
-                            self.spec = np.array(self.Spectrometer.getIntensities())
+                            self.spec = np.array(self.Spectrometer.get_intensities())
                             self.sendSpectrum.emit(self.wls, self.spec)
                             print(time.strftime('%H:%M:%S') + ' Spectrum acquired')
 
@@ -225,7 +225,7 @@ class TSeriesMeasurement(QtCore.QThread):
                             self.sendParameter.emit('shutter1', 100)  # open Orpheus shutter
                             time.sleep(2)
                             for m in range(self.spectra_avg):
-                                self.spec = np.array(self.Spectrometer.getIntensities())
+                                self.spec = np.array(self.Spectrometer.get_intensities())
                                 self.sendSpectrum.emit(self.wls, self.spec)
                                 print(time.strftime('%H:%M:%S') + ' PL Spectrum acquired')
 
@@ -243,7 +243,7 @@ class TSeriesMeasurement(QtCore.QThread):
                                     if not self.int_time_orpheus == self.int_times[k]:
                                         print(time.strftime('%H:%M:%S') + ' Int time changed, trigger spectrometer and '
                                                                           'wait to stabilize changes')
-                                        self.Spectrometer.getIntensities()
+                                        self.Spectrometer.get_intensities()
                                         time.sleep(2)
                                     self.int_time_orpheus = self.int_times[k]
                                     waittime = 1 + self.int_times[k] / 1000
@@ -253,7 +253,7 @@ class TSeriesMeasurement(QtCore.QThread):
                                     self.sendParameter.emit('shutter1', 100)  # open Orpheus shutter
                                     time.sleep(2)
                                     for m in range(self.spectra_avg):
-                                        self.spec = np.array(self.Spectrometer.getIntensities())
+                                        self.spec = np.array(self.Spectrometer.get_intensities())
                                         self.sendSpectrum.emit(self.wls, self.spec)
                                         print(time.strftime('%H:%M:%S') + ' PL Spectrum acquired')
                                     self.sendParameter.emit('shutter1', 0)  # close Orpheus shutter
@@ -266,7 +266,7 @@ class TSeriesMeasurement(QtCore.QThread):
                         time.sleep(2)
 
                         for m in range(self.spectra_avg):
-                            self.spec = np.array(self.Spectrometer.getIntensities())
+                            self.spec = np.array(self.Spectrometer.get_intensities())
                             self.sendSpectrum.emit(self.wls, self.spec)
                             print(time.strftime('%H:%M:%S') + ' WL Spectrum acquired')
 
@@ -327,7 +327,7 @@ class TwoPhotonMeasurement(QtCore.QThread):
         for i in range(self.scan_number):
             if not self.terminate:
                 self.sendProgress.emit(1)
-                self.wls = np.array(self.Spectrometer.getWavelength())
+                self.wls = np.array(self.Spectrometer.get_wavelength())
 
                 for idx, wavelength in enumerate(self.wave_array):
                     self.coarse_check = False
@@ -456,7 +456,7 @@ class TwoPhotonMeasurement(QtCore.QThread):
                     time.sleep(2 + self.powermeter.parameter_dict['avg_time'])
                     if not self.terminate:
                         for m in range(self.spectra_number):
-                            self.spec = np.array(self.Spectrometer.getIntensities())
+                            self.spec = np.array(self.Spectrometer.get_intensities())
                             progress = (n + i) / len(self.power_array) / self.scan_number * 100
                             self.sendSpectrum.emit(self.wls, self.spec)
                             self.sendProgress.emit(progress)
@@ -503,7 +503,7 @@ class KineticMeasurement(QtCore.QThread):
         print(time.strftime('%H:%M:%S') + 'Run Kinetic Measurement')
         if not self.terminate:
             # get wls and start time
-            self.wls = np.array(self.Spectrometer.getWavelength())
+            self.wls = np.array(self.Spectrometer.get_wavelength())
             self.t0 = time.time()
 
             # get commands from kinetic_interval
@@ -541,7 +541,7 @@ class KineticMeasurement(QtCore.QThread):
                         for j in k:
                             if not self.terminate:
                                 self.t_curr_step = j
-                                self.spec = np.array(self.Spectrometer.getIntensities())
+                                self.spec = np.array(self.Spectrometer.get_intensities())
                                 self.sendSpectrum.emit(self.wls, self.spec)
                                 self.sendProgress.emit(j / self.max_time * 100)
                                 t3 = time.time()
@@ -567,7 +567,7 @@ class KineticMeasurement(QtCore.QThread):
         self.sendParameter.emit('fast_shutter', 100)
         # acquire
         if not self.terminate:
-            self.spec = np.array(self.Spectrometer.getIntensities())
+            self.spec = np.array(self.Spectrometer.get_intensities())
             # close shutter
             self.sendParameter.emit('fast_shutter', 0)
             self.sendSpectrum.emit(self.wls, self.spec)

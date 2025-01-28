@@ -36,8 +36,6 @@ class SpectrometerDemo(QtCore.QThread):
         self.spectrum = np.array([])
         self.wavelength = np.array([])
         self.stop = False
-        self.parameter_dict['int_time'] = 500
-        self.parameter_dict['binning'] = 1
         self.parameter_display_dict = defaultdict(dict)
         self.parameter_display_dict['int_time']['val'] = 500
         self.parameter_display_dict['int_time']['unit'] = ' ms'
@@ -47,6 +45,11 @@ class SpectrometerDemo(QtCore.QThread):
         self.parameter_display_dict['binning']['unit'] = ' px'
         self.parameter_display_dict['binning']['max'] = 1000
         self.parameter_display_dict['binning']['read'] = False
+
+        # set up parameter dict that only contains value. (faster to access)
+        self.parameter_dict = {}
+        for key in self.parameter_display_dict.keys():
+            self.parameter_dict[key] = self.parameter_display_dict[key]['val']
 
     def set_parameter(self,parameter,value):
         if parameter == 'int_time':

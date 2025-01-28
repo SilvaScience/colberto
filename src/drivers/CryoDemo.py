@@ -10,20 +10,18 @@ set_parameter function (assign set functions)
 
 """
 
-import requests
 import numpy as np
-import json
 from PyQt5 import QtCore
 import time
 from collections import defaultdict
 
 
-class CryocoreDemo(QtCore.QThread):
+class CryoDemo(QtCore.QThread):
 
     name = 'cryostat'
     
     def __init__(self):
-        super(CryocoreDemo, self).__init__()
+        super(CryoDemo, self).__init__()
 
 
         # set parameter dict
@@ -33,8 +31,6 @@ class CryocoreDemo(QtCore.QThread):
         self.set_T = []
         self.current_T = []
         self.stop = False
-        self.parameter_dict['set_T'] = 10
-        self.parameter_dict['current_T'] = 1
         self.parameter_display_dict = defaultdict(dict)
         self.parameter_display_dict['set_T']['val'] = 5
         self.parameter_display_dict['set_T']['unit'] = ' K'
@@ -44,6 +40,12 @@ class CryocoreDemo(QtCore.QThread):
         self.parameter_display_dict['current_T']['unit'] = ' K'
         self.parameter_display_dict['current_T']['max'] = 1000
         self.parameter_display_dict['current_T']['read'] = True
+
+        # set up parameter dict that only contains value. (faster to access)
+        self.parameter_dict = {}
+        for key in self.parameter_display_dict.keys():
+            self.parameter_dict[key] = self.parameter_display_dict[key]['val']
+
 
         
         # defining waitTime

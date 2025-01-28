@@ -14,10 +14,10 @@ from PyQt5 import QtCore, QtWidgets, uic
 from functools import partial
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
-from drivers.CryocoreDemo import CryocoreDemo
-from drivers.SpectrometerDemo import SpectrometerDemo
+from drivers.CryoDemo import CryoDemo
+from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from DataHandling.DataHandling import DataHandling
-from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement,
+from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 
 
 class MainInterface(QtWidgets.QMainWindow):
@@ -25,7 +25,7 @@ class MainInterface(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainInterface, self).__init__()
         project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\GUI\main_GUI.ui', self)
+        uic.loadUi(project_folder + r'\src\GUI\main_GUI.ui', self)
 
         # fancy name
         self.setWindowTitle('COLBERTo')
@@ -39,25 +39,14 @@ class MainInterface(QtWidgets.QMainWindow):
         # always try to include communication on important events.
         # This is extremely useful for debugging and troubleshooting.
         print('WARNING you are using a DEMO version of the cryostat')
-        self.cryostat = CryocoreDemo() # launch cryostat interface
+        self.cryostat = CryoDemo() # launch cryostat interface
         self.devices['cryostat'] = self.cryostat # store in global device dict.
 
         # initialize Spectrometer
-        try:
-            " This try block illustrates how DEMOs an be used, if spectrometer are not found."
-            self.spectrometer = OceanSpectrometer()
-            self.spectrometer.start()
-            self.speclength = self.spectrometer.speclength
-            self.devices['spectrometer'] = self.spectrometer
-        except Exception as e:
-            #Print the type of exception
-            print(f"An error occurred: {e}")
-            print(f"Type of error: {type(e)}")
-            print('Use Demo Spectrometer')
-            self.spectrometer = SpectrometerDemo()
-            self.speclength = self.spectrometer.speclength
-            self.devices['spectrometer'] = self.spectrometer
-            print('Spectrometer connection failed, use DEMO')
+        self.spectrometer = SpectrometerDemo()
+        self.spec_length = self.spectrometer.spec_length
+        self.devices['spectrometer'] = self.spectrometer
+        print('Spectrometer connection failed, use DEMO')
 
 
         # find items to complement in GUI
@@ -133,7 +122,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
 
         # start DataHandling
-        self.DataHandling = DataHandling(self.parameter, self.speclength)
+        self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
@@ -168,8 +157,10 @@ class MainInterface(QtWidgets.QMainWindow):
         # run some functions once to define default values
         self.change_filename()
 
-        # show GUI
+        # show GUI, to be executed at the end of init.
         self.show()
+
+    ##### General functions #####
 
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
@@ -231,7 +222,7 @@ class MainInterface(QtWidgets.QMainWindow):
         BackgroundFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select background data')
         bg_path = BackgroundFile[0]
         bg = np.loadtxt(bg_path, delimiter=',')
-        self.DataHandling.background = bg[-self.speclength:, 1]
+        self.DataHandling.background = bg[-self.spec_length:, 1]
         # print(np.shape(bg[1:,1]))
 
         # display background filename
