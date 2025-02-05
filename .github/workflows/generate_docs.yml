@@ -6,6 +6,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt-get install doxygen
-      - run: cd $GITHUB_WORKSPACE
+      - uses: actions/checkout@v4
       - run: doxygen doxygen.conf
 
