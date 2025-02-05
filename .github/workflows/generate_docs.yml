@@ -5,8 +5,6 @@ jobs:
   generate_documentation:
     runs-on: ubuntu-latest
     steps:
-      - name: Install dependancies
       - run: sudo apt-get install doxygen
-      - name: Generate documentation
       - run: doxygen doxygen.conf
 
