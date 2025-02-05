@@ -1,0 +1,11 @@
+name: Generate documentation
+run-name: ${{ github.actor }} is generating documentation for this push
+on: [push]
+jobs:
+  generate_documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get install doxygen
+      - uses: actions/checkout@v4
+      - run: doxygen doxygen.conf
+
