@@ -4,16 +4,14 @@ arrange and store data. Saves Data in a temp file during data acquirement to pre
 Sends Data to Data and Live Viewers.
 """
 import time
+import csv
 from PyQt5 import QtCore, QtWidgets
-import h5py
 import numpy as np
 import os.path
 import pandas as pd
 from collections import deque
-import shutil
-"""TO DOs: 
-implement proper communication between measurements and DataHandling
-"""
+
+
 
 
 class DataHandling(QtCore.QThread):
@@ -35,9 +33,9 @@ class DataHandling(QtCore.QThread):
         for param in self.parameter:
             self.parameter_queue[param] = deque(maxlen=100000)
         self.param_from_deque = np.zeros([len(self.parameter) + 2, 1])
-        self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
+        self.parameter_measured = np.zeros([len(self.parameter) + 2, 1])
         self.iteration_idx = -1
-        self.spec = np.empty([self.speclength, 0])
+        self.spec = np.empty([self.speclength, 1])
         self.background = np.empty([self.speclength, 1])
         self.transmission = np.empty([self.speclength, 1])
         self.wavelength = np.empty([self.speclength, 1])
@@ -52,16 +50,13 @@ class DataHandling(QtCore.QThread):
         self.parameter_matrix_full = False
         self.data_in_flash = 0
         self.firstbuffer = True
-        self.temp_filename = r"C:\Data\temp.h5"
+        self.temp_filename = r"C:\Data\temp.csv"
         self.filename = 'test'
 
-        # initialize Calibration dict
-        self.calibration = {}
-
-    #def run(self):
-    #    while not self.terminate:
-    #        time.sleep(1)
-    #    return
+    def run(self):
+        while not self.terminate:
+            time.sleep(1)
+        return
 
     # main update device parameter function
     def update_parameter(self, parameter):
@@ -77,9 +72,9 @@ class DataHandling(QtCore.QThread):
 
     def clear_data(self):
         self.starttime = time.time()
-        self.spec = np.empty([self.speclength, 0])
+        self.spec = np.empty([self.speclength, 1])
         self.firstbuffer = 1
-        self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
+        self.parameter_measured = np.zeros([len(self.parameter) + 2, 1])
         try:
             os.remove(self.temp_filename)
         except:
@@ -89,6 +84,16 @@ class DataHandling(QtCore.QThread):
         # add data to data array, not used for now
         curr_time = time.time() - self.starttime
         self.wls = wls
+        if self.correct_background:
+            spec = spec - self.background
+        if self.transmission_option == 'transmission':
+            spec = spec/self.transmission
+        elif self.transmission_option == 'absorption':
+            spec = np.ones(spec) - spec/self.transmission
+        elif self.transmission_option == 'absorbance':
+            spec = spec/self.transmission
+            spec[spec <= 0] = 0.001
+            spec = - np.log10(spec)
         self.spec = np.c_[self.spec, spec]
         for idx, param in enumerate(self.parameter_queue.keys()):
             self.param_from_deque[idx] = self.parameter_queue[param][-1]
@@ -100,9 +105,9 @@ class DataHandling(QtCore.QThread):
         self.maximum[0] = curr_time
         self.sendMaximum.emit(self.maximum)
         self.sendSpectrum.emit(wls, spec)
-        # to prevent memory overload, save to temp file every 100th spectrum
+        # to prevent memory overload, save to temp file every 10th spectrum
         self.data_in_flash =self.data_in_flash + 1
-        if self.data_in_flash > 99:
+        if self.data_in_flash > 10:
             self.save_buffer()
             self.data_in_flash = 0
 
@@ -114,52 +119,40 @@ class DataHandling(QtCore.QThread):
     def save_buffer(self):
         # check for first buffer saving to initialize data array
         if self.firstbuffer:
-            spectrum = np.delete(self.spec, 0, 1)
-            spectrum_w_param = np.vstack([self.parameter_measured, self.spec])
-            print(np.shape(spectrum_w_param))
-            with h5py.File(self.temp_filename, 'w') as hf:
-                hf.create_dataset("spectra", data=spectrum_w_param, compression="gzip", chunks=True, maxshape=(np.shape(spectrum_w_param)[0],None))
-            print('First buffer saved')
-            self.firstbuffer = False
+            spectrum = np.c_[self.wls, np.delete(self.spec, 0, 1)]
         else:
             spectrum = np.delete(self.spec, 0, 1)
-            spectrum_w_param = np.vstack([self.parameter_measured, self.spec])
-            with h5py.File(self.temp_filename, 'a') as hf:
-                hf["spectra"].resize((hf["spectra"].shape[1] + spectrum_w_param.shape[1]), axis=1)
-                hf["spectra"][:,-spectrum_w_param.shape[1]:] = spectrum_w_param
+            self.parameter_measured = np.delete(self.parameter_measured, 0, 1)
+        spectrum_w_param = np.vstack([self.parameter_measured, spectrum])
+        self.spectrumlength = np.shape(spectrum_w_param)  # required for data transpose
+
+        # save to temp file
+        if self.firstbuffer:
+            np.savetxt(self.temp_filename, spectrum_w_param.transpose(), fmt='% 6.4f', delimiter=',')
+            self.firstbuffer = False
+        else:
+            with open(self.temp_filename, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerows(spectrum_w_param.transpose())
 
         # clear arrays in memory
-        self.spec = np.empty([self.speclength, 0])
-        self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
+        self.spec = np.empty([self.speclength, 1])
+        self.parameter_measured = np.zeros([len(self.parameter) + 2, 1])
 
     def save_parameter(self, filename):
         save_length = len(self.parameter_queue['time'])
         save_array = np.empty((len(self.parameter_queue), save_length))
         for idx, param in enumerate(self.parameter_queue.keys()):
             save_array[idx, :] = np.array(self.parameter_queue[param])[0:save_length]
-        ty_res = time.localtime(time.time())
-        timestamp = time.strftime("%H_%M_%S", ty_res)
-        with h5py.File( filename + '_' + timestamp + '_parameters.h5', 'w') as hf:
-            hf.create_dataset("Parameter", data=save_array, compression="gzip", chunks=True)
         np.savetxt(filename, save_array)
         print('Parameter saved as: ' + filename)
 
     @QtCore.pyqtSlot(str, str)
     def save_data(self, filename, comments):
         self.save_buffer()
-        ty_res = time.localtime(time.time())
-        timestamp = time.strftime("%H_%M_%S", ty_res)
-        shutil.copyfile(self.temp_filename, filename + '_' + timestamp + '.h5')
-        self.save_parameter(filename)
-        #self.save_worker_thread = SaveWorker(filename, comments, self.parameter, self.spectrumlength, self.temp_filename)
-        #self.save_worker_thread.start()
+        self.save_worker_thread = SaveWorker(filename, comments, self.parameter, self.spectrumlength, self.temp_filename)
+        self.save_worker_thread.start()
         print('thread started')
-
-    @QtCore.pyqtSlot
-    def add_calibration(self,calibration):
-        # each calibration should consist of a tuple of name and content
-        calibration_name, calibration_value = calibration
-        self.calibration[calibration_name] = calibration_value
 
     def change_send_idx(self, x_idx, y_idx):
         self.send_x_idx = list(self.parameter_queue)[x_idx]
@@ -217,6 +210,6 @@ class SaveWorker(QtCore.QThread):
             rcol = min(NCOLS, lcol + batch_size)
             data = pd.read_csv(from_file, usecols=range(lcol, rcol), header=None)
             with open(to_file, 'a') as _f:
-                data.T.to_csv(_f, header=None, index=None, line_terminator='\n')
+                data.T.to_csv(_f, header=None, index=None) # , line_terminator='\n'
         print('Data saved as: ' + to_file)
         return
