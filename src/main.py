@@ -16,6 +16,7 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
+from drivers.SLMDemo import SLMDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement, KineticMeasurement
@@ -49,6 +50,11 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['spectrometer'] = self.spectrometer
         print('Spectrometer connection failed, use DEMO')
 
+        # initialize SLMDemo
+        self.SLM = SLMDemo()
+        self.devices['SLM'] = self.SLM
+        print('SLMDemo connected')
+
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -70,6 +76,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
+        self.SLM_tab = self.findChild(QtWidgets.QWidget, 'SLM_tab')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -88,6 +95,10 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.ParameterPlot)
         self.parameter_tab.setLayout(vbox)
+
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.addWidget(self.SLM)
+        self.SLM_tab.setLayout(vbox)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """

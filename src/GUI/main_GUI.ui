@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1329</width>
+    <width>893</width>
     <height>1002</height>
    </rect>
   </property>
@@ -311,14 +311,14 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>5</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
           <string>Spectrum View</string>
          </attribute>
         </widget>
-        <widget class="QWidget" name="data_tab">
+        <widget class="QWidget" name="SLM_tab">
          <attribute name="title">
           <string>SLM View</string>
          </attribute>
@@ -539,7 +539,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1329</width>
+     <width>893</width>
      <height>26</height>
     </rect>
    </property>
