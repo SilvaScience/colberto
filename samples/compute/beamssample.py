@@ -53,5 +53,16 @@ plt.xlabel('Pixel index')
 plt.figure()
 plt.imshow(bm.makeGrating())
 
+# Here is how to constraint the horizontal extent of the pattern
+mask=np.zeros(slm.get_size()[0])
+mask[325:330]=1
+bm.set_gratingAmplitudeMask(mask)
+bm.set_maskStatus(True)
+plt.figure()
+plt.plot(mask)
+plt.figure()
+plt.imshow(bm.makeGrating())
+
+
 
 plt.show()
