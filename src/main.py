@@ -17,6 +17,7 @@ from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
+from drivers.StresingDemo import StresingDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement, KineticMeasurement
@@ -55,6 +56,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['SLM'] = self.SLM
         print('SLMDemo connected')
 
+        # initialize StresingDemo
+        self.Stresing = StresingDemo()
+        self.devices['Stresing'] = self.Stresing
+        print('Stresing connected')
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
