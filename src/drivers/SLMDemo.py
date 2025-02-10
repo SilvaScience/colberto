@@ -46,7 +46,7 @@ class SLMDemo(QtWidgets.QMainWindow):
 
         # load the GUI
         project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
+        uic.loadUi(project_folder + r'\GUI\SLM_GUI.ui', self)
 
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
