@@ -18,10 +18,11 @@
     <rect>
      <x>60</x>
      <y>190</y>
-     <width>371</width>
-     <height>261</height>
+     <width>1200</width>
+     <height>800</height>
     </rect>
    </property>
+    <bool>true</bool>
   </widget>
   <widget class="QLabel" name="label">
    <property name="geometry">
@@ -33,7 +34,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>This is the SLM</string>
+    <string>View of the SLM</string>
    </property>
   </widget>
  </widget>

@@ -10,6 +10,8 @@ set_parameter function (assign set functions)
 
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, uic
+from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
+from PyQt5.QtGui import QPixmap
 from collections import defaultdict
 import time
 import sys
@@ -48,10 +50,33 @@ class SLMDemo(QtWidgets.QMainWindow):
         project_folder = os.getcwd()
         uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
 
+
+        self.load_image(r"C:\Users\MathieuDesmarais\Documents\GitHub\colberto\src\drivers\test1.png")
+
+    def load_image(self, image_path):
+        if not os.path.exists(image_path):
+            print(f"Erreur : L'image {image_path} n'existe pas.")
+            return
+
+        pixmap = QPixmap(image_path)
+    
+        # Créer une scène et ajouter l’image
+        scene = QGraphicsScene()
+        pixmap_item = QGraphicsPixmapItem(pixmap)
+        scene.addItem(pixmap_item)
+
+    # Assigner la scène au QGraphicsView
+        self.graphicsView.setScene(scene)  
+
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """
         if parameter == 'amplitude':
             self.parameter_dict['amplitude'] = value
             self.amplitude = value
+
+
+   
+
+
 

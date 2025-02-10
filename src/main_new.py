@@ -16,6 +16,7 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
+from drivers.SLMDemo import SLMDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 
@@ -48,6 +49,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['spectrometer'] = self.spectrometer
         print('Spectrometer connection failed, use DEMO')
 
+        # initialize SLM
+
+        self.SLM = SLMDemo()
+        self.devices['SLM'] = self.SLM
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
