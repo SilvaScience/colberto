@@ -65,7 +65,7 @@ class MainInterface(QtWidgets.QMainWindow):
         # initialize MonochromDemo
         self.Monochrom = MonochromDemo() 
         self.devices['Monochrom'] = self.Monochrom 
-        print('Monochrom connected')
+        print('Monochrom DEMO connected')
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
