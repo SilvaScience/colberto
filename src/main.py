@@ -18,6 +18,7 @@ from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
+from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement, KineticMeasurement
@@ -28,7 +29,7 @@ class MainInterface(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainInterface, self).__init__()
         project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\src\GUI\main_GUI.ui', self)
+        uic.loadUi(project_folder + r'\GUI\main_GUI.ui', self)
 
         # fancy name
         self.setWindowTitle('COLBERTo')
@@ -60,6 +61,11 @@ class MainInterface(QtWidgets.QMainWindow):
         self.Stresing = StresingDemo()
         self.devices['Stresing'] = self.Stresing
         print('Stresing connected')
+
+        # initialize MonochromDemo
+        self.Monochrom = MonochromDemo() 
+        self.devices['Monochrom'] = self.Monochrom 
+        print('Monochrom connected')
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
