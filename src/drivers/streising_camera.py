@@ -5,10 +5,9 @@ Created on Wed Jun  5 10:52:39 2024
 
 @author: katiekoch
 """
-
 from ctypes import *
 from pathlib import Path
-
+import configparser
 
 class camera_settings(Structure):
 	_fields_ = [("use_software_polling", c_uint32),
@@ -68,16 +67,15 @@ class measurement_settings(Structure):
 	("cont_pause_in_microseconds", c_uint32),
 	("camera_settings", camera_settings * 5)]
     
-########### Path to the DLL file ############
-folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
+class streising:
 
-path_camera_dll = folder_path / "src" / "drivers" / "stresing" / "ESLSCDLL.dll"
+    def __init__(self, path_config, path_camera_dll):
+        
+        # Create a ConfigParser object
+        config = configparser.ConfigParser()
 
-path_camera_dll = str(path_camera_dll)
-
-class stresing:
-
-    def __init__(self):
+        # Read the INI file
+        config.read(path_config)
         
         ''' Initializes camera and camera settings '''
         
@@ -90,35 +88,42 @@ class stresing:
         self.drvno = 0 
         
         #controls which boards are used for the measurement 
-        self.settings.board_sel = 1 
+        self.settings.board_sel = int(config.get("General","boardSel"))  #1 ?? 
         
         #number of samples
-        self.settings.nos = 1000 
-        
+        self.settings.nos = int(config.get("General","nos")) #1000
+
         #number of boards
-        self.settings.nob = 1 
+        self.settings.nob = int(config.get("General","nob")) 
+        
+        board_num = [0,1,2,3,4]
+        i=0
+        for i in board_num:
+            value = config.get("General", f'board{i}')
+            if value == "true":
+                Board = f'board{i}'
         
         #Scan trigger input mode
-        self.settings.camera_settings[0].sti_mode = 4 
+        self.settings.camera_settings[0].sti_mode = int(config.get(Board,"sti")) #4 
         
         #Block trigger input counter 
-        self.settings.camera_settings[0].bti_mode = 4 
+        self.settings.camera_settings[0].bti_mode = int(config.get(Board,"bti")) #4 
             #determines how many block trigger inputs are skipped before the next block start is triggered
             #min = 0/step = 1/ max = 127
         
         #senor_type for camera 
-        self.settings.camera_settings[0].SENSOR_TYPE = 0 
+        self.settings.camera_settings[0].SENSOR_TYPE = int(config.get(Board,"sensorType")) #0 
             #0: PDA - Photodiode Array
             
         #type of camera system 
-        self.settings.camera_settings[0].CAMERA_SYSTEM = 2 
+        self.settings.camera_settings[0].CAMERA_SYSTEM = int(config.get(Board,"cameraSystem")) #2 
             #2: 3030 system
             
         #Camcnt is the number of cameras which are connected to one PCIe board
-        self.settings.camera_settings[0].CAMCNT = 1 
+        self.settings.camera_settings[0].CAMCNT = int(config.get(Board,"camcnt")) #1
        
         #Pixel is the number of pixels in one sensor
-        self.settings.camera_settings[0].PIXEL = 1024 
+        self.settings.camera_settings[0].PIXEL = int(config.get(Board,"pixelcnt")) #1024 
         
         #Size of DMA buffer in scans
         self.settings.camera_settings[0].dma_buffer_size_in_scans = 1000 
@@ -126,13 +131,25 @@ class stresing:
             #60 is also working with high speed
         
         #Scan timer in microseconds is the time between the start of two readouts.
-        self.settings.camera_settings[0].stime_in_microsec = 8000 
+        self.settings.camera_settings[0].stime_in_microsec = int(config.get(Board,"stimer")) #8000 
             #min = 1 µs/step: 1 µs/max: 268,435,455 µs = 268.435455 s
         
         #Block timer in microseconds is the time between the start of two blocks of readouts
-        self.settings.camera_settings[0].btime_in_microsec = 1000000 
+        self.settings.camera_settings[0].btime_in_microsec = int(float(config.get(Board,"btimer"))) #1000000 
             #min = 1 µs/step: 1 µs/max: 268,435,455 µs = 268.435455 s
+	    
+        self.settings.camera_settings[0].number_of_regions = int(config.get(Board,"numberOfRegions"))
+        self.settings.camera_settings[0].region_size[0] = int(config.get(Board,"regionSize1"))
+        self.settings.camera_settings[0].region_size[1] = int(config.get(Board,"regionSize2"))
+        self.settings.camera_settings[0].region_size[2] = int(config.get(Board,"regionSize3"))
         
+        if config.get(Board,"use_software_polling")=="true":
+            self.settings.camera_settings[0].use_software_polling = 1
+        else:
+            self.settings.camera_settings[0].use_software_polling = 0
+        
+        self.settings.camera_settings[0].VFREQ = int(config.get(Board,"vfreq"))
+	    
         #:dac_output[MAXCAMCNT][DACCOUNT] = Array for output levels of each digital to analog converter
         self.settings.camera_settings[0].dac_output[0][0] = 55000
         self.settings.camera_settings[0].dac_output[0][1] = 55000
@@ -233,7 +250,7 @@ class stresing:
         	self.ptr_cur_block = pointer(self.cur_block)
 
         	while self.cur_sample.value < self.settings.nos-1 or self.cur_block.value < self.settings.nob-1:
-        		self.camera_dll.DLLGetCurrentScanNumber(self.settings.drvno, self.ptr_cur_sample, self.ptr_cur_block)
+        		self.camera_dll.DLLGetCurrentScanNumber(self.drvno, self.ptr_cur_sample, self.ptr_cur_block)
         		print("sample: "+str(self.cur_sample.value)+" block: "+str(self.cur_block.value))
 
     def stop(self):
@@ -268,10 +285,10 @@ class stresing:
         self.ptr_frame_buffer = pointer(self.frame_buffer)
                 
         # Get the data of one frame. (camera = 0 in this case b/c we only have one)        
-        self.status = self.camera_dll.DLLReturnFrame(self.settings.board_sel, sample, block, 0, self.ptr_frame_buffer, self.ptr_frame_buffer, self.PIXEL)
+        self.status = self.camera_dll.DLLReturnFrame(self.drvno, sample, block, 0, self.PIXEL, self.ptr_frame_buffer)
 
         if(self.status != 0):
-        	raise BaseException(self.camer_dll.DLLConvertErrorCodeToMsg(self.status))
+        	raise BaseException(self.camera_dll.DLLConvertErrorCodeToMsg(self.status))
         
         # Convert the c-style array to a python list
         self.list_frame_buffer = [self.frame_buffer[i] for i in range(self.PIXEL)]
@@ -323,8 +340,3 @@ class stresing:
          	raise BaseException(self.camera_dll.DLLConvertErrorCodeToMsg(self.status))
              
         return
-    
-
-    
-    
-

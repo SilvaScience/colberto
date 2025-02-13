@@ -30,7 +30,9 @@ class Beam:
         self.calibration=currentCalibration
         self.beamHorizontalDelimiters=[0,self.calibration.SLM.get_size()[0]]
         self.beamVerticalDelimiters=None # Vertical position delimiter of beam on SLM in pixels. Default is whole SLM
-    
+        self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
+        self.maskOn=False #Is the mask enabled in the output grating?
+
     def set_beamVerticalDelimiters(self,delimiters):
         '''
             Sets the vertical delimiters of the beam
@@ -38,6 +40,14 @@ class Beam:
                 - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
         '''
         self.beamVerticalDelimiters=delimiters
+
+    def set_beamHorizontalDelimiters(self,delimiters):
+        '''
+            Sets the horizontal delimiters of the beam
+            input:
+                - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
+        '''
+        self.beamHorizontalDelimiters=delimiters
 
     def set_compressionCarrierWave(self,compCarrierWave):
         """
@@ -155,6 +165,25 @@ class Beam:
         angFreq=self.calibration.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.optimalPhasePolynomial(angFreq)
     
+    def set_gratingAmplitudeMask(self, mask):
+        '''
+            Sets the amplitude modulation along the horizontal axis of the phase grating.
+            input:
+                - mask (1d.array): The modulation of the grating's amplitude at a given pixel index from 0 (totally off) to 1 (fully on). The mask length must match the number of columns on the SLM's.
+        '''
+        if mask.shape[0]==self.get_horizontalIndices().shape[0]:
+            self.phaseGratingAmplitudeMask=mask
+        else:
+            raise(IndexError("The mask length must match the number of columns on the SLM's."))
+    def set_maskStatus(self,maskOn):
+        '''
+            Sets wether the mask should be applied or not.
+            input:
+                - maskOn (bool): Mask is applied to the phase grating when set to True and not applied when set to False
+        '''
+        self.maskOn=maskOn
+
+
     def set_gratingAmplitude(self,amplitude):
         '''
             Sets the amplitude of the grating in multiples of 2*pi
@@ -194,10 +223,12 @@ class Beam:
                 - 2d.array: A 2D phase array corresponding to the current phase profile 
         '''
         phaseGratingImage=[]
-        numberVerticalPixels=self.beamHorizontalDelimiters[1]-self.beamVerticalDelimiters[0]
+        numberVerticalPixels=self.beamVerticalDelimiters[1]-self.beamVerticalDelimiters[0]
         phaseProfile=self.get_sampledCurrentPhase()
-        for phase in phaseProfile:
+        for mask,phase in zip(self.phaseGratingAmplitudeMask,phaseProfile):
             row=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
+            if self.maskOn:
+                row=mask*row
             phaseGratingImage.append(row)
         phaseGratingImage=np.array(phaseGratingImage)
         return phaseGratingImage 
