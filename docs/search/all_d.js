@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['user_5finput_5fassign_5fpixelnumber_5fto_5fwavelength_0',['user_input_assign_pixelnumber_to_wavelength',['../classcalibration_1_1Calibration.html#aabc4824a8e013b48f3c720c061569a4e',1,'calibration::Calibration']]]
+  ['rgb_0',['rgb',['../namespacetest__SLM.html#a23c8dad9d9f95dc0bf9265b3ac22885c',1,'test_SLM.RGB'],['../namespaceExemple.html#af83dca900c365bea576f3e5e220c2bb9',1,'Exemple.rgb']]]
 ];
