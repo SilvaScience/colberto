@@ -9,6 +9,7 @@ import time
 import re
 import os
 from collections import defaultdict
+from pathlib import Path
 import numpy as np
 from PyQt5 import QtCore, QtWidgets, uic
 from functools import partial
@@ -28,8 +29,8 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainInterface, self).__init__()
-        project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\GUI\main_GUI.ui', self)
+        project_folder = Path(__file__).parent.resolve()
+        uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
 
         # fancy name
         self.setWindowTitle('COLBERTo')

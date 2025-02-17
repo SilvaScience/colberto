@@ -12,6 +12,7 @@ import numpy as np
 from PyQt5 import QtWidgets, QtCore, uic
 from collections import defaultdict
 import time
+from pathlib import Path
 import sys
 import os
 
@@ -45,8 +46,8 @@ class SLMDemo(QtWidgets.QMainWindow):
             self.parameter_dict[key] = self.parameter_display_dict[key]['val']
 
         # load the GUI
-        project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\GUI\SLM_GUI.ui', self)
+        project_folder = Path(__file__).parents[1].resolve()
+        uic.loadUi(Path(project_folder,r'GUI/SLM_GUI.ui'), self)
 
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
