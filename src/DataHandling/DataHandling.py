@@ -42,7 +42,8 @@ class DataHandling(QtCore.QThread):
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
         self.spec = np.empty([self.speclength, 0])
         self.background = np.empty([self.speclength, 1])
-        self.wls = np.empty([self.speclength, 1])
+        self.wavelength_axis = np.empty([self.speclength, 1])
+        self.center_wavelength = 500
         self.maximum = np.zeros([3])
         self.correct_background = False
         self.send_x_idx = 'time'
@@ -87,7 +88,7 @@ class DataHandling(QtCore.QThread):
         acquisiton of infinite spectra. """
         # add data to data array, not used for now
         curr_time = time.time() - self.starttime
-        self.wls = wls
+        self.wavelength_axis = wls
         self.spec = np.c_[self.spec, spec]
         for idx, param in enumerate(self.parameter_queue.keys()):
             self.param_from_deque[idx] = self.parameter_queue[param][-1]
@@ -117,7 +118,7 @@ class DataHandling(QtCore.QThread):
             print(np.shape(spectrum_w_param))
             with h5py.File(self.temp_filename, 'w') as hf:
                 hf.create_dataset("spectra", data=spectrum_w_param, compression="gzip", chunks=True, maxshape=(np.shape(spectrum_w_param)[0],None))
-                hf["spectra"].attrs["yaxis"] = self.wls
+                hf["spectra"].attrs["yaxis"] = self.wavelength_axis
                 hf["spectra"].attrs["parameter_keys"] = list(self.parameter_queue.keys())
             print('First buffer saved')
             self.firstbuffer = False
@@ -147,7 +148,7 @@ class DataHandling(QtCore.QThread):
 
     @QtCore.pyqtSlot(str, str)
     def save_data(self, filename, comments):
-        """saves data. Each time data is saved, parameters are saved aswell. """
+        """saves data. Each time data is saved, parameters are saved as well. """
         self.save_buffer()
         with h5py.File(self.temp_filename, 'a') as hf:
             hf.attrs["comments"] = comments
