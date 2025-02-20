@@ -23,8 +23,9 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
     sendSpectrum= QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendIntensities= QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendProgress = QtCore.pyqtSignal(float)
+    add_calibration = QtCore.pyqtSignal(tuple)
 
-    def __init__(self,devices, parameters):
+    def __init__(self,devices, parameters,calibration):
         super(VerticalBeamCalibrationMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
         self.SLM= devices['SLM']
