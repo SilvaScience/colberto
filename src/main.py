@@ -16,8 +16,12 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
+from drivers.SLMDemo import SLMDemo
+from drivers.StresingDemo import StresingDemo
+from drivers.MonochromatorDemo import MonochromatorDemo
 from DataHandling.DataHandling import DataHandling
-from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
+from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
+    ViewMeasurement, KineticMeasurement
 
 
 class MainInterface(QtWidgets.QMainWindow):
@@ -25,7 +29,7 @@ class MainInterface(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainInterface, self).__init__()
         project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\GUI\main_GUI.ui', self)
+        uic.loadUi(project_folder + r'\src\GUI\main_GUI.ui', self)
 
         # fancy name
         self.setWindowTitle('COLBERTo')
@@ -48,6 +52,20 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['spectrometer'] = self.spectrometer
         print('Spectrometer connection failed, use DEMO')
 
+        # initialize SLMDemo
+        self.SLM = SLMDemo()
+        self.devices['SLM'] = self.SLM
+        print('SLMDemo connected')
+
+        # initialize StresingDemo
+        self.Stresing = StresingDemo()
+        self.devices['Stresing'] = self.Stresing
+        print('Stresing connected')
+
+        # initialize MonochromatorDemo
+        self.monocromator = MonochromatorDemo()
+        self.devices['monocromator'] = self.monocromator
+        print('Monochromator connected')
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -67,6 +85,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_file_indicator = self.findChild(QtWidgets.QLineEdit, 'bg_file_lineEdit')
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
+        self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
+        self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
+        self.SLM_tab = self.findChild(QtWidgets.QWidget, 'SLM_tab')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -85,6 +106,10 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.ParameterPlot)
         self.parameter_tab.setLayout(vbox)
+
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.addWidget(self.SLM)
+        self.SLM_tab.setLayout(vbox)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -153,6 +178,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_check_box.stateChanged.connect(self.update_check_bg)
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
+        self.kinetic_lineEdit.editingFinished.connect(self.change_kinetic_interval)
+        self.kinetic_run_button.clicked.connect(self.kinetic_measurement)
 
         # run some functions once to define default values
         self.change_filename()
@@ -232,6 +259,31 @@ class MainInterface(QtWidgets.QMainWindow):
     def update_check_bg(self):
         self.DataHandling.correct_background = self.bg_check_box.isChecked()
 
+    def change_kinetic_interval(self):
+        # generate timing array for time resolved measurement
+        try:
+            self.kinetic_interval = []
+            txt = self.kinetic_lineEdit.text()
+            for s in re.split(' ', txt):
+                if s == "o":
+                    self.kinetic_interval.append('open')
+                elif s == "c":
+                    self.kinetic_interval.append('close')
+                elif s == "":
+                    pass
+                    pass
+                elif s[0] == "p":
+                    numbers = re.split(":", s[1:])
+                    probint = np.linspace(float(numbers[0]), float(numbers[2]), int(numbers[1]))
+                    for i in range(len(probint)):
+                        self.kinetic_interval.append('p'+str(probint[i]))
+                else:
+                    numbers = re.split(':', s)
+                    self.kinetic_interval.append(np.linspace(float(numbers[0]), float(numbers[2]), int(numbers[1])))
+            print('Kinetic Interval: ' + str(self.kinetic_interval))
+        except:
+            print('Lecture of kinetic interval failed')
+
     ##### Measurements #####
 
     def acquire_measurement(self):
@@ -284,6 +336,21 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.sendSave.connect(self.DataHandling.save_data)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def kinetic_measurement(self):
+        # take time resolved measurements as defined in automation GUI section
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            #self.DataPlot.clear_data()
+            self.DataHandling.clear_data()
+            self.change_kinetic_interval()
+            self.measurement =KineticMeasurement(self.devices, self.parameter, self.kinetic_interval)
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendParameter.connect(self.change_parameter)
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')

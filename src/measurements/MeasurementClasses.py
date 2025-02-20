@@ -6,6 +6,7 @@ until the measurement has finished.
 """
 
 import time
+import re
 from PyQt5 import QtCore
 import numpy as np
 
@@ -151,3 +152,108 @@ class BackgroundMeasurement(QtCore.QThread):
         self.terminate = True
         print(time.strftime('%H:%M:%S') + ' Request Stop')
 
+# Measurement to acquire spectra according to a time array defined by the user. Shutter commands are enabled
+class KineticMeasurement(QtCore.QThread):
+    # set used signal types, destination is set in main script
+    sendProgress = QtCore.pyqtSignal(float)
+    sendParameter = QtCore.pyqtSignal(str, float)
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+
+    def __init__(self, devices, parameter, kinetic_interval):
+        super(KineticMeasurement, self).__init__()
+        self.Spectrometer = devices['spectrometer']
+        #self.orpheus = devices['thorlabs_shutter']
+        self.kinetic_interval = kinetic_interval
+        self.wls = []
+        self.spec = []
+        self.terminate = False
+        self.t_curr_step = 0
+        self.t0 = 0
+        try:  # extract max time of measurement series to calculate progress
+            self.max_time = float(re.findall('[0-9]+[.]', kinetic_interval[-1])[0])
+        except:
+            try:
+                self.max_time = float(re.findall('[0-9]+[.]', kinetic_interval[-2])[0])
+            except:
+                self.max_time = float(kinetic_interval[-1][0])
+
+    def run(self):
+        print(time.strftime('%H:%M:%S') + 'Run Kinetic Measurement')
+        if not self.terminate:
+            # get wls and start time
+            self.wls = np.array(self.Spectrometer.get_wavelength())
+            self.t0 = time.time()
+
+            # get commands from kinetic_interval
+            for k in self.kinetic_interval:
+                if not self.terminate:
+                    # shutter command or waiting time
+                    if isinstance(k, str):  # shutter command
+                        if k == 'open':
+                            print('open shutter')
+                            self.sendParameter.emit('fast_shutter', 100)
+                            wait = 0.05
+                            time.sleep(wait)
+                        elif k == 'close':
+                            print('close shutter')
+                            self.sendParameter.emit('fast_shutter', 0)
+                            wait = 0.05
+                            time.sleep(wait)
+
+                        # open, acquire, close and wait
+                        elif k[0] == 'p':
+                            # set spectrometer in probe trigger mode
+                            self.Spectrometer.probe_trigger = True
+                            self.t_curr_step = float(k[1:])
+                            # wait
+                            wait_time = self.t0 + float(k[1:]) - time.time()
+                            if wait_time > 0:
+                                time.sleep(wait_time)
+                            else:
+                                print('Waiting time before probe cycle negative:' + str(wait_time))
+                            self.probe_cycle()
+                            self.sendProgress.emit(float(k[1:]) / self.max_time * 100)
+
+                    # acquire spectrum and wait
+                    elif isinstance(k, np.ndarray):  # waiting command
+                        for j in k:
+                            if not self.terminate:
+                                self.t_curr_step = j
+                                self.spec = np.array(self.Spectrometer.get_intensities())
+                                self.sendSpectrum.emit(self.wls, self.spec)
+                                self.sendProgress.emit(j / self.max_time * 100)
+                                t3 = time.time()
+                                wait_time = self.t0 + self.t_curr_step - t3
+
+                                if wait_time > 0:
+                                    time.sleep(wait_time)
+                                else:
+                                    print('Waiting time negative:' + str(wait_time))
+
+                    else:
+                        print('Unknown instance in kinetic interval')
+
+        self.sendProgress.emit(100)
+        self.Spectrometer.probe_trigger = False
+        print(time.strftime('%H:%M:%S') + ' Finished')
+        return
+
+    # helper functions  self.sendSpectrum.emit(self.wls, self.spec)
+    def probe_cycle(self):
+        # open shutter
+        t1 = time.time()
+        self.sendParameter.emit('fast_shutter', 100)
+        # acquire
+        if not self.terminate:
+            self.spec = np.array(self.Spectrometer.get_intensities())
+            # close shutter
+            self.sendParameter.emit('fast_shutter', 0)
+            self.sendSpectrum.emit(self.wls, self.spec)
+            t2 = time.time()
+            print('Open time: ' + str(t2 - t1))
+
+            #  initiate controlled stop by enableing terminate statement, that is frequently queried in run code
+
+    def stop(self):
+        self.terminate = True
+        print(time.strftime('%H:%M:%S') + ' Request Stop')
