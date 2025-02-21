@@ -40,6 +40,23 @@ class Beam:
         '''
         self.beamVerticalDelimiters=delimiters
 
+    def get_beamVerticalDelimiters(self,delimiters):
+        '''
+            Returns the vertical delimiters of the beam
+            input:
+                - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
+        '''
+        return self.beamVerticalDelimiters
+
+    def get_beamHorizontalDelimiters(self,delimiters):
+        '''
+            Returns the vertical delimiters of the beam
+            input:
+                - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
+        '''
+        return self.beamHorizontalDelimiters
+
+
     def set_beamHorizontalDelimiters(self,delimiters):
         '''
             Sets the horizontal delimiters of the beam
@@ -48,6 +65,34 @@ class Beam:
         '''
         self.beamHorizontalDelimiters=delimiters
         self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
+
+    def get_spectrumAtPixel(self,pixels,unit='wavelength'):
+        '''
+        Gets the spectral position of light associated with a pixel on the SLM
+        input:
+            - pixels: (nd.array) the horizontal pixel index on the SLM
+            - unit: the unit in which to return the spectrum axis allows for
+                - 'wavelength' (default): Returns in units of wavelength (m)
+                - 'frequency' : Returns in units of frequency (Hz)
+                - 'ang_frequency' : Returns in units of angular frequency (rad.Hz)
+                - 'energy' : Returns in units of energy (eV)
+        output: (nd.array) the spectral position associated with the pixels in pixels
+
+        '''
+        conversionFunction={'wavelength':lambda x: x,
+                            'frequency':co.waveToFreq,
+                            'ang_frequency':co.waveToAngFreq,
+                            'energy':co.waveToeV}
+        wavelength=self.pixelToWavelength(pixels)
+        return conversionFunction[unit](wavelength)
+
+    def set_pixelToWavelength(self,polynomial):
+        '''
+        Sets the pixel to wavelength calibration polynomial for this beam
+        input:
+            - polynomial: (Polynomial object) a Numpy Power series polynomial relating a pixel index to a wavelength in m
+        '''
+        self.pixelToWavelength=polynomial
 
     def set_compressionCarrierWave(self,compCarrierWave):
         """
@@ -123,11 +168,11 @@ class Beam:
             return self.currentPhasePolynomial
     def get_horizontalIndices(self):
         '''
-            Returns an array with indices from to 0 to the width of the SLM
+            Returns an array with indices from the active part of the SLM
             output:
                 - nd.array (int): indices of the SLM's columns
         '''
-        return np.arange(self.calibration.SLM.get_size()[0])
+        return np.arange(self.beamHorizontalDelimiters[0],self.beamHorizontalDelimiters[1])
 
     def get_sampledCurrentPhase(self,indices=None):
         '''
@@ -141,7 +186,7 @@ class Beam:
         '''
         if indices is None:
             indices=self.get_horizontalIndices()
-        angFreq=self.calibration.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
+        angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.currentPhasePolynomial(angFreq)
 
 

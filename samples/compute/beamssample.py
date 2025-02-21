@@ -15,9 +15,14 @@ A snippet of code demonstrating how to use some of the features in the Beams cla
 '''
 
 bm=Beam()
+bm.set_pixelToWavelength(P(1e-9*np.array([500,1/6])))# Sets bogus polynomial for pix to wave conversionpix2wave
 bm.set_beamHorizontalDelimiters([0,600])
 bm.set_beamVerticalDelimiters([0,300])
 bm.set_compressionCarrierWave(532e-9)
+print('Wavelength at pixel 111:  %.3e m'%bm.get_spectrumAtPixel(111))
+print('Frequency at pixel 111:  %.3e Hz'%bm.get_spectrumAtPixel(111,unit='frequency'))
+print('Angular frequency at pixel 111:  %.3e rad Hz'%bm.get_spectrumAtPixel(111,unit='ang_frequency'))
+print('Energy at pixel 111:  %.3e eV'%bm.get_spectrumAtPixel(111,unit='energy'))
 print('Compression carrier wavelenght is %.2e nm'%bm.get_compressionCarrier(unit='wavelength'))
 print('Compression carrier angular frequency is %.2e rad.Hz'%bm.get_compressionCarrier(unit='ang_frequency'))
 bm.set_optimalPhase(P([0,0,1000,500]))
@@ -51,7 +56,7 @@ plt.figure()
 plt.imshow(bm.makeGrating())
 
 # Here is how to constraint the horizontal extent of the pattern
-mask=np.zeros(slm.get_size()[0])
+mask=np.zeros(bm.get_horizontalIndices().shape)
 mask[325:330]=1
 bm.set_gratingAmplitudeMask(mask)
 bm.set_maskStatus(True)
