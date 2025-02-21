@@ -13,9 +13,9 @@ from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
 
 class Beam:
-    def __init__(self,currentCalibration):
+    def __init__(self):
         """
-        Instantiates a Beam object describing all properties of a single beam
+        Instantiates a Beam object describing all properties of a single beam. All phase are in rad (units of 2*pi)
         Input:
             currentCalibration: Calibration object corresponding to the current setup
         output:
@@ -23,14 +23,13 @@ class Beam:
         """
         self.optimalPhasePolynomial=None
         self.currentPhasePolynomial=None
-        self.phaseGratingAmplitude=None
+        self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
         self.compressionCarrierFreq=None#stored internally in angular frequency
         self.delayCarrierFreq=None
-        self.calibration=currentCalibration
-        self.beamHorizontalDelimiters=[0,self.calibration.SLM.get_size()[0]]
-        self.beamVerticalDelimiters=None # Vertical position delimiter of beam on SLM in pixels. Default is whole SLM
-        self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
+        self.beamHorizontalDelimiters=None# Horizontal position delimiter of beam on SLM in pixels. Default raises an error
+        self.beamVerticalDelimiters=None # Vertical position delimiter of beam on SLM in pixels. Default raises an error
+        self.phaseGratingAmplitudeMask=None
         self.maskOn=False #Is the mask enabled in the output grating?
 
     def set_beamVerticalDelimiters(self,delimiters):
@@ -48,6 +47,7 @@ class Beam:
                 - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
         '''
         self.beamHorizontalDelimiters=delimiters
+        self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
 
     def set_compressionCarrierWave(self,compCarrierWave):
         """
@@ -222,6 +222,8 @@ class Beam:
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile 
         '''
+        if self.beamHorizontalDelimiters is None or self.beamVerticalDelimiters is None:
+            raise ValueError('No pixel delimitations provided. Grating generation aborted and returning empty matrix')
         phaseGratingImage=[]
         numberVerticalPixels=self.beamVerticalDelimiters[1]-self.beamVerticalDelimiters[0]
         phaseProfile=self.get_sampledCurrentPhase()

@@ -14,12 +14,9 @@ import numpy as np
 A snippet of code demonstrating how to use some of the features in the Beams class
 '''
 
-slm=SLM(600,300)
-print('Widht: %d and heigth %d of SLM '%(slm.get_size()))
-cal=Calibration(slm)# Initialize calibration with SLM object
-pix2wave=P(1e-9*np.array([500,1/6]))# Sets bogus polynomial for pix to wave conversion
-cal.set_pixelToWavelength(pix2wave)
-bm=Beam(cal)
+bm=Beam()
+bm.set_beamHorizontalDelimiters([0,600])
+bm.set_beamVerticalDelimiters([0,300])
 bm.set_compressionCarrierWave(532e-9)
 print('Compression carrier wavelenght is %.2e nm'%bm.get_compressionCarrier(unit='wavelength'))
 print('Compression carrier angular frequency is %.2e rad.Hz'%bm.get_compressionCarrier(unit='ang_frequency'))
