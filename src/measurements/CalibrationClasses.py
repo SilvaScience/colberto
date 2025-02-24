@@ -19,33 +19,62 @@ from src.compute.calibration import Calibration
 class VerticalBeamCalibrationMeasurement(QtCore.QThread):
     '''
         Runs a measurement that will gradually turn on rows of the SLM and record the intensity on the spectrometer.
+        signals:
+            - send_vertical_calibration : 2d.array of spectra acquired during the row scan
+            - sendWavelengths :  array of wavelengths associated with the spectra array
+            - sendIntensities : tuple of np arrays, first is row index and second is spectrally integrated intensity
+            - sendProgress :  float representing the progress of the measurement.
     '''
-    sendSpectrum= QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    sendIntensities= QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    #send_rows = QtCore.pyqtSignal(np.ndarray)
+    #send_intensities= QtCore.pyqtSignal(np.ndarray)
+    send_vertical_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
-    add_calibration = QtCore.pyqtSignal(tuple)
 
-    def __init__(self,devices, parameters,calibration):
+    def __init__(self,devices, parameters):
+        '''
+         Initializes the Vertical beam calibration measurement
+         input:
+             - devices: the devices dictionnary holding at least a spectrometer and a SLM
+             - parameters: dictonnary holding the grating period and the increment in number of activated rows.
+        ''' 
         super(VerticalBeamCalibrationMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
         self.SLM= devices['SLM']
-        self.rows= []  # preallocate indices array
-        self.spec = []  # preallocate spec array
-        self.intensities= []  # preallocate spec array
+        self.spectra = []  # preallocate spec array
+        self.wls = self.spectrometer.get_wavelength()
         self.terminate = False
         self.acquire_measurement = True
         self.rows_multiple=parameters['rows_multiple']
+        self.grating_period=parameters['grating_period']
         self.rows=np.arange(0,self.SLM.get_height(),self.rows_multiple)
-        beam=Beam(parameters:while)
+        self.intensities= np.zeros(self.rows.shape)# preallocate spec array
+        self.vertical_calibration_data={
+            'rows' : self.rows,
+            'intensities' : self.intensities
+        }
+        # Configure single beam over which the rows will be scanned
+        self.monobeam=Beam()
+        self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
+        self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
+        self.monobeam.set_gratingAmplitude=1
+        self.monobeam.set_gratingPeriod=self.grating_period
 
     def run(self):
         for i,row in enumerate(self.rows):
             if not self.terminate:  # check whether stopping measurement is called
-                
+                #Take the data
+                self.monobeam.set_beamVerticalDelimiters([0, row])
+                image_output=self.monobeam.makeGrating()                
                 self.take_spectrum()
-                self.intensities.append(np.sum(self.spec))
+                self.intensities[i]=np.sum(self.spec)
+                # Emit the data through signals 
                 self.sendProgress.emit(i/len(rows))
-        self.sendIntensities.emit(self.rows,self.intensities)
+                self.vertical_calibration_data['intensities']=self.intensities
+                self.send_vertical_calibration_data(('vertical_calibration_data',self.vertical_calibration_data))
+                self.sendSpectra.emit(self.spectra)
+        self.vertical_calibration_data['intensities']=self.intensities
+        self.send_vertical_calibration_data(('vertical_calibration_data',self.vertical_calibration_data))
         self.stop()
         print('Vertical Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
 

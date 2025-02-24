@@ -17,12 +17,9 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-<<<<<<< HEAD
-=======
 from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
->>>>>>> dev
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement
@@ -80,6 +77,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_file_indicator = self.findChild(QtWidgets.QLineEdit, 'bg_file_lineEdit')
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
+        self.grating_period_edit=self.findChild(QtWidgets.QLineEdit,'grating_period_line_edit')
+        self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
+        self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -302,14 +302,16 @@ class MainInterface(QtWidgets.QMainWindow):
             print('Measurement not started, devices are busy')
 
     def VerticalBeamCalibrationMeasurement(self):
-       '''
-            Sets up and starts a vertical Beam Calibration.
-       ''' 
+        '''
+             Sets up and starts a vertical Beam Calibration.
+        ''' 
         if not self.measurement_busy:
             self.measurement_busy = True
             self.DataHandling.clear_data()
-            self.measurement= VerticalBeamCalibrationMeasurement(self.devices, self.parameter,self.DataHandling.calibration)
-            self.measurement.set_calibration.connect(self.DataHandling.add_calibration)
+            self.measurement= VerticalBeamCalibrationMeasurement(self.devices, self.parameter)
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
