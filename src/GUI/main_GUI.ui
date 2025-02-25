@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>893</width>
+    <width>1135</width>
     <height>1002</height>
    </rect>
   </property>
@@ -330,25 +330,25 @@ p, li { white-space: pre-wrap; }
          <widget class="QGroupBox" name="vertical_calibration_groupbox">
           <property name="geometry">
            <rect>
-            <x>19</x>
-            <y>29</y>
+            <x>20</x>
+            <y>30</y>
             <width>521</width>
-            <height>211</height>
+            <height>281</height>
            </rect>
           </property>
           <property name="font">
            <font>
             <weight>50</weight>
             <bold>false</bold>
-            <underline>true</underline>
-            <kerning>true</kerning>
+            <underline>false</underline>
+            <kerning>false</kerning>
            </font>
           </property>
           <property name="title">
-           <string>Vertical Calibration</string>
+           <string/>
           </property>
           <property name="checkable">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="checked">
            <bool>false</bool>
@@ -357,7 +357,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>145</x>
-             <y>34</y>
+             <y>24</y>
              <width>30</width>
              <height>30</height>
             </rect>
@@ -376,13 +376,100 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>40</y>
+             <y>30</y>
              <width>131</width>
              <height>19</height>
             </rect>
            </property>
            <property name="text">
             <string>Grating period (px):</string>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="vertical_calib_plot_layout" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>260</x>
+             <y>10</y>
+             <width>231</width>
+             <height>241</height>
+            </rect>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="measure_vertical_calibration">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>70</y>
+             <width>88</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Measure</string>
+           </property>
+          </widget>
+          <widget class="QTableWidget" name="beam_vertical_delimiters_table">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>110</y>
+             <width>221</width>
+             <height>151</height>
+            </rect>
+           </property>
+           <property name="rowCount">
+            <number>4</number>
+           </property>
+           <property name="columnCount">
+            <number>2</number>
+           </property>
+           <row/>
+           <row/>
+           <row/>
+           <row/>
+           <column>
+            <property name="text">
+             <string>Top index</string>
+            </property>
+           </column>
+           <column>
+            <property name="text">
+             <string>Bottom index</string>
+            </property>
+           </column>
+          </widget>
+          <widget class="QPushButton" name="assign_beams_button">
+           <property name="geometry">
+            <rect>
+             <x>120</x>
+             <y>70</y>
+             <width>101</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Assign beams</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_vertical_calibration_box">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>0</y>
+             <width>231</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Vertical SLM calibration </string>
            </property>
           </widget>
          </widget>
@@ -598,7 +685,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>893</width>
+     <width>1135</width>
      <height>24</height>
     </rect>
    </property>
@@ -690,6 +777,14 @@ Start:Stepnumber:Stop  Start:Stepnum...
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QWidget</extends>
+   <header>pyqtgraph</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -13,8 +13,10 @@ from pathlib import Path
 import numpy as np
 from PyQt5 import QtCore, QtWidgets, uic
 from functools import partial
+import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
+from GUI.VerticalCalibPlot import VerticalCalibPlot 
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
@@ -78,8 +80,11 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
         self.grating_period_edit=self.findChild(QtWidgets.QLineEdit,'grating_period_line_edit')
+        # Spatial calibration tab
         self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
         self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
+        self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
+        self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -98,6 +103,8 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.ParameterPlot)
         self.parameter_tab.setLayout(vbox)
+
+        self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
