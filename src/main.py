@@ -53,6 +53,9 @@ class MainInterface(QtWidgets.QMainWindow):
         # initialize SLMDemo
         self.SLM = SLMDemo()
         self.devices['SLM'] = self.SLM
+        
+        self.SLM.slm_worker.start()
+        self.SLM.slm_worker.slmParamsSignal.connect(self.SLM.handle_slm_params)
         print('SLMDemo connected')
 
 

@@ -17,8 +17,8 @@
    <property name="geometry">
     <rect>
      <x>60</x>
-     <y>190</y>
-     <width>1200</width>
+     <y>60</y>
+     <width>1450</width>
      <height>800</height>
     </rect>
    </property>
@@ -27,11 +27,18 @@
   <widget class="QLabel" name="label">
    <property name="geometry">
     <rect>
-     <x>70</x>
-     <y>40</y>
+     <x>700</x>
+     <y>20</y>
      <width>241</width>
      <height>16</height>
     </rect>
+   </property>
+   <property name="font">
+      <font>
+         <pointsize>16</pointsize> <!-- Taille du texte -->
+         <bold>true</bold> <!-- Texte en gras -->
+         <italic>false</italic> <!-- Texte en italique (optionnel) -->
+      </font>
    </property>
    <property name="text">
     <string>View of the SLM</string>
