@@ -55,6 +55,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['spectrometer'] = self.spectrometer
         print('Spectrometer connection failed, use DEMO')
 
+        # Initialize SLM
+        self.SLM= SLMDemo()
+        self.devices['SLM'] = self.SLM
+        print('SLM connection failed, use DEMO')
 
         # initialize MonochromDemo
         self.Monochrom = MonochromDemo() 
@@ -79,12 +83,15 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_file_indicator = self.findChild(QtWidgets.QLineEdit, 'bg_file_lineEdit')
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
-        self.grating_period_edit=self.findChild(QtWidgets.QLineEdit,'grating_period_line_edit')
+        self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
         # Spatial calibration tab
         self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
         self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
         self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
         self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
+        self.assign_beams_vertical_delimiters= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
+        self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
+        self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -173,6 +180,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_check_box.stateChanged.connect(self.update_check_bg)
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
+        self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
 
         # run some functions once to define default values
         self.change_filename()
@@ -308,16 +316,17 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             print('Measurement not started, devices are busy')
 
-    def VerticalBeamCalibrationMeasurement(self):
+    def verticalBeamCalibrationMeasurement(self):
         '''
              Sets up and starts a vertical Beam Calibration.
         ''' 
         if not self.measurement_busy:
             self.measurement_busy = True
             self.DataHandling.clear_data()
-            self.measurement= VerticalBeamCalibrationMeasurement(self.devices, self.parameter)
+            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_intensities.connect(self.VerticalCalibPlot.set_data)
             self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:

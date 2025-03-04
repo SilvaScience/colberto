@@ -26,7 +26,7 @@ print('Energy at pixel 111:  %.3e eV'%bm.get_spectrumAtPixel(111,unit='energy'))
 print('Compression carrier wavelenght is %.2e nm'%bm.get_compressionCarrier(unit='wavelength'))
 print('Compression carrier angular frequency is %.2e rad.Hz'%bm.get_compressionCarrier(unit='ang_frequency'))
 bm.set_optimalPhase(P([0,0,1000,500]))
-bm.set_currentPhase(P([0,100,500]),mode='relative')
+bm.set_currentPhase(P([0,100,-1000,-500]),mode='relative')
 bm.set_beamVerticalDelimiters([100,250])
 
 print('Optimal phase is now:')

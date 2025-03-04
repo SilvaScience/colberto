@@ -333,7 +333,7 @@ p, li { white-space: pre-wrap; }
             <x>20</x>
             <y>30</y>
             <width>521</width>
-            <height>281</height>
+            <height>301</height>
            </rect>
           </property>
           <property name="font">
@@ -353,25 +353,6 @@ p, li { white-space: pre-wrap; }
           <property name="checked">
            <bool>false</bool>
           </property>
-          <widget class="QLineEdit" name="grating_period_line_edit">
-           <property name="geometry">
-            <rect>
-             <x>145</x>
-             <y>24</y>
-             <width>30</width>
-             <height>30</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>8</string>
-           </property>
-           <property name="readOnly">
-            <bool>false</bool>
-           </property>
-           <property name="clearButtonEnabled">
-            <bool>false</bool>
-           </property>
-          </widget>
           <widget class="QLabel" name="grating_period_label">
            <property name="geometry">
             <rect>
@@ -391,18 +372,18 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="geometry">
             <rect>
-             <x>260</x>
-             <y>10</y>
-             <width>231</width>
-             <height>241</height>
+             <x>240</x>
+             <y>20</y>
+             <width>261</width>
+             <height>271</height>
             </rect>
            </property>
           </widget>
           <widget class="QPushButton" name="measure_vertical_calibration">
            <property name="geometry">
             <rect>
-             <x>0</x>
-             <y>70</y>
+             <x>10</x>
+             <y>100</y>
              <width>88</width>
              <height>27</height>
             </rect>
@@ -415,7 +396,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>110</y>
+             <y>140</y>
              <width>221</width>
              <height>151</height>
             </rect>
@@ -445,7 +426,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>120</x>
-             <y>70</y>
+             <y>100</y>
              <width>101</width>
              <height>27</height>
             </rect>
@@ -470,6 +451,51 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="text">
             <string>Vertical SLM calibration </string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_2">
+           <property name="geometry">
+            <rect>
+             <x>6</x>
+             <y>66</y>
+             <width>141</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Row increment (px):</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="grating_period_spin_box">
+           <property name="geometry">
+            <rect>
+             <x>150</x>
+             <y>30</y>
+             <width>44</width>
+             <height>28</height>
+            </rect>
+           </property>
+           <property name="minimum">
+            <number>2</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="row_increment_spin_box">
+           <property name="geometry">
+            <rect>
+             <x>150</x>
+             <y>60</y>
+             <width>44</width>
+             <height>28</height>
+            </rect>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="value">
+            <number>5</number>
            </property>
           </widget>
          </widget>

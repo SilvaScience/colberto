@@ -115,7 +115,6 @@ class RunMeasurement(QtCore.QThread):
         self.terminate = True
         print(time.strftime('%H:%M:%S') + 'Request Stop')
 
-
 class BackgroundMeasurement(QtCore.QThread):
     # set used signal types, destination is set in main script
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)

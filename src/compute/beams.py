@@ -13,7 +13,7 @@ from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
 
 class Beam:
-    def __init__(self):
+    def __init__(self,SLMWidth,SLMHeight):
         """
         Instantiates a Beam object describing all properties of a single beam. All phase are in rad (units of 2*pi)
         Input:
@@ -21,16 +21,41 @@ class Beam:
         output:
             Beam Object           
         """
+        self.SLMWidth=SLMWidth
+        self.SLMHeight=SLMHeight
+        self.set_beamHorizontalDelimiters([0,SLMWidth])
+        self.set_beamVerticalDelimiters([0,SLMHeight])
         self.optimalPhasePolynomial=None
         self.currentPhasePolynomial=None
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
-        self.compressionCarrierFreq=None#stored internally in angular frequency
+        self.compressionCarrierFreq=co.waveToAngFreq(600)#stored internally in angular frequency, default is 600 nm
         self.delayCarrierFreq=None
-        self.beamHorizontalDelimiters=None# Horizontal position delimiter of beam on SLM in pixels. Default raises an error
-        self.beamVerticalDelimiters=None # Vertical position delimiter of beam on SLM in pixels. Default raises an error
         self.phaseGratingAmplitudeMask=None
         self.maskOn=False #Is the mask enabled in the output grating?
+        self.pixelToWavelength=P([600])
+
+    def make_mask(self,horizontalDelimiters=None,verticalDelimiters=None):
+        '''
+            Makes an amplitude mask corresponding to the vertical and horizontal delimiters
+            input:
+                - horizontalDelimiters (nd.array, Default None) Indices of the two horizontal limiting edges of the beam. Default uses internal delimiters
+                - verticalDelimiters (nd.array, Default None) Indices of the two vertical limiting edges of the beam. Default uses internal delimiters
+        '''
+        self.mask=np.ones((self.SLMHeight,self.SLMWidth))
+        if horizontalDelimiters is None:
+            horizontalDelimiters=self.get_beamHorizontalDelimiters()
+        if verticalDelimiters is None:
+            verticalDelimiters=self.get_beamVerticalDelimiters()
+        self.mask[horizontalDelimiters[0]:horizontalDelimiters[1],verticalDelimiters[0]:verticalDelimiters[1]]=1
+    
+    def set_mask(self,isTheBeamOn=True):
+        '''
+            Enables or disables the diffraction of the beam
+            input:
+                - isTheBeamOn (Bool) True turns the beam on and False turns it off
+        '''
+        self.maskOn=isTheBeamOn
 
     def set_beamVerticalDelimiters(self,delimiters):
         '''
@@ -40,7 +65,7 @@ class Beam:
         '''
         self.beamVerticalDelimiters=delimiters
 
-    def get_beamVerticalDelimiters(self,delimiters):
+    def get_beamVerticalDelimiters(self):
         '''
             Returns the vertical delimiters of the beam
             input:
@@ -48,7 +73,7 @@ class Beam:
         '''
         return self.beamVerticalDelimiters
 
-    def get_beamHorizontalDelimiters(self,delimiters):
+    def get_beamHorizontalDelimiters(self):
         '''
             Returns the vertical delimiters of the beam
             input:
@@ -91,10 +116,10 @@ class Beam:
         Sets the pixel to wavelength calibration polynomial for this beam
         input:
             - polynomial: (Polynomial object) a Numpy Power series polynomial relating a pixel index to a wavelength in m
-        '''
+        ''' 
         self.pixelToWavelength=polynomial
 
-    def set_compressionCarrierWave(self,compCarrierWave):
+    def set_compressionCarrierWave(self,compCarrierWave=None):
         """
         Sets the wavelength around which the phase coefficients for compression are defined
         input:
@@ -265,12 +290,12 @@ class Beam:
         '''
             Makes the phase grating using the current phase, amplitude and period
             output:
-                - 2d.array: A 2D phase array corresponding to the current phase profile 
+                - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
         if self.beamHorizontalDelimiters is None or self.beamVerticalDelimiters is None:
             raise ValueError('No pixel delimitations provided. Grating generation aborted and returning empty matrix')
         phaseGratingImage=[]
-        numberVerticalPixels=self.beamVerticalDelimiters[1]-self.beamVerticalDelimiters[0]
+        numberVerticalPixels=self.SLMHeight
         phaseProfile=self.get_sampledCurrentPhase()
         for mask,phase in zip(self.phaseGratingAmplitudeMask,phaseProfile):
             row=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)

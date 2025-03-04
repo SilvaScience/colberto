@@ -36,7 +36,7 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.parameter_display_dict['amplitude']['unit'] = ' V'
         self.parameter_display_dict['amplitude']['max'] = 1000
         self.parameter_display_dict['amplitude']['read'] = False
-
+    
         # set parameters
         self.amplitude = 5
 
@@ -55,4 +55,15 @@ class SLMDemo(QtWidgets.QMainWindow):
         if parameter == 'amplitude':
             self.parameter_dict['amplitude'] = value
             self.amplitude = value
+    
+    def get_height(self):
+        '''
+            Dummy function for SLM height
+        '''
+        return 300
 
+    def get_width(self):
+        '''
+            Dummy function for SLM width
+        '''
+        return 600

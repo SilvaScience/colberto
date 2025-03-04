@@ -26,12 +26,11 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
             - sendProgress :  float representing the progress of the measurement.
     '''
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    #send_rows = QtCore.pyqtSignal(np.ndarray)
-    #send_intensities= QtCore.pyqtSignal(np.ndarray)
+    send_intensities= QtCore.pyqtSignal(np.ndarray,np.ndarray)
     send_vertical_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, parameters):
+    def __init__(self,devices, grating_period,rows_multiple):
         '''
          Initializes the Vertical beam calibration measurement
          input:
@@ -45,20 +44,18 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.wls = self.spectrometer.get_wavelength()
         self.terminate = False
         self.acquire_measurement = True
-        self.rows_multiple=parameters['rows_multiple']
-        self.grating_period=parameters['grating_period']
-        self.rows=np.arange(0,self.SLM.get_height(),self.rows_multiple)
+        print(self.SLM.get_height())
+        self.rows=np.arange(0,self.SLM.get_height(),rows_multiple)
         self.intensities= np.zeros(self.rows.shape)# preallocate spec array
         self.vertical_calibration_data={
             'rows' : self.rows,
             'intensities' : self.intensities
         }
         # Configure single beam over which the rows will be scanned
-        self.monobeam=Beam()
+        self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
         self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
         self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
-        self.monobeam.set_gratingAmplitude=1
-        self.monobeam.set_gratingPeriod=self.grating_period
+        self.monobeam.set_gratingPeriod=grating_period
 
     def run(self):
         for i,row in enumerate(self.rows):
@@ -72,7 +69,8 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
                 self.sendProgress.emit(i/len(rows))
                 self.vertical_calibration_data['intensities']=self.intensities
                 self.send_vertical_calibration_data(('vertical_calibration_data',self.vertical_calibration_data))
-                self.sendSpectra.emit(self.spectra)
+                self.send_intensities(self.rows,self.intensities)
+                self.sendSpectra.emit(self.spec)
         self.vertical_calibration_data['intensities']=self.intensities
         self.send_vertical_calibration_data(('vertical_calibration_data',self.vertical_calibration_data))
         self.stop()
