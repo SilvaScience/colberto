@@ -23,15 +23,15 @@ class Beam:
         """
         self.SLMWidth=SLMWidth
         self.SLMHeight=SLMHeight
+        # initilization of parameters to default benign values
         self.set_beamHorizontalDelimiters([0,SLMWidth])
         self.set_beamVerticalDelimiters([0,SLMHeight])
-        self.optimalPhasePolynomial=None
-        self.currentPhasePolynomial=None
+        self.set_optimalPhase(P([0]))
+        self.set_currentPhase(P([0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
-        self.compressionCarrierFreq=co.waveToAngFreq(600)#stored internally in angular frequency, default is 600 nm
-        self.delayCarrierFreq=None
-        self.phaseGratingAmplitudeMask=None
+        self.set_compressionCarrierWave(600)
+        self.set_delayCarrierWave(600)
         self.maskOn=False #Is the mask enabled in the output grating?
         self.pixelToWavelength=P([600])
 
@@ -42,21 +42,24 @@ class Beam:
                 - horizontalDelimiters (nd.array, Default None) Indices of the two horizontal limiting edges of the beam. Default uses internal delimiters
                 - verticalDelimiters (nd.array, Default None) Indices of the two vertical limiting edges of the beam. Default uses internal delimiters
         '''
-        self.mask=np.ones((self.SLMHeight,self.SLMWidth))
+        self.mask=np.zeros((self.SLMWidth,self.SLMHeight))
         if horizontalDelimiters is None:
             horizontalDelimiters=self.get_beamHorizontalDelimiters()
         if verticalDelimiters is None:
             verticalDelimiters=self.get_beamVerticalDelimiters()
-        self.mask[horizontalDelimiters[0]:horizontalDelimiters[1],verticalDelimiters[0]:verticalDelimiters[1]]=1
-    
-    def set_mask(self,isTheBeamOn=True):
-        '''
-            Enables or disables the diffraction of the beam
-            input:
-                - isTheBeamOn (Bool) True turns the beam on and False turns it off
-        '''
-        self.maskOn=isTheBeamOn
+        self.mask[verticalDelimiters[0]:verticalDelimiters[1],horizontalDelimiters[0]:horizontalDelimiters[1]]=1
 
+    def get_mask(self):
+        ''' 
+            Returns the amplitude mask currently set and the wether it is on or not.
+            input:
+                None
+            output:
+                - nd.array: the amplitude mask currently configured
+                - bool: True if the mask is applied to the beam
+        '''
+        return self.mask, self.maskOn
+    
     def set_beamVerticalDelimiters(self,delimiters):
         '''
             Sets the vertical delimiters of the beam
@@ -118,6 +121,32 @@ class Beam:
             - polynomial: (Polynomial object) a Numpy Power series polynomial relating a pixel index to a wavelength in m
         ''' 
         self.pixelToWavelength=polynomial
+
+    def set_delayCarrierWave(self,compCarrierWave=None):
+        """
+        Sets the wavelength around which the phase coefficients for delay are defined
+        input:
+            wavelength: Compression carrier wavelength in m
+        """
+        self.compressionCarrierFreq=co.waveToAngFreq(compCarrierWave)
+
+    def get_delayCarrier(self,unit='ang_frequency'):
+        """
+        Gets the wavelength around which the phase coefficients for pulse delaying (rotating frame) are defined
+        input:
+            - unit: the unit in which to return the compression carrier frequency 
+                - 'wavelength' : Returns in units of wavelength (m)
+                - 'frequency' : Returns in units of frequency (Hz)
+                - 'ang_frequency' (default): Returns in units of angular frequency (rad.Hz)
+                - 'energy' : Returns in units of energy (eV)
+        output:
+            float: Delay carrier in specified units
+        """
+        conversionFunction={'wavelength':co.angFreqToWave,
+                            'frequency':co.angFreqToFreq,
+                            'ang_frequency': lambda x: x,
+                            'energy':co.angFreqToeV}
+        return conversionFunction[unit](self.delayCarrierFreq)
 
     def set_compressionCarrierWave(self,compCarrierWave=None):
         """
@@ -235,16 +264,6 @@ class Beam:
         angFreq=self.calibration.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.optimalPhasePolynomial(angFreq)
     
-    def set_gratingAmplitudeMask(self, mask):
-        '''
-            Sets the amplitude modulation along the horizontal axis of the phase grating.
-            input:
-                - mask (1d.array): The modulation of the grating's amplitude at a given pixel index from 0 (totally off) to 1 (fully on). The mask length must match the number of columns on the SLM's.
-        '''
-        if mask.shape[0]==self.get_horizontalIndices().shape[0]:
-            self.phaseGratingAmplitudeMask=mask
-        else:
-            raise(IndexError("The mask length must match the number of columns on the SLM's."))
     def set_maskStatus(self,maskOn):
         '''
             Sets wether the mask should be applied or not.
@@ -292,17 +311,15 @@ class Beam:
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
-        if self.beamHorizontalDelimiters is None or self.beamVerticalDelimiters is None:
-            raise ValueError('No pixel delimitations provided. Grating generation aborted and returning empty matrix')
         phaseGratingImage=[]
         numberVerticalPixels=self.SLMHeight
         phaseProfile=self.get_sampledCurrentPhase()
-        for mask,phase in zip(self.phaseGratingAmplitudeMask,phaseProfile):
+        for phase in phaseProfile:
             row=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
-            if self.maskOn:
-                row=mask*row
             phaseGratingImage.append(row)
         phaseGratingImage=np.array(phaseGratingImage)
+        if self.maskOn:
+            phaseGratingImage=phaseGratingImage*self.mask
         return phaseGratingImage 
 
     @staticmethod 
