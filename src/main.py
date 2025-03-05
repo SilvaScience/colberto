@@ -17,6 +17,7 @@ import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
+from GUI.ChirpPlot import Chirp_calibration_plot 
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
@@ -92,7 +93,16 @@ class MainInterface(QtWidgets.QMainWindow):
         self.assign_beams_vertical_delimiters= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
         self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
         self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
-
+        # Temporal calibration tab
+        self.temporal_calibration_tab= self.findChild(QtWidgets.QWidget, 'temporal_tab')
+        self.Chirp_scan_groupbox=self.findChild(QtWidgets.QGroupBox,'Chirp_scan_groupbox')
+        self.Acquire_data_temp_calibration_Button = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
+        self.Compression_carrier_wavelength = self.findChild(QtWidgets.QLineEdit,'Compression_carrier_wavelength')
+        self.Chirp_min = self.findChild(QtWidgets.QLineEdit,'Chirp_min')
+        self.Chirp_max = self.findChild(QtWidgets.QLineEdit,'Chirp_max')
+        self.Chirp_step = self.findChild(QtWidgets.QLineEdit,'Chirp_step')
+        self.chirp_calibration_plot=self.findChild(pg.PlotWidget,'Chirp_Scan')
+        
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
         for device in self.devices.keys():
@@ -112,6 +122,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.parameter_tab.setLayout(vbox)
 
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
+        self.Chirp_calibration_plot = Chirp_calibration_plot (self.chirp_calibration_plot)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """

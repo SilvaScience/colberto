@@ -184,11 +184,11 @@
           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Ubuntu Sans'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;User:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;Sample:&lt;br /&gt;Power:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;Wavelength:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;Freq: &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;User:&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;Sample:&lt;br /&gt;Power:&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;Wavelength:&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;Freq: &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
         <widget class="QLabel" name="label">
@@ -224,94 +224,9 @@ p, li { white-space: pre-wrap; }
     <item>
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
-       <widget class="QGroupBox" name="groupBox_2">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>10</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="minimumSize">
-         <size>
-          <width>0</width>
-          <height>55</height>
-         </size>
-        </property>
-        <property name="title">
-         <string>Quick Control</string>
-        </property>
-        <widget class="QPushButton" name="acquire_pushButton">
-         <property name="geometry">
-          <rect>
-           <x>170</x>
-           <y>20</y>
-           <width>75</width>
-           <height>23</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Acquire</string>
-         </property>
-        </widget>
-        <widget class="QPushButton" name="run_pushButton">
-         <property name="geometry">
-          <rect>
-           <x>90</x>
-           <y>20</y>
-           <width>75</width>
-           <height>23</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Run</string>
-         </property>
-        </widget>
-        <widget class="QPushButton" name="stop_pushButton">
-         <property name="geometry">
-          <rect>
-           <x>250</x>
-           <y>20</y>
-           <width>75</width>
-           <height>23</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>Stop</string>
-         </property>
-        </widget>
-        <widget class="QPushButton" name="view_pushButton">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>20</y>
-           <width>75</width>
-           <height>23</height>
-          </rect>
-         </property>
-         <property name="text">
-          <string>View</string>
-         </property>
-        </widget>
-        <widget class="QWidget" name="horizontalLayoutWidget">
-         <property name="geometry">
-          <rect>
-           <x>530</x>
-           <y>10</y>
-           <width>321</width>
-           <height>41</height>
-          </rect>
-         </property>
-         <layout class="QHBoxLayout" name="set_power_layout"/>
-        </widget>
-       </widget>
-      </item>
-      <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>3</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -330,8 +245,8 @@ p, li { white-space: pre-wrap; }
          <widget class="QGroupBox" name="vertical_calibration_groupbox">
           <property name="geometry">
            <rect>
-            <x>20</x>
-            <y>30</y>
+            <x>40</x>
+            <y>50</y>
             <width>521</width>
             <height>301</height>
            </rect>
@@ -432,7 +347,7 @@ p, li { white-space: pre-wrap; }
             </rect>
            </property>
            <property name="text">
-            <string>Assign beams and period</string>
+            <string>Assign beams</string>
            </property>
           </widget>
           <widget class="QLabel" name="label_vertical_calibration_box">
@@ -504,6 +419,181 @@ p, li { white-space: pre-wrap; }
          <attribute name="title">
           <string>Temporal Calibration</string>
          </attribute>
+         <widget class="PlotWidget" name="Chirp_Scan" native="true">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="geometry">
+           <rect>
+            <x>150</x>
+            <y>360</y>
+            <width>431</width>
+            <height>351</height>
+           </rect>
+          </property>
+         </widget>
+         <widget class="QGroupBox" name="Chirp_scan_groupbox">
+          <property name="geometry">
+           <rect>
+            <x>100</x>
+            <y>30</y>
+            <width>521</width>
+            <height>301</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <weight>50</weight>
+            <bold>false</bold>
+            <underline>false</underline>
+            <kerning>false</kerning>
+           </font>
+          </property>
+          <property name="title">
+           <string/>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <widget class="QLabel" name="label_vertical_calibration_box_2">
+           <property name="geometry">
+            <rect>
+             <x>190</x>
+             <y>10</y>
+             <width>131</width>
+             <height>41</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Chirp Scan</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Compression_carrier_wavelength">
+           <property name="geometry">
+            <rect>
+             <x>350</x>
+             <y>110</y>
+             <width>113</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>532</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_3">
+           <property name="geometry">
+            <rect>
+             <x>310</x>
+             <y>70</y>
+             <width>201</width>
+             <height>31</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Compresion Carrier Wavelength</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Chirp_min">
+           <property name="geometry">
+            <rect>
+             <x>80</x>
+             <y>220</y>
+             <width>113</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Chirp_max">
+           <property name="geometry">
+            <rect>
+             <x>220</x>
+             <y>220</y>
+             <width>113</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>100</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_7">
+           <property name="geometry">
+            <rect>
+             <x>400</x>
+             <y>180</y>
+             <width>41</width>
+             <height>31</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Step</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_6">
+           <property name="geometry">
+            <rect>
+             <x>260</x>
+             <y>180</y>
+             <width>31</width>
+             <height>31</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Max</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_5">
+           <property name="geometry">
+            <rect>
+             <x>120</x>
+             <y>180</y>
+             <width>31</width>
+             <height>31</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Min</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Chirp_step">
+           <property name="geometry">
+            <rect>
+             <x>360</x>
+             <y>220</y>
+             <width>113</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>1</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="Acquire_data_temp_calibration">
+           <property name="geometry">
+            <rect>
+             <x>60</x>
+             <y>90</y>
+             <width>141</width>
+             <height>41</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Acquire</string>
+           </property>
+          </widget>
+         </widget>
         </widget>
         <widget class="QWidget" name="parameter_tab">
          <attribute name="title">
@@ -702,6 +792,91 @@ Start:Stepnumber:Stop  Start:Stepnum...
         </widget>
        </widget>
       </item>
+      <item>
+       <widget class="QGroupBox" name="groupBox_2">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>10</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>55</height>
+         </size>
+        </property>
+        <property name="title">
+         <string>Quick Control</string>
+        </property>
+        <widget class="QPushButton" name="acquire_pushButton">
+         <property name="geometry">
+          <rect>
+           <x>170</x>
+           <y>20</y>
+           <width>75</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Acquire</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="run_pushButton">
+         <property name="geometry">
+          <rect>
+           <x>90</x>
+           <y>20</y>
+           <width>75</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Run</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="stop_pushButton">
+         <property name="geometry">
+          <rect>
+           <x>250</x>
+           <y>20</y>
+           <width>75</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Stop</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="view_pushButton">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>20</y>
+           <width>75</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>View</string>
+         </property>
+        </widget>
+        <widget class="QWidget" name="horizontalLayoutWidget">
+         <property name="geometry">
+          <rect>
+           <x>530</x>
+           <y>10</y>
+           <width>321</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <layout class="QHBoxLayout" name="set_power_layout"/>
+        </widget>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>
@@ -712,7 +887,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
      <x>0</x>
      <y>0</y>
      <width>1135</width>
-     <height>24</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

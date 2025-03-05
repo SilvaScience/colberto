@@ -84,3 +84,9 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.terminate = True
         print(time.strftime('%H:%M:%S') + ' Request Stop')
 
+
+class ChirpTemporalCalibration(QtCore.QThread):
+    '''
+        Runs a chirp scan with stablish carrier wavelenth, a minimun value, a maximun  value and a defined step.
+            - spectrum: 2d.array of spectra acquired during the chrip scan
+    '''
