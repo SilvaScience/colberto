@@ -49,6 +49,13 @@ class SLMDemo(QtWidgets.QMainWindow):
         project_folder = Path(__file__).parents[1].resolve()
         uic.loadUi(Path(project_folder,r'GUI/SLM_GUI.ui'), self)
 
+    def write_image(self,image):
+        '''
+            Placeholder for image writing on the SLM
+            input:
+                - image (nd.array)
+        '''
+        return 42
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """

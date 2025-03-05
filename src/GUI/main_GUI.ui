@@ -432,7 +432,7 @@ p, li { white-space: pre-wrap; }
             </rect>
            </property>
            <property name="text">
-            <string>Assign beams</string>
+            <string>Assign beams and period</string>
            </property>
           </widget>
           <widget class="QLabel" name="label_vertical_calibration_box">

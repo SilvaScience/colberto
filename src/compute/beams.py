@@ -185,14 +185,6 @@ class Beam:
             phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial)
         self.optimalPhasePolynomial=phasePolynomial
 
-    def get_optimalPhase(self,indices):
-        '''
-            Gets the optimal phase for the beam (spectral phase profile to apply to get best compression and synchronization with the LO)
-            output:
-                - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
-        '''
-        return self.optimalPhasePolynomial
-
     def set_currentPhase(self,phasePolynomial,mode='relative',unit='fs'):
         '''
             Sets the beam's phase profile 
@@ -311,6 +303,9 @@ class Beam:
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
+        if self.phaseGratingPeriod is None:
+            
+            return np.zeros((self.SLMWidth,self.SLMHeight))
         phaseGratingImage=[]
         numberVerticalPixels=self.SLMHeight
         phaseProfile=self.get_sampledCurrentPhase()

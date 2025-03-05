@@ -55,7 +55,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
         self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
         self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
-        self.monobeam.set_gratingPeriod=grating_period
+        self.monobeam.set_gratingPeriod(grating_period)
 
     def run(self):
         for i,row in enumerate(self.rows):
@@ -63,16 +63,16 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
                 #Take the data
                 self.monobeam.set_beamVerticalDelimiters([0, row])
                 image_output=self.monobeam.makeGrating()                
+                self.SLM.write_image(image_output)
                 self.take_spectrum()
                 self.intensities[i]=np.sum(self.spec)
                 # Emit the data through signals 
-                self.sendProgress.emit(i/len(rows))
+                self.sendProgress.emit(i/len(self.rows)*100)
                 self.vertical_calibration_data['intensities']=self.intensities
-                self.send_vertical_calibration_data(('vertical_calibration_data',self.vertical_calibration_data))
-                self.send_intensities(self.rows,self.intensities)
-                self.sendSpectra.emit(self.spec)
+                self.send_intensities.emit(self.rows,self.intensities)
         self.vertical_calibration_data['intensities']=self.intensities
-        self.send_vertical_calibration_data(('vertical_calibration_data',self.vertical_calibration_data))
+        self.send_vertical_calibration_data.emit(('vertical_calibration_data',self.vertical_calibration_data))
+        self.sendProgress.emit(100)
         self.stop()
         print('Vertical Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
 
