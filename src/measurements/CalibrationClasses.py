@@ -8,6 +8,7 @@ import time
 from PyQt5 import QtCore
 import numpy as np
 from pathlib import Path
+from scipy import special
 import sys
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
@@ -44,7 +45,6 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.wls = self.spectrometer.get_wavelength()
         self.terminate = False
         self.acquire_measurement = True
-        print(self.SLM.get_height())
         self.rows=np.arange(0,self.SLM.get_height(),rows_multiple)
         self.intensities= np.zeros(self.rows.shape)# preallocate spec array
         self.vertical_calibration_data={
@@ -56,6 +56,10 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
         self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
         self.monobeam.set_gratingPeriod(grating_period)
+        self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
+        if self.isDemo:
+            fakeBeamshape = lambda x,x0: 1000*(special.erf((x-x0)/10)+1)
+            self.demoIntensities=fakeBeamshape(self.rows,2*40)+fakeBeamshape(self.rows,2*120)+fakeBeamshape(self.rows,2*200)+fakeBeamshape(self.rows,2*280)
 
     def run(self):
         for i,row in enumerate(self.rows):
@@ -65,7 +69,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
                 image_output=self.monobeam.makeGrating()                
                 self.SLM.write_image(image_output)
                 self.take_spectrum()
-                self.intensities[i]=np.sum(self.spec)
+                self.intensities[i]=np.sum(self.spec) if not self.isDemo else self.demoIntensities[i] 
                 # Emit the data through signals 
                 self.sendProgress.emit(i/len(self.rows)*100)
                 self.vertical_calibration_data['intensities']=self.intensities

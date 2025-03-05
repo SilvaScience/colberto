@@ -91,6 +91,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
         self.assign_beams_vertical_delimiters= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
         self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
+        #self.beam_vertical_delimiters_table.
         self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
 
         # initial parameter values, retrieved from devices
@@ -180,7 +181,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_check_box.stateChanged.connect(self.update_check_bg)
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
+        # Vertical calibration
         self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
+        self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
+        
 
         # run some functions once to define default values
         self.change_filename()
@@ -259,7 +263,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def update_check_bg(self):
         self.DataHandling.correct_background = self.bg_check_box.isChecked()
-
+    
     ##### Measurements #####
 
     def acquire_measurement(self):
@@ -331,6 +335,29 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
+    
+    def verticalBeamDelimitersChanged(self,row_index,col_index):
+        '''
+            Validates the vertical delimiter change and refreshes the vertical beam delimiters plot when they are changed in the table
+            input:
+                - row_index (int): the index of the row of the changed column
+                - col_index (int): the index of the row of the changed column
+        '''
+        regions={}
+        table=self.beam_vertical_delimiters_table
+        if not col_index==0: #In case didn,t change the label of the beam
+            try:
+                added_item=int(table.item(row_index,col_index).text())# Check for integer
+                if any([added_item<0,added_item>self.devices['SLM'].get_height()]):# Check for proper bounds
+                    raise ValueError
+                for row in range(table.rowCount()):
+                    top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+                    bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+                    label=table.item(row,0).text()
+                    regions[label]=[top_index,bottom_index]
+                self.VerticalCalibPlot.draw_regions(regions)
+            except ValueError:
+                table.setItem(row_index,col_index,None)
 
     def stop_measurement(self):
         # stop measurement
