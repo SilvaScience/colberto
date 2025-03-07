@@ -182,7 +182,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_check_box.stateChanged.connect(self.update_check_bg)
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
-        # Vertical calibration
+        # Vertical calibration connect events
         self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
         self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
         self.assign_beams_vertical_delimiters_button.clicked.connect(self.assign_vertical_beam_calibration)
