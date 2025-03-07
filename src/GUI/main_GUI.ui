@@ -538,6 +538,154 @@ p, li { white-space: pre-wrap; }
            </property>
           </widget>
          </widget>
+         <widget class="QGroupBox" name="vertical_calibration_groupbox_2">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>350</y>
+            <width>611</width>
+            <height>301</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <weight>50</weight>
+            <bold>false</bold>
+            <underline>false</underline>
+            <kerning>false</kerning>
+           </font>
+          </property>
+          <property name="title">
+           <string/>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <widget class="PlotWidget" name="spectral_calib_plot_layout" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>330</x>
+             <y>10</y>
+             <width>261</width>
+             <height>271</height>
+            </rect>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="measure_spectral_calibration">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>100</y>
+             <width>88</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Measure</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="assign_spectral_calibraion_button">
+           <property name="geometry">
+            <rect>
+             <x>190</x>
+             <y>100</y>
+             <width>131</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Assign calibration</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_spectral_calibration_box">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>0</y>
+             <width>231</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Spectral SLM calibration </string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="column_increment_label">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>40</y>
+             <width>171</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Column increment (px):</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="column_increment_spin_box">
+           <property name="geometry">
+            <rect>
+             <x>180</x>
+             <y>34</y>
+             <width>44</width>
+             <height>28</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+          <widget class="QLabel" name="column_width_label">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>76</y>
+             <width>171</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Column width (px):</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="column_width_spin_box">
+           <property name="geometry">
+            <rect>
+             <x>180</x>
+             <y>70</y>
+             <width>44</width>
+             <height>28</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+         </widget>
         </widget>
         <widget class="QWidget" name="temporal_tab">
          <attribute name="title">
