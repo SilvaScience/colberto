@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['makegrating_0',['makeGrating',['../classbeams_1_1Beam.html#ad4ed00fd5756f16d79c8c51a5a9180b9',1,'beams::Beam']]],
-  ['measure_1',['measure',['../classstreising__camera_1_1streising.html#a3742ac7b986c83cc4eb2d8c29304aba5',1,'streising_camera::streising']]]
+  ['do_5fbinning_0',['do_binning',['../classSpectrometerDemo__advanced_1_1SpectrometerDemo.html#acc4faa28eca8a81567eba82a53ab7aa1',1,'SpectrometerDemo_advanced::SpectrometerDemo']]],
+  ['draw_5fregions_1',['draw_regions',['../classVerticalCalibPlot_1_1VerticalCalibPlot.html#addfb91aa9447ae8917fe46e93a147877',1,'VerticalCalibPlot::VerticalCalibPlot']]]
 ];

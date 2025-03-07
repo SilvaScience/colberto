@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['tremblay_20s_20documentation_0',['Colberto Tremblay&apos;s documentation',['../index.html',1,'']]]
+  ['management_0',['Beam management',['../md_manual_2beam__management.html',1,'']]]
 ];

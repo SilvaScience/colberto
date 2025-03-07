@@ -26,14 +26,22 @@ var NAVTREE =
 [
   [ "Colberto Tremblay", "index.html", [
     [ "Colberto documentation", "index.html", "index" ],
+    [ "Beam management", "md_manual_2beam__management.html", [
+      [ "Location of beam configurations and attributes", "md_manual_2beam__management.html#autotoc_md1", null ],
+      [ "Calibrations", "md_manual_2beam__management.html#autotoc_md2", null ],
+      [ "Manipulating beams", "md_manual_2beam__management.html#autotoc_md3", null ]
+    ] ],
+    [ "Spatial calibrations", "md_manual_2calibrations_2spatial__calibration.html", [
+      [ "Vertical calibration", "md_manual_2calibrations_2spatial__calibration.html#autotoc_md5", null ]
+    ] ],
     [ "Contributing", "md_manual_2contributing.html", [
       [ "Documentation", "md_manual_2contributing.html#documentation", null ],
-      [ "Setting up your Python environnement", "md_manual_2contributing.html#autotoc_md1", null ],
-      [ "Updating python environnement", "md_manual_2contributing.html#autotoc_md2", null ],
-      [ "Naming Conventions", "md_manual_2contributing.html#autotoc_md3", null ],
-      [ "Folder structure", "md_manual_2contributing.html#autotoc_md4", [
-        [ "Classes", "md_manual_2contributing.html#autotoc_md5", null ],
-        [ "Functions and Methods", "md_manual_2contributing.html#autotoc_md6", null ]
+      [ "Setting up your Python environnement", "md_manual_2contributing.html#autotoc_md7", null ],
+      [ "Updating python environnement", "md_manual_2contributing.html#autotoc_md8", null ],
+      [ "Naming Conventions", "md_manual_2contributing.html#autotoc_md9", null ],
+      [ "Folder structure", "md_manual_2contributing.html#autotoc_md10", [
+        [ "Classes", "md_manual_2contributing.html#autotoc_md11", null ],
+        [ "Functions and Methods", "md_manual_2contributing.html#autotoc_md12", null ]
       ] ]
     ] ],
     [ "Namespaces", "namespaces.html", [
