@@ -50,7 +50,10 @@ class VerticalCalibPlot(QtWidgets.QMainWindow):
             input:
                 - regions (dict): dict of np.1darray (2 elements [top_limit, bottom_limit]) with keys as labels
         '''
-        self.clear_plot()
+        if self.xdata is not None:
+            self.set_data(self.xdata,self.ydata)
+        else:
+            self.clear_plot()
         yRange=self.graphWidget.getAxis('left').range
         for region in regions:
             lower_bound=regions[region][0]

@@ -59,7 +59,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
         if self.isDemo:
             fakeBeamshape = lambda x,x0: 1000*(special.erf((x-x0)/10)+1)
-            self.demoIntensities=fakeBeamshape(self.rows,2*40)+fakeBeamshape(self.rows,2*120)+fakeBeamshape(self.rows,2*200)+fakeBeamshape(self.rows,2*280)
+            self.demoIntensities=fakeBeamshape(self.rows,self.SLM.get_height()/8)+fakeBeamshape(self.rows,3*self.SLM.get_height()/8)+fakeBeamshape(self.rows,5*self.SLM.get_height()/8)+fakeBeamshape(self.rows,7*self.SLM.get_height()/8)
 
     def run(self):
         for i,row in enumerate(self.rows):

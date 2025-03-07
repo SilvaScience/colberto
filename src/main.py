@@ -25,6 +25,7 @@ from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement
+from compute.beams import Beam
 
 
 class MainInterface(QtWidgets.QMainWindow):
@@ -89,7 +90,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
         self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
         self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
-        self.assign_beams_vertical_delimiters= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
+        self.assign_beams_vertical_delimiters_button= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
         self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
         #self.beam_vertical_delimiters_table.
         self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
@@ -184,6 +185,7 @@ class MainInterface(QtWidgets.QMainWindow):
         # Vertical calibration
         self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
         self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
+        self.assign_beams_vertical_delimiters_button.clicked.connect(self.assign_vertical_beam_calibration)
         
 
         # run some functions once to define default values
@@ -358,6 +360,21 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.VerticalCalibPlot.draw_regions(regions)
             except ValueError:
                 table.setItem(row_index,col_index,None)
+
+    def assign_vertical_beam_calibration(self):
+        '''
+            Saves the current vertical beam calibration to the DataHandling
+        '''
+        table=self.beam_vertical_delimiters_table
+        for row in range(table.rowCount()):
+            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
+            if all([label is not None, bottom_index is not None, top_index is not None]):
+                beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam.set_beamVerticalDelimiters([top_index,bottom_index])
+                beam.set_gratingAmplitude(self.grating_period_edit.value())
+                self.DataHandling.set_beam((label,beam))
 
     def stop_measurement(self):
         # stop measurement
