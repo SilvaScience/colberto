@@ -67,7 +67,7 @@ class measurement_settings(Structure):
 	("cont_pause_in_microseconds", c_uint32),
 	("camera_settings", camera_settings * 5)]
     
-class streising:
+class stresing:
 
     def __init__(self, path_config, path_camera_dll):
         
