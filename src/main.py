@@ -17,6 +17,7 @@ import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
+from GUI.SpectralCalibPlot import SpectralCalibDataPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
@@ -24,7 +25,7 @@ from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement
 from compute.beams import Beam
 
 
@@ -86,14 +87,20 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
         self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
         # Spatial calibration tab
+        ## Vertical calibration tab
         self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
         self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
         self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
         self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
         self.assign_beams_vertical_delimiters_button= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
         self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
-        #self.beam_vertical_delimiters_table.
         self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
+        ## Spectral calibration tab
+        self.column_increment_spinbox=self.findChild(QtWidgets.QSpinBox,'column_increment_spin_box')
+        self.column_width_spinbox=self.findChild(QtWidgets.QSpinBox,'column_width_spin_box')
+        self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
+        self.spectral_calibration_image_layout=self.findChild(pg.ImageItem,'spectral_calib_image_layout')
+
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -114,6 +121,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.parameter_tab.setLayout(vbox)
 
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
+        self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -186,8 +194,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
         self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
         self.assign_beams_vertical_delimiters_button.clicked.connect(self.assign_vertical_beam_calibration)
-        
-
+        # Spectral calibration connect events
+        self.spectral_calibration_runButton.clicked.connect(self.spectralBeamCalibrationMeasurement)
         # run some functions once to define default values
         self.change_filename()
 
@@ -334,6 +342,22 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_intensities.connect(self.VerticalCalibPlot.set_data)
             self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def spectralBeamCalibrationMeasurement(self):
+        '''
+             Sets up and starts a spectral Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value())
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_intensities.connect(self.SpectralCalibDataPlot.set_data)
+            self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')

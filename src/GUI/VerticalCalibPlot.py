@@ -38,6 +38,9 @@ class VerticalCalibPlot(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(np.ndarray, np.ndarray)
     def set_data(self, x_array, y_array):
+        '''
+            Updates the data in the plot
+        '''
         self.xdata=x_array
         self.ydata=y_array
         self.graphWidget.clear()

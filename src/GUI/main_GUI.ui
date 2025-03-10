@@ -331,9 +331,9 @@ p, li { white-space: pre-wrap; }
           <property name="geometry">
            <rect>
             <x>20</x>
-            <y>30</y>
+            <y>70</y>
             <width>611</width>
-            <height>301</height>
+            <height>271</height>
            </rect>
           </property>
           <property name="font">
@@ -353,19 +353,6 @@ p, li { white-space: pre-wrap; }
           <property name="checked">
            <bool>false</bool>
           </property>
-          <widget class="QLabel" name="grating_period_label">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>30</y>
-             <width>131</width>
-             <height>19</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Grating period (px):</string>
-           </property>
-          </widget>
           <widget class="PlotWidget" name="vertical_calib_plot_layout" native="true">
            <property name="enabled">
             <bool>true</bool>
@@ -373,9 +360,9 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>330</x>
-             <y>10</y>
+             <y>60</y>
              <width>261</width>
-             <height>271</height>
+             <height>221</height>
             </rect>
            </property>
           </widget>
@@ -499,25 +486,6 @@ p, li { white-space: pre-wrap; }
             <string>Row increment (px):</string>
            </property>
           </widget>
-          <widget class="QSpinBox" name="grating_period_spin_box">
-           <property name="geometry">
-            <rect>
-             <x>150</x>
-             <y>30</y>
-             <width>44</width>
-             <height>28</height>
-            </rect>
-           </property>
-           <property name="inputMethodHints">
-            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
-           </property>
-           <property name="minimum">
-            <number>2</number>
-           </property>
-           <property name="value">
-            <number>5</number>
-           </property>
-          </widget>
           <widget class="QSpinBox" name="row_increment_spin_box">
            <property name="geometry">
             <rect>
@@ -542,7 +510,7 @@ p, li { white-space: pre-wrap; }
           <property name="geometry">
            <rect>
             <x>20</x>
-            <y>350</y>
+            <y>390</y>
             <width>611</width>
             <height>301</height>
            </rect>
@@ -564,7 +532,7 @@ p, li { white-space: pre-wrap; }
           <property name="checked">
            <bool>false</bool>
           </property>
-          <widget class="PlotWidget" name="spectral_calib_plot_layout" native="true">
+          <widget class="ImageItem" name="spectral_calib_plot_layout" native="true">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -685,6 +653,38 @@ p, li { white-space: pre-wrap; }
             <number>5</number>
            </property>
           </widget>
+         </widget>
+         <widget class="QLabel" name="grating_period_label">
+          <property name="geometry">
+           <rect>
+            <x>30</x>
+            <y>30</y>
+            <width>131</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Grating period (px):</string>
+          </property>
+         </widget>
+         <widget class="QSpinBox" name="grating_period_spin_box">
+          <property name="geometry">
+           <rect>
+            <x>170</x>
+            <y>30</y>
+            <width>44</width>
+            <height>28</height>
+           </rect>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+          </property>
+          <property name="minimum">
+           <number>2</number>
+          </property>
+          <property name="value">
+           <number>5</number>
+          </property>
          </widget>
         </widget>
         <widget class="QWidget" name="temporal_tab">
@@ -991,6 +991,12 @@ Start:Stepnumber:Stop  Start:Stepnum...
   </action>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>ImageItem</class>
+   <extends>QWidget</extends>
+   <header>pyqtgraph</header>
+   <container>1</container>
+  </customwidget>
   <customwidget>
    <class>PlotWidget</class>
    <extends>QWidget</extends>
