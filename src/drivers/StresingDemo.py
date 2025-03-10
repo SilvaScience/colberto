@@ -8,7 +8,7 @@ set_parameter function (assign set functions)
 
 """
 """TO DOS:
-- Connect the camera with the PC. Try the different functionalities and choose the relevant one.
+- Connect the camera with the PC. Try the different functionalities and choose the relevant one : integration time and acquire for now
 - Define these functions in the worker.
 """
 
