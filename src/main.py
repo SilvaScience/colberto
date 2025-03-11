@@ -25,7 +25,7 @@ from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,ChirpTemporalCalibration
 
 
 class MainInterface(QtWidgets.QMainWindow):
@@ -122,7 +122,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.parameter_tab.setLayout(vbox)
 
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
-        self.Chirp_calibration_plot = Chirp_calibration_plot (self.chirp_calibration_plot)
+        self.Chirp_calibration_plot = Chirp_calibration_plot(self.chirp_calibration_plot)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -192,7 +192,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
         self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
-
+        self.Acquire_data_temp_calibration_Button.clicked.connect(self.ChirpCalibrationMeasurement)
         # run some functions once to define default values
         self.change_filename()
 
@@ -342,11 +342,27 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
-
+    def ChirpCalibrationMeasurement(self):
+        '''
+             Sets up and starts a Chirp calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value())
+            # self.measurement= ChirpTemporalCalibration(self.devices,self.Chirp_min.text(),self.Chirp_max.text(),self.Compression_carrier_wavelength.text())
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_intensities.connect(self.Chirp_calibration_plot.set_data)
+            self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')  
     def stop_measurement(self):
         # stop measurement
         self.measurement.stop()
         self.measurement_busy = False
+    
 
 
 class UpdateWorker(QtCore.QThread):
