@@ -12,6 +12,7 @@ from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
 
+
 class Beam:
     def __init__(self,currentCalibration):
         """
@@ -29,7 +30,7 @@ class Beam:
         self.delayCarrierFreq=None
         self.calibration=currentCalibration
         self.beamHorizontalDelimiters=[0,self.calibration.SLM.get_size()[0]]
-        self.beamVerticalDelimiters=None # Vertical position delimiter of beam on SLM in pixels. Default is whole SLM
+        self.beamVerticalDelimiters=[0,self.calibration.SLM.get_size()[1]] # Vertical position delimiter of beam on SLM in pixels. Default is whole SLM
     
     def set_beamVerticalDelimiters(self,delimiters):
         '''
@@ -194,8 +195,9 @@ class Beam:
                 - 2d.array: A 2D phase array corresponding to the current phase profile 
         '''
         phaseGratingImage=[]
-        numberVerticalPixels=self.beamHorizontalDelimiters[1]-self.beamVerticalDelimiters[0]
+        numberVerticalPixels= self.beamVerticalDelimiters[1]
         phaseProfile=self.get_sampledCurrentPhase()
+        
         for phase in phaseProfile:
             row=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
             phaseGratingImage.append(row)
