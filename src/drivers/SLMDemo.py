@@ -136,7 +136,10 @@ class SLMDemo(QtWidgets.QMainWindow):
 
         self.parameter_display_dict['is8bit']['val'] = is8bit
         self.parameter_dict['is8bit'] = is8bit
-        
+
+
+
+
     def update_image_from_array(self, np_img):
         print("debut de la fonction update")
         """
@@ -170,37 +173,7 @@ class SLMDemo(QtWidgets.QMainWindow):
 
 
 
-        '''
-        # 2) Créer un QImage à partir du numpy array
-        #    - On suppose Format_RGB888. Adaptez si vous avez du mono ou autre format.
-        bytes_per_line = channels * width
-        q_img = QImage(
-            np_img.data, 
-            width, 
-            height, 
-            bytes_per_line, 
-            QImage.Format_RGB888
-        )
 
-        # 3) Convertir QImage -> QPixmap
-        pixmap = QPixmap.fromImage(q_img)
-
-        # 4) Afficher dans la QGraphicsView
-        scene = QGraphicsScene()
-        pixmap_item = QGraphicsPixmapItem(pixmap)
-        scene.addItem(pixmap_item)
-        self.graphicsView.setScene(scene) 
-        
-        
-        
-        print("l'image avant matplotlib")
-    # Affichage avec matplotlib (mode non bloquant)
-        plt.imshow(np_img, cmap='gray')  # Utilisez cmap='gray' si l'image est en niveaux de gris
-        plt.title("Image générée par le worker")
-        plt.draw()
-        plt.pause(0.001)  # Petite pause pour que la fenêtre se mette à jour
-        print("l'image a été affichée avec matplotlib")
-        '''
 
 
 
@@ -229,7 +202,17 @@ class SLMWorker(QtCore.QThread):
 
         
 
-
+    '''
+    Run function
+    - Begin by initializing the sdk to connect to the SLM with the function -->  create_slm_sdk()
+    - Load the callibration file with --> load_lut("path")
+    - Get the SLM parameter using the function get_parameter() and emit a signal to SLMDemo()
+    - Principal loop
+        - Initialize a chronometer to be use to the frameRate specification with time.time()
+        - Some loop to send more image. Will need to be remove when the image will be create outside of this code. 
+        - Create the image with different chirp (i,j index)
+        - Send the image to the SLM with the function 
+    '''
 
 
     def run(self):
@@ -244,52 +227,62 @@ class SLMWorker(QtCore.QThread):
 
 
             # 2) Get the slm parameter 
-            (h, w, d, rgbCtype, bitCtype) = self.slm.parameter_slm()
+            h, w, d, rgbCtype, bitCtype = self.get_parameter()
             self.height = h
             self.width = w
             self.depth = d
             self.rgb = rgbCtype.value     # ctypes.c_uint -> int
             self.is_eight_bit = bitCtype.value
 
-            #self.slmParamsSignal.emit(self.height, self.width, self.depth,
-            #                          self.rgb, self.is_eight_bit)
+            # Emit a signal to the SLMDemo that update the dictonnary.
+            #This is done only 1 time at the beginning, because this parameter doesn't change 
+            self.slmParamsSignal.emit(self.height, self.width, self.depth,
+                                      self.rgb, self.is_eight_bit)
             
 
 
            
 
+            '''
+            # Principal Loop
+            # There are loops here to try to send many image
+            # In practice, we would need to remove the loop and get the image created directly from the our code. 
+            #
+            '''
 
-            # 2) Boucle principale
+
             while not self._stop_flag:
                 start_time = time.time()
                 
-
-                self.current_image= self.generate_slm_image()
+                for i in [0, 1, 2, 3,4,5,6,7,8]:
+                    for j in [0,1,2,3,4,5]:
+                        start_time = time.time()                                 
+                        self.current_image= self.generate_slm_image(i,j)
                 #self.newImageSignal.emit(self.current_image)
                 
                 # Éventuellement, si on n’a pas d’image valide, on peut soit
                 # afficher un pattern neutre, soit skipper l’envoi
                 
            
-                sys.stdout.flush()  # Forcer l'affichage immédiat
+                
 
 
-                if self.current_image is not None:
+                        if self.current_image is not None:
                     # Envoyer l'image au SLM
-                    self.slm.write_image(self.current_image,c_uint(1))
+                            self.write_image_slm(self.current_image)
                   
-                    self.newImageSignal.emit(self.current_image)
+                            self.newImageSignal.emit(self.current_image)
                     
                     
 
 
 
                 # Calculer le temps écoulé
-                elapsed = time.time() - start_time
-                frame_duration = 1.0 / self.target_fps
+                        elapsed = time.time() - start_time
+                        frame_duration = 1/self.target_fps
                 # Si on veut viser 30Hz, on « dort » le reste du temps
-                if elapsed < frame_duration:
-                    time.sleep(frame_duration - elapsed)
+                        if elapsed < frame_duration:
+                            time.sleep(frame_duration - elapsed)
 
         except Exception as e:
             # En cas d'erreur, émettre un signal
@@ -299,6 +292,9 @@ class SLMWorker(QtCore.QThread):
             if self.slm is not None:
                 self.slm.delete_sdk()
 
+
+
+
     def create_slm_sdk(self):
         #Connect and create the sdk"
         
@@ -306,88 +302,49 @@ class SLMWorker(QtCore.QThread):
         slm.create_sdk()
         return slm
     
-    def stop(self):
-        self._stop_flag = True
+    #def stop(self):
+    #   self._stop_flag = True
+
+    
+    def get_parameter(self):
+        slm=SLM()
+        h, w, d, rgbCtype, bitCtype=slm.parameter_slm()
+        return h, w, d, rgbCtype, bitCtype
+    
+    def write_image_slm(self,image):
+        slm=SLM()
+        slm.write_image(image,c_uint(1))
+        return
 
 
 
 
 
 
-    def imageTestSolid(self):
-        """
-        Exemple de génération d'un motif "solid". 
-        On crée d’abord des tableaux array et wfc aux dimensions nécessaires,
-        puis on appelle la fonction generate_solid(...) de ImageGen.
-
-        array = 1920 x 1200 x 3  (ou height x width x 3 suivant l’implémentation)
-        wfc   = 20 x 1200 x 3    (exemple: correction wavefront)
-
-        Attention à la cohérence hauteur/largeur et l’ordre (height, width).
-        """
-        # Dans beaucoup de bibliothèques images, la shape est (height, width, channels)
-        # Donc si votre SLM fait 1200 de haut et 1920 de large, on dimensionne comme suit:
-        height = self.height
-        width = self.width
-        channels = 3  # si rgb=1
-
-        # Créons un array plein de zéros (8 bits) 
-        # Vous pouvez ajuster le dtype en fonction du “depth”
-        array = np.zeros((height, width, channels), dtype=np.uint8)
-
-        # wfc peut être un petit tableau (20, width, 3) ou (20, height, 3),
-        # selon l’implémentation souhaitée. À adapter !
-        wfc = np.zeros((20, width, channels), dtype=np.uint8)
-
-        # Valeur de gris (0 à 255 si 8 bits)
-        pixel_val = 128
-
-        # Appel à la fonction generate_solid de ImageGen
-        # (vérifiez l’ordre des arguments selon votre signature réelle).
-        # La signature indiquée dans votre commentaire :
-        # ImageGen.generate_solid(self, array, wfc, width, height, depth, pixel_val, rgb)
-        # suppose un ordre d’arguments. Adaptez si besoin.
-        '''solid_image = ImageGen.generate_solid(
-            array, 
-            wfc, 
-            width, 
-            height, 
-            self.depth, 
-            pixel_val, 
-            self.rgb
-            )
-            '''
-        test_grating = np.empty([width*height], dtype=np.uint8);
-        WFC = np.empty([width*height], dtype=np.uint8);
-        Period = 128 
-        increasing = 0 #0 or 1
-        horizontal = 0 #0 or 1
-        grating= ImageGen.generate_grating(test_grating.ctypes.data_as(POINTER(c_ubyte)), WFC.ctypes.data_as(POINTER(c_ubyte)), 
-                            width, height, self.depth, Period, increasing, horizontal, self.rgb);
 
 
-        return grating
+
 
     def load_lut(self, lut_path):
-        """Charge un fichier LUT dans le SDK Meadowlark."""
+        """ Load lut file in the SDK Meadowlark."""
         if self.slm is not None:
             self.slm.load_lut(lut_path)
         else:
             print("SLM non initialisé. Impossible de charger le LUT.") 
 
 
-    def generate_slm_image(self):
+    def generate_slm_image(self,i,j):
         """
-    Génère une image en utilisant l'algorithme de Esteban et retourne un numpy array.
+    Generating an exemple image for the SLM based on Esteban code. 
     
     Returns:
-        np.ndarray: Image en uint8 (1200x1920) prête pour affichage sur le SLM.
+        np.ndarray: Image en uint8 (1200x1920) <<<(H x W x 3) en 8 bits>>> Ready to write to the slm
         """
      
     # === Définition des paramètres ===
         A = 2
         d = 128
-        chirp = [0, 0, 0, 0]  # 3, 2, 1, 0 ordre  
+        chirp = [j, j, i, 0]  # 3, 2, 1, 0 ordre  
         coeff_wavepix = np.array([0.06313, 485])
         w_c = 505
         w_c_delay = 505
