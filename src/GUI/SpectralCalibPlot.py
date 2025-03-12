@@ -7,7 +7,7 @@ import time
 class SpectralCalibDataPlot(QtWidgets.QMainWindow):
 
 
-    def __init__(self, imageItem, *args, **kwargs):
+    def __init__(self, graphLayoutWidget, *args, **kwargs):
         '''
             Initializes the graph to diplay the vertical calibration data.
             input:
@@ -16,14 +16,23 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
         super(SpectralCalibDataPlot, self).__init__(*args, **kwargs)
 
         # create Widgets for plot
-        self.imageItem=  imageItem 
+        self.graphLayoutWidget= graphLayoutWidget 
+        self.graphLayoutWidget.show()
+        self.plot=self.graphLayoutWidget.addPlot()
+        leftAxis = self.plot.getAxis('left')
+        bottomAxis = self.plot.getAxis('bottom')
+        font = QtGui.QFont("Roboto", 12)
+        leftAxis.setTickFont(font)
+        bottomAxis.setTickFont(font)
         #self.styles = {'color':'#c8c8c8', 'font-size':'20px'}
         #self.fontForTickValues = QtGui.QFont()
         #self.fontForTickValues.setPixelSize(10)
         self.ydata=None
         self.xdata=None
         self.data=None
-
+        self.tr=QtGui.QTransform()
+        self.image=pg.ImageItem(np.eye(1))
+        self.plot.addItem(self.image)
         # plot data: x, y values
         #self.imageItem.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         #self.imageItem.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
@@ -31,12 +40,11 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
         #self.imageItem.setLabel('bottom', 'Column index', **self.styles)
         #self.imageItem.showGrid(True, True)
         # Clear data to show plot
-        self.clear_plot()
 
 
-    @QtCore.pyqtSlot()
-    def clear_plot(self):
-        self.graphWidget.clear()
+#    @QtCore.pyqtSlot()
+#    def clear_plot(self):
+#        self.graphLayoutWidget.clear()
     
 
     @QtCore.pyqtSlot(np.ndarray, np.ndarray,np.ndarray)
@@ -49,20 +57,23 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
                 - data: (np.ndarray) 2D array of scanned spectra
                 STIL IN DEV, NOT TESTED
         '''
-        self.xdata=x_array
-        self.ydata=y_array
-        deltax=self.xdata[1]-self.xdata[0]
-        deltay=self.ydata[1]-self.ydata[0]
-        if self.data is None:
-            self.tr=QtGui.QTransform()
-        else:
-            self.imageItem.setImage(data)
-        #self.tr.scale(deltax,deltay)
-        #self.img.setTransform(self.tr)
-        #tr.translate() Might be necessary to make the axes right
-        
+        if self.xdata is None:
+            deltax=x_array[1]-x_array[0]
+            self.deltax=deltax
+            self.tr.scale(deltax,1)
+            self.tr.translate(x_array[0],0)
+            self.image.setTransform(self.tr)
+        if self.ydata is None:
+            if len(y_array)==1:
+                deltay=1
+            else:
+                deltay=y_array[1]-y_array[0]
+                self.deltay=deltay
+                self.tr.scale(1,deltay)
+                self.image.setTransform(self.tr)
+        self.image.setImage(data)
         self.data=data
-        self.graphWidget.clear()
+        self.image.setTransform(self.tr)
             
             
 

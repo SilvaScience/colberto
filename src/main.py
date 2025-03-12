@@ -99,7 +99,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.column_increment_spinbox=self.findChild(QtWidgets.QSpinBox,'column_increment_spin_box')
         self.column_width_spinbox=self.findChild(QtWidgets.QSpinBox,'column_width_spin_box')
         self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
-        self.spectral_calibration_image_layout=self.findChild(pg.ImageItem,'spectral_calib_image_layout')
+        self.spectral_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'spectral_calib_plot_layout')
 
 
         # initial parameter values, retrieved from devices

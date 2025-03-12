@@ -532,7 +532,7 @@ p, li { white-space: pre-wrap; }
           <property name="checked">
            <bool>false</bool>
           </property>
-          <widget class="ImageItem" name="spectral_calib_plot_layout" native="true">
+          <widget class="GraphicsLayoutWidget" name="spectral_calib_plot_layout" native="true">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -992,13 +992,13 @@ Start:Stepnumber:Stop  Start:Stepnum...
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ImageItem</class>
+   <class>PlotWidget</class>
    <extends>QWidget</extends>
    <header>pyqtgraph</header>
    <container>1</container>
   </customwidget>
   <customwidget>
-   <class>PlotWidget</class>
+   <class>GraphicsLayoutWidget</class>
    <extends>QWidget</extends>
    <header>pyqtgraph</header>
    <container>1</container>
