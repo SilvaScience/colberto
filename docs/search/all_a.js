@@ -1,4 +1,7 @@
 var searchData=
 [
-  ['rgb_0',['rgb',['../namespacetest__SLM.html#a23c8dad9d9f95dc0bf9265b3ac22885c',1,'test_SLM.RGB'],['../namespaceExemple.html#af83dca900c365bea576f3e5e220c2bb9',1,'Exemple.rgb']]]
+  ['makegrating_0',['makeGrating',['../classbeams_1_1Beam.html#ad4ed00fd5756f16d79c8c51a5a9180b9',1,'beams::Beam']]],
+  ['measure_1',['measure',['../classstreising__camera_1_1streising.html#a3742ac7b986c83cc4eb2d8c29304aba5',1,'streising_camera::streising']]],
+  ['measurement_5fsettings_2',['measurement_settings',['../classstreising__camera_1_1measurement__settings.html',1,'streising_camera']]],
+  ['methods_3',['Functions and Methods',['../md_manual_2contributing.html#autotoc_md6',1,'']]]
 ];
