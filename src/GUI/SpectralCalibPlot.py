@@ -24,20 +24,20 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
         font = QtGui.QFont("Roboto", 12)
         leftAxis.setTickFont(font)
         bottomAxis.setTickFont(font)
-        #self.styles = {'color':'#c8c8c8', 'font-size':'20px'}
-        #self.fontForTickValues = QtGui.QFont()
-        #self.fontForTickValues.setPixelSize(10)
+        self.styles = {'color':'#c8c8c8', 'font-size':'20px'}
+        self.fontForTickValues = QtGui.QFont()
+        self.fontForTickValues.setPixelSize(10)
         self.ydata=None
         self.xdata=None
         self.data=None
         self.tr=QtGui.QTransform()
-        self.image=pg.ImageItem(np.eye(1))
+        self.image=pg.ImageItem()
         self.plot.addItem(self.image)
         # plot data: x, y values
-        #self.imageItem.getAxis('left').setStyle(tickFont=self.fontForTickValues)
-        #self.imageItem.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
-        #self.imageItem.setLabel('left', 'Wavelength', **self.styles)
-        #self.imageItem.setLabel('bottom', 'Column index', **self.styles)
+        self.plot.getAxis('left').setStyle(tickFont=self.fontForTickValues)
+        self.plot.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
+        self.plot.setLabel('left', 'Wavelength', **self.styles)
+        self.plot.setLabel('bottom', 'Column index', **self.styles)
         #self.imageItem.showGrid(True, True)
         # Clear data to show plot
 
@@ -55,25 +55,22 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
                 - x_array: (np.ndarray) 1D array holding the wavelength axis of the 2D data plot
                 - y_array: (np.ndarray) 1D array holding the scanned axis of the 2D data plot
                 - data: (np.ndarray) 2D array of scanned spectra
-                STIL IN DEV, NOT TESTED
         '''
-        if self.xdata is None:
+        if np.shape(data)[0]>=2 and np.shape(data)[1]>=2: # Don't plot it if it is not a 2D array 
             deltax=x_array[1]-x_array[0]
             self.deltax=deltax
-            self.tr.scale(deltax,1)
-            self.tr.translate(x_array[0],0)
-            self.image.setTransform(self.tr)
-        if self.ydata is None:
-            if len(y_array)==1:
-                deltay=1
-            else:
-                deltay=y_array[1]-y_array[0]
-                self.deltay=deltay
-                self.tr.scale(1,deltay)
-                self.image.setTransform(self.tr)
-        self.image.setImage(data)
-        self.data=data
-        self.image.setTransform(self.tr)
+            deltay=y_array[1]-y_array[0]
+            self.deltay=deltay
+            self.rect = QtCore.QRectF(x_array[0]-deltax/2,y_array[0]-deltay/2,x_array[-1]-x_array[0],y_array[-1]-y_array[0])
+            self.ydata=y_array
+            self.data=data
+            self.xdata=x_array
+            self.image.setImage(data)
+            self.image.setRect(self.rect)
+        else:
+            self.xdata=None
+            self.ydata=None
+            self.data=None
             
             
 

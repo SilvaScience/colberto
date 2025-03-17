@@ -17,3 +17,9 @@ The result of the calibration is plotted in live in the `self.VerticalCalibPlot`
 Once the measurement is performed, the user inputs the boundaries of each beams delimiting each S-curve in the `beam_vertical_delimiters_table`. Every time the cell is modified, the location of the boundary is updated on `VerticalCalibPlot`. The validity of each input is checked before updating the cell value.
 
 The grating period and beam vertical location for each complete row is saved in the `DataHandling.beams` dictionnary when pressing the `assign_beams_vertical_delimiters_button` button. These parameters cannot be changed in any other way.
+
+## Spectral calibration
+
+The spectral calibration of the SLM is performed by sweeping a vertical grating stripe across the SLM and measuring the peak of the spectrum at each step.
+
+This measurement is performed by pressing the `measure_spectral_calibration` button after specifying the width of the stripe in `column_width_spin_box` and the increment by which to step its location in `column_increment_spin_box`. The measurements are updated in the `spectral_calib_plot_layout` where a `SpectralCalibDataPlot` is instantiated.
