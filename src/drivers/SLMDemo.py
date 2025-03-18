@@ -9,6 +9,10 @@ set_parameter function (assign set functions)
 """
 
 
+from matplotlib import pyplot as plt
+from scipy.constants import pi
+from numpy.polynomial import Polynomial as P
+
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, uic
 from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
@@ -25,6 +29,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
 from src.drivers.Slm_Meadowlark_optics import SLM
 from src.drivers.Slm_Meadowlark_optics import ImageGen
+from src.compute.beams import Beam
+from src.compute.calibration import Calibration
+from src.compute.SLMBogus import SLM2 
 
 
 class SLMDemo(QtWidgets.QMainWindow):
@@ -36,6 +43,9 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.slm_worker= SLMWorker()
         self.slm_worker.start()
 
+        
+        self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
+        
 
 
 
@@ -90,21 +100,7 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.slm_worker.newImageSignal.connect(self.update_image_from_array)
        
 
-    '''def load_image_gui(self, image_path):
-        if not os.path.exists(image_path):
-            print(f"Erreur : L'image {image_path} n'existe pas.")
-            return
 
-        pixmap = QPixmap(image_path)
-    
-        # Créer une scène et ajouter l’image
-        scene = QGraphicsScene()
-        pixmap_item = QGraphicsPixmapItem(pixmap)
-        scene.addItem(pixmap_item) 
-
-    # Assigner la scène au QGraphicsView
-        self.graphicsView.setScene(scene)  
-        '''
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """
@@ -120,8 +116,13 @@ class SLMDemo(QtWidgets.QMainWindow):
             self.slm_worker.wait()
         super().closeEvent(event)
 
+    '''
+    - Function that updtaded the parameter into the dictionnary
+    '''
+
+
     def handle_slm_params(self, height, width, depth, rgb, is8bit):
-        # Mettre à jour le parameter_display_dict
+       
         self.parameter_display_dict['Height']['val'] = height
         self.parameter_dict['Height'] = height
 
@@ -141,7 +142,7 @@ class SLMDemo(QtWidgets.QMainWindow):
 
 
     def update_image_from_array(self, np_img):
-        print("debut de la fonction update")
+    
         """
         Reçoit un numpy array (H x W x 3) en 8 bits, le convertit en QPixmap,
         puis l’affiche dans le QGraphicsView.
@@ -150,22 +151,20 @@ class SLMDemo(QtWidgets.QMainWindow):
         if np_img is None:
             return
 
-        # 1) Récupérer les dimensions
+        # 1) dimension of the image
         height, width, = np_img.shape
         channels=3
 
-        # 1) Récupérer les dimensions (pour une image 2D)
-        height, width = np_img.shape
-     # 2) Calculer le nombre d'octets par ligne
-        bytes_per_line = width  # pour une image 8 bits (niveaux de gris)
+     # 2) Number of octets by line
+        bytes_per_line = width  # For an 8 bits (grey level)
 
-    # 3) Créer un QImage en niveaux de gris
+    # 3) Create the Qimage in grey scale
         q_img = QImage(np_img.data, width, height, bytes_per_line, QImage.Format_Grayscale8)
 
-    # 4) Convertir QImage -> QPixmap
+    # 4) Convert QImage -> QPixmap
         pixmap = QPixmap.fromImage(q_img)
 
-    # 5) Afficher dans le QGraphicsView
+    # 5) Display in the graphical interface
         scene = QGraphicsScene()
         pixmap_item = QGraphicsPixmapItem(pixmap)
         scene.addItem(pixmap_item)
@@ -173,16 +172,13 @@ class SLMDemo(QtWidgets.QMainWindow):
 
 
 
-
-
-
-
-
-
 class SLMWorker(QtCore.QThread):
     errorSignal = QtCore.pyqtSignal(str)
     slmParamsSignal = QtCore.pyqtSignal(int, int, int, int, int)
     newImageSignal = QtCore.pyqtSignal(np.ndarray)
+
+
+
 
 
     def __init__(self):
@@ -211,7 +207,12 @@ class SLMWorker(QtCore.QThread):
         - Initialize a chronometer to be use to the frameRate specification with time.time()
         - Some loop to send more image. Will need to be remove when the image will be create outside of this code. 
         - Create the image with different chirp (i,j index)
-        - Send the image to the SLM with the function 
+        - Send the image to the SLM with the function  write_image_slm(current_image) and emit a signal to the SLMDemo()
+            -- Maybe we could send the image before when the code for the image generation will be done.
+        - FrameRate condition. If the time between the initialisation of the image and the writing is less than 30hz sleep for the remaining time 
+        - Will need a start stop, at some point if we want to keep the same image 
+
+        
     '''
 
 
@@ -241,23 +242,13 @@ class SLMWorker(QtCore.QThread):
             
 
 
-           
-
-            '''
-            # Principal Loop
-            # There are loops here to try to send many image
-            # In practice, we would need to remove the loop and get the image created directly from the our code. 
-            #
-            '''
-
-
             while not self._stop_flag:
                 start_time = time.time()
                 
                 for i in [0, 1, 2, 3,4,5,6,7,8]:
                     for j in [0,1,2,3,4,5]:
                         start_time = time.time()                                 
-                        self.current_image= self.generate_slm_image(i,j)
+                        self.current_image= self.beam_image()
                 #self.newImageSignal.emit(self.current_image)
                 
                 # Éventuellement, si on n’a pas d’image valide, on peut soit
@@ -305,24 +296,17 @@ class SLMWorker(QtCore.QThread):
     #def stop(self):
     #   self._stop_flag = True
 
-    
+    #get the parameter from the slm
     def get_parameter(self):
         slm=SLM()
         h, w, d, rgbCtype, bitCtype=slm.parameter_slm()
         return h, w, d, rgbCtype, bitCtype
     
+    #Write image on the slm
     def write_image_slm(self,image):
         slm=SLM()
         slm.write_image(image,c_uint(1))
         return
-
-
-
-
-
-
-
-
 
 
     def load_lut(self, lut_path):
@@ -330,16 +314,60 @@ class SLMWorker(QtCore.QThread):
         if self.slm is not None:
             self.slm.load_lut(lut_path)
         else:
-            print("SLM non initialisé. Impossible de charger le LUT.") 
+            print(" Impossible to load the LUT file.") 
 
 
+    
+    def beam_image(self):
+        
+        slm=SLM()
+        cal = Calibration(slm)
+        
+        
+        pix2wave = P(1e-7 * np.array([50000, 1/6000000]))  # Sets bogus polynomial for pix to wave conversion
+        cal.set_pixelToWavelength(pix2wave)
+        bm = Beam(cal)
+
+        
+        bm.set_compressionCarrierWave(532e-9)
+        bm.set_optimalPhase(P([0, 0, 1000, 500]))
+        bm.set_currentPhase(P([0, 100, 500]), mode='relative')
+        #bm.set_beamVerticalDelimiters([1000, 1100])
+       
+        amplitude = 0.1
+        bm.set_gratingAmplitude(amplitude)
+        period = 10
+        bm.set_gratingPeriod(period)
+        image = bm.makeGrating()
+        #print(f"Image générée - shape: {image.shape}, taille: {image.size}")
+        return image
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+"""
     def generate_slm_image(self,i,j):
-        """
+        '''
     Generating an exemple image for the SLM based on Esteban code. 
     
     Returns:
         np.ndarray: Image en uint8 (1200x1920) <<<(H x W x 3) en 8 bits>>> Ready to write to the slm
-        """
+        '''
      
     # === Définition des paramètres ===
         A = 2
@@ -403,7 +431,7 @@ class SLMWorker(QtCore.QThread):
         
         return img       
 
-
+"""
             
 
 

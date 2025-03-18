@@ -50,13 +50,12 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['spectrometer'] = self.spectrometer
         print('Spectrometer connection failed, use DEMO')
 
-        # initialize SLMDemo
+        # Call the class SLMDemo that initialize the worker
         self.SLM = SLMDemo()
         self.devices['SLM'] = self.SLM
         
-        self.SLM.slm_worker.start()
-        self.SLM.slm_worker.slmParamsSignal.connect(self.SLM.handle_slm_params)
-        print('SLMDemo connected')
+        
+    
 
 
         # find items to complement in GUI
