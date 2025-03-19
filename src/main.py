@@ -100,6 +100,12 @@ class MainInterface(QtWidgets.QMainWindow):
         self.column_width_spinbox=self.findChild(QtWidgets.QSpinBox,'column_width_spin_box')
         self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
         self.spectral_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'spectral_calib_plot_layout')
+        self.fit_snr_spinbox=self.findChild(QtWidgets.QSpinBox,'min_snr_spin_box')
+        self.polynomial_order_spinbox=self.findChild(QtWidgets.QSpinBox,'polynomial_order_spin_box')
+        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration')
+        self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
+        self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
+        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibraion_button')
 
 
         # initial parameter values, retrieved from devices

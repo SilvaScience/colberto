@@ -332,7 +332,7 @@ p, li { white-space: pre-wrap; }
            <rect>
             <x>20</x>
             <y>70</y>
-            <width>611</width>
+            <width>731</width>
             <height>271</height>
            </rect>
           </property>
@@ -360,8 +360,8 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>330</x>
-             <y>60</y>
-             <width>261</width>
+             <y>30</y>
+             <width>361</width>
              <height>221</height>
             </rect>
            </property>
@@ -511,8 +511,8 @@ p, li { white-space: pre-wrap; }
            <rect>
             <x>20</x>
             <y>390</y>
-            <width>611</width>
-            <height>301</height>
+            <width>731</width>
+            <height>381</height>
            </rect>
           </property>
           <property name="font">
@@ -540,8 +540,8 @@ p, li { white-space: pre-wrap; }
             <rect>
              <x>330</x>
              <y>10</y>
-             <width>261</width>
-             <height>271</height>
+             <width>371</width>
+             <height>181</height>
             </rect>
            </property>
           </widget>
@@ -549,7 +549,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>100</y>
+             <y>120</y>
              <width>88</width>
              <height>27</height>
             </rect>
@@ -561,8 +561,8 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="assign_spectral_calibraion_button">
            <property name="geometry">
             <rect>
-             <x>190</x>
-             <y>100</y>
+             <x>0</x>
+             <y>320</y>
              <width>131</width>
              <height>27</height>
             </rect>
@@ -593,7 +593,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>40</y>
+             <y>60</y>
              <width>171</width>
              <height>19</height>
             </rect>
@@ -606,7 +606,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>180</x>
-             <y>34</y>
+             <y>54</y>
              <width>44</width>
              <height>28</height>
             </rect>
@@ -625,7 +625,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>76</y>
+             <y>96</y>
              <width>171</width>
              <height>19</height>
             </rect>
@@ -638,7 +638,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>180</x>
-             <y>70</y>
+             <y>90</y>
              <width>44</width>
              <height>28</height>
             </rect>
@@ -651,6 +651,145 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="value">
             <number>5</number>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="spectral_calib_fit_plot_layout" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>330</x>
+             <y>190</y>
+             <width>191</width>
+             <height>161</height>
+            </rect>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_spectral_calibration_box_measurement">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>30</y>
+             <width>231</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Measurement</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_spectral_calibration_box_fitting">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>160</y>
+             <width>231</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Fitting</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="polynomial_order_label">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>236</y>
+             <width>171</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Polynomial order</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="column_increment_label_2">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>200</y>
+             <width>171</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Minimal SNR</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="min_snr_spin_box">
+           <property name="geometry">
+            <rect>
+             <x>170</x>
+             <y>194</y>
+             <width>44</width>
+             <height>28</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="polynomial_order_spin_box">
+           <property name="geometry">
+            <rect>
+             <x>170</x>
+             <y>230</y>
+             <width>44</width>
+             <height>28</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="fit_spectral_calibration">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>270</y>
+             <width>88</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Fit</string>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="spectral_calib_fit_residual_plot_layout" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>520</x>
+             <y>190</y>
+             <width>180</width>
+             <height>161</height>
+            </rect>
            </property>
           </widget>
          </widget>

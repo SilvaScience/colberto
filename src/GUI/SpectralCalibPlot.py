@@ -74,7 +74,70 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
             
             
 
+class SpectralCalibFitPlot(QtWidgets.QMainWindow):
 
+
+    def __init__(self, plotWidget,isResidual=False, *args, **kwargs):
+        '''
+            Initializes the graph to display the fitted maxima or the residual
+            input:
+            - plotWidget: the pyqtgraph plotwidget where the data should be plotted
+            - isResidual: (bool) If true, the graph is set up to display the fit residual
+        '''
+        super(SpectralCalibFitPlot, self).__init__(*args, **kwargs)
+
+        # create Widgets for plot
+        self.graphWidget = plotWidget
+        self.styles = {'color':'#c8c8c8', 'font-size':'20px'}
+        self.fontForTickValues = QtGui.QFont()
+        self.fontForTickValues.setPixelSize(10)
+        self.ydata=None
+        self.xdata=None
+        self.poly=None
+
+        # plot data: x, y values
+        self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
+
+        # plot data: x, y values
+        self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
+        self.graphWidget.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
+        if isResidual:
+            self.graphWidget.setLabel('left', 'Fit residual (nm)', **self.styles)
+        else:
+            self.graphWidget.setLabel('left', 'Wvelength (nm)', **self.styles)
+        self.graphWidget.setLabel('bottom', 'Column index', **self.styles)
+        self.graphWidget.showGrid(True, True)
+        # Clear data to show plot
+        self.clear_plot()
+
+
+    @QtCore.pyqtSlot()
+    def clear_plot(self):
+        self.graphWidget.clear()
+
+    @QtCore.pyqtSlot(np.ndarray, np.ndarray)
+    def set_data(self, x_array, y_array):
+        '''
+            Updates the data in the plot
+            input:
+             - x_array: np.1darray the x-axis of the data
+             - y_array: np.1darray the y-axis of the data
+
+        '''
+        self.xdata=x_array
+        self.ydata=y_array
+        self.graphWidget.clear()
+        self.graphWidget.plot(x_array,y_array,symbol='o')
+
+    def set_fit(self, polynomial):
+        '''
+            Displays the latest fit on the plot
+            input:
+             - polynomial: np.Polynomial object converting column indes to wavelength
+        '''
+        self.poly=polynomial
+        self.graphWidget.clear()
+        self.graphWidget.plot(self.x_array,self.poly(self.x_array))
 
 
 
