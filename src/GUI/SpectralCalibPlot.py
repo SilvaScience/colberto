@@ -77,7 +77,7 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
 class SpectralCalibFitPlot(QtWidgets.QMainWindow):
 
 
-    def __init__(self, plotWidget,isResidual=False, *args, **kwargs):
+    def __init__(self, plotWidget,residual_plot_widget=None, *args, **kwargs):
         '''
             Initializes the graph to display the fitted maxima or the residual
             input:
@@ -88,6 +88,7 @@ class SpectralCalibFitPlot(QtWidgets.QMainWindow):
 
         # create Widgets for plot
         self.graphWidget = plotWidget
+        self.residual_plot_widget=residual_plot_widget
         self.styles = {'color':'#c8c8c8', 'font-size':'20px'}
         self.fontForTickValues = QtGui.QFont()
         self.fontForTickValues.setPixelSize(10)
@@ -101,10 +102,15 @@ class SpectralCalibFitPlot(QtWidgets.QMainWindow):
         # plot data: x, y values
         self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         self.graphWidget.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
-        if isResidual:
-            self.graphWidget.setLabel('left', 'Fit residual (nm)', **self.styles)
+        if self.residual_plot_widget is not None:
+            self.residual_plot_widget.setLabel('left', 'Fit residual (nm)', **self.styles)
+            self.residual_plot_widget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
+            self.residual_plot_widget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
+            self.residual_plot_widget.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
+            self.residual_plot_widget.setLabel('bottom', 'Column index', **self.styles)
+            self.residual_plot_widget.showGrid(True, True)
         else:
-            self.graphWidget.setLabel('left', 'Wvelength (nm)', **self.styles)
+            self.graphWidget.setLabel('left', 'Wavelength (nm)', **self.styles)
         self.graphWidget.setLabel('bottom', 'Column index', **self.styles)
         self.graphWidget.showGrid(True, True)
         # Clear data to show plot
@@ -114,6 +120,8 @@ class SpectralCalibFitPlot(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def clear_plot(self):
         self.graphWidget.clear()
+        if self.residual_plot_widget is not None:
+            self.residual_plot_widget.clear()
 
     @QtCore.pyqtSlot(np.ndarray, np.ndarray)
     def set_data(self, x_array, y_array):
@@ -124,8 +132,8 @@ class SpectralCalibFitPlot(QtWidgets.QMainWindow):
              - y_array: np.1darray the y-axis of the data
 
         '''
-        self.xdata=x_array
-        self.ydata=y_array
+        self.x_array=x_array
+        self.y_array=y_array
         self.graphWidget.clear()
         self.graphWidget.plot(x_array,y_array,symbol='o')
 
@@ -136,9 +144,17 @@ class SpectralCalibFitPlot(QtWidgets.QMainWindow):
              - polynomial: np.Polynomial object converting column indes to wavelength
         '''
         self.poly=polynomial
-        self.graphWidget.clear()
+        self.clear_plot()
+        self.set_data(self.x_array,self.y_array)
         self.graphWidget.plot(self.x_array,self.poly(self.x_array))
+        self.plot_residual()
 
+    def plot_residual(self):
+        '''
+            Displays the residual from the fit on the residual plot
+        '''
+        self.residual=np.abs(self.y_array-self.poly(self.x_array))
+        self.residual_plot_widget.plot(self.x_array,self.residual)
 
 
 

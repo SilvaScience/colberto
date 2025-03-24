@@ -102,7 +102,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.spectral_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'spectral_calib_plot_layout')
         self.shortest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'shortest_fitting_wave_spin_box')
         self.longest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'longest_fitting_wave_spin_box')
-        self.polynomial_order_spinbox=self.findChild(QtWidgets.QSpinBox,'polynomial_order_spin_box')
+        self.spectral_fit_polynomial_order_spinbox=self.findChild(QtWidgets.QSpinBox,'polynomial_order_spin_box')
         self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration_button')
         self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
         self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
@@ -129,7 +129,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
         self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
-        self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout)
+        self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -206,6 +206,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.spectral_calibration_runButton.clicked.connect(self.spectralBeamCalibrationMeasurement)
         self.shortest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
         self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
         # run some functions once to define default values
         self.change_filename()
 
@@ -409,6 +410,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.send_intensities.connect(self.spectralfitting.extractMaxima)
             self.spectralfitting.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
             self.spectralfitting.send_maxima.connect(self.SpectralCalibrationFitPlot.set_data)
+            self.spectralfitting.send_polynomial.connect(self.SpectralCalibrationFitPlot.set_fit)
             self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
@@ -427,6 +429,19 @@ class MainInterface(QtWidgets.QMainWindow):
                 print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
         except AttributeError:
             self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+
+    def fit_spectral_calibration(self):
+        '''
+            Fits the last spectral beam calibration data using the displayed valued and updates the result in the Datahandling thread.
+        '''
+        try:
+            spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_processed_data']
+            try:
+                self.spectralfitting.fitSpectraMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],self.spectral_fit_polynomial_order_spinbox.value())
+            except AttributeError:
+                self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+        except KeyError:
+            print('Spectral calibration data has not been processed. Run a spectral beam calibration measurement first')
 
     def stop_measurement(self):
         # stop measurement

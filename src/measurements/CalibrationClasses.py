@@ -7,6 +7,7 @@ until the measurement has finished.
 import time
 from PyQt5 import QtCore
 import numpy as np
+from numpy.polynomial.polynomial import Polynomial
 from pathlib import Path
 from scipy import special
 import sys
@@ -191,7 +192,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
             - send_polynomial: np.ndarray representing a polynomial p[0]+p[1]*x+p[2]*x**2+...
     '''
     send_maxima = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    send_polynomial= QtCore.pyqtSignal(np.ndarray)
+    send_polynomial= QtCore.pyqtSignal(Polynomial)
     send_spectral_calibration_data = QtCore.pyqtSignal(tuple)
 
     def __init__(self,boundaries,spectral_calibration_data=None):
@@ -228,7 +229,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.send_maxima.emit(columns_out,wavelengths_out)
         self.spectral_calibration_processed_data={
             'columns':columns_out,
-            'wavelenghts':wavelengths_out
+            'wavelengths':wavelengths_out
         }
         self.send_spectral_calibration_data.emit(('spectral_calibration_processed_data',self.spectral_calibration_processed_data))
         return columns_out,wavelengths_out
@@ -242,10 +243,12 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.boundaries=boundaries
         self.extractMaxima(self.column_array,self.wavelength_array,self.data)
 
-    def fitSpectraMaxima(self,columns,maxima_wavelengths):
+    def fitSpectraMaxima(self,columns,maxima_wavelengths,degree):
         '''
             Extracts the polynomial converting SLM column into the incident wavelength
             input:
                 - columns: (nd.array) array of SLM columns indices
                 - maxima_wavelenghts: (nd.array) array of the maxima (wavelengths) of the spectral calibration measurements
         '''
+        self.fit_polynomial=Polynomial.fit(columns,maxima_wavelengths,deg=degree)
+        self.send_polynomial.emit(self.fit_polynomial)
