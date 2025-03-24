@@ -100,9 +100,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.column_width_spinbox=self.findChild(QtWidgets.QSpinBox,'column_width_spin_box')
         self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
         self.spectral_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'spectral_calib_plot_layout')
-        self.fit_snr_spinbox=self.findChild(QtWidgets.QSpinBox,'min_snr_spin_box')
+        self.shortest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'shortest_fitting_wave_spin_box')
+        self.longest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'longest_fitting_wave_spin_box')
         self.polynomial_order_spinbox=self.findChild(QtWidgets.QSpinBox,'polynomial_order_spin_box')
-        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration')
+        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration_button')
         self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
         self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
         self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibraion_button')
@@ -203,6 +204,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.assign_beams_vertical_delimiters_button.clicked.connect(self.assign_vertical_beam_calibration)
         # Spectral calibration connect events
         self.spectral_calibration_runButton.clicked.connect(self.spectralBeamCalibrationMeasurement)
+        self.shortest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
         # run some functions once to define default values
         self.change_filename()
 
@@ -352,25 +355,6 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
-
-    def spectralBeamCalibrationMeasurement(self):
-        '''
-             Sets up and starts a spectral Beam Calibration.
-        ''' 
-        if not self.measurement_busy:
-            self.measurement_busy = True
-            self.DataHandling.clear_data()
-            self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value())
-            self.spectralfitting=FitSpectralBeamCalibration()
-            self.measurement.sendProgress.connect(self.set_progress)
-            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            self.measurement.send_intensities.connect(self.SpectralCalibDataPlot.set_data)
-            self.measurement.send_intensities.connect(self.spectralfitting.extractMaxima)
-            self.spectralfitting.send_maxima.connect(self.SpectralCalibrationFitPlot.set_data)
-            self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
-            self.measurement.start()
-        else:
-            print('Measurement not started, devices are busy')
     
     def verticalBeamDelimitersChanged(self,row_index,col_index):
         '''
@@ -409,6 +393,40 @@ class MainInterface(QtWidgets.QMainWindow):
                 beam.set_beamVerticalDelimiters([top_index,bottom_index])
                 beam.set_gratingAmplitude(self.grating_period_edit.value())
                 self.DataHandling.set_beam((label,beam))
+
+    def spectralBeamCalibrationMeasurement(self):
+        '''
+             Sets up and starts a spectral Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value())
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_intensities.connect(self.SpectralCalibDataPlot.set_data)
+            self.measurement.send_intensities.connect(self.spectralfitting.extractMaxima)
+            self.spectralfitting.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
+            self.spectralfitting.send_maxima.connect(self.SpectralCalibrationFitPlot.set_data)
+            self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def update_spectra_calibration_boundaries(self):
+        '''
+            Updates the boundaries to consider when processing spectral calibration data
+        '''
+        try:
+            self.spectralfitting.set_boundaries([self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+            try:
+                spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_raw_data']
+                self.spectralfitting.extractMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],spectral_calib_dict['data'])
+            except KeyError:
+                print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
+        except AttributeError:
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
 
     def stop_measurement(self):
         # stop measurement

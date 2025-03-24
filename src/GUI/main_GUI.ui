@@ -561,8 +561,8 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="assign_spectral_calibraion_button">
            <property name="geometry">
             <rect>
-             <x>0</x>
-             <y>320</y>
+             <x>90</x>
+             <y>300</y>
              <width>131</width>
              <height>27</height>
             </rect>
@@ -678,6 +678,9 @@ p, li { white-space: pre-wrap; }
            <property name="font">
             <font>
              <pointsize>12</pointsize>
+             <weight>50</weight>
+             <bold>false</bold>
+             <underline>true</underline>
             </font>
            </property>
            <property name="text">
@@ -696,6 +699,7 @@ p, li { white-space: pre-wrap; }
            <property name="font">
             <font>
              <pointsize>12</pointsize>
+             <underline>true</underline>
             </font>
            </property>
            <property name="text">
@@ -706,7 +710,7 @@ p, li { white-space: pre-wrap; }
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>236</y>
+             <y>260</y>
              <width>171</width>
              <height>19</height>
             </rect>
@@ -715,25 +719,25 @@ p, li { white-space: pre-wrap; }
             <string>Polynomial order</string>
            </property>
           </widget>
-          <widget class="QLabel" name="column_increment_label_2">
+          <widget class="QLabel" name="shorter_fit_wave_label">
            <property name="geometry">
             <rect>
              <x>0</x>
              <y>200</y>
-             <width>171</width>
+             <width>191</width>
              <height>19</height>
             </rect>
            </property>
            <property name="text">
-            <string>Minimal SNR</string>
+            <string>Shortest fitting wavelength</string>
            </property>
           </widget>
-          <widget class="QSpinBox" name="min_snr_spin_box">
+          <widget class="QSpinBox" name="shortest_fitting_wave_spin_box">
            <property name="geometry">
             <rect>
-             <x>170</x>
+             <x>203</x>
              <y>194</y>
-             <width>44</width>
+             <width>61</width>
              <height>28</height>
             </rect>
            </property>
@@ -743,15 +747,18 @@ p, li { white-space: pre-wrap; }
            <property name="minimum">
             <number>1</number>
            </property>
+           <property name="maximum">
+            <number>3000</number>
+           </property>
            <property name="value">
-            <number>5</number>
+            <number>400</number>
            </property>
           </widget>
           <widget class="QSpinBox" name="polynomial_order_spin_box">
            <property name="geometry">
             <rect>
              <x>170</x>
-             <y>230</y>
+             <y>254</y>
              <width>44</width>
              <height>28</height>
             </rect>
@@ -766,11 +773,11 @@ p, li { white-space: pre-wrap; }
             <number>5</number>
            </property>
           </widget>
-          <widget class="QPushButton" name="fit_spectral_calibration">
+          <widget class="QPushButton" name="fit_spectral_calibration_button">
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>270</y>
+             <y>300</y>
              <width>88</width>
              <height>27</height>
             </rect>
@@ -790,6 +797,67 @@ p, li { white-space: pre-wrap; }
              <width>180</width>
              <height>161</height>
             </rect>
+           </property>
+          </widget>
+          <widget class="QLabel" name="shorter_fit_wave_label_unit">
+           <property name="geometry">
+            <rect>
+             <x>270</x>
+             <y>200</y>
+             <width>51</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>nm</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="longer_fit_wave_label_unit">
+           <property name="geometry">
+            <rect>
+             <x>270</x>
+             <y>230</y>
+             <width>51</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>nm</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="longer_fit_wave_label">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>230</y>
+             <width>191</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Longest fitting wavelength</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="longest_fitting_wave_spin_box">
+           <property name="geometry">
+            <rect>
+             <x>203</x>
+             <y>224</y>
+             <width>61</width>
+             <height>28</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>3000</number>
+           </property>
+           <property name="value">
+            <number>900</number>
            </property>
           </widget>
          </widget>
