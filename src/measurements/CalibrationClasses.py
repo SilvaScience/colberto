@@ -194,6 +194,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
     send_maxima = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     send_polynomial= QtCore.pyqtSignal(Polynomial)
     send_spectral_calibration_data = QtCore.pyqtSignal(tuple)
+    send_spectral_calibration_fit = QtCore.pyqtSignal(tuple)
 
     def __init__(self,boundaries,spectral_calibration_data=None):
         '''
@@ -252,3 +253,4 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         '''
         self.fit_polynomial=Polynomial.fit(columns,maxima_wavelengths,deg=degree)
         self.send_polynomial.emit(self.fit_polynomial)
+        self.send_spectral_calibration_fit.emit(('spectral_calibration_fit',self.fit_polynomial))

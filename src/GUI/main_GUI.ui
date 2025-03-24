@@ -558,7 +558,7 @@ p, li { white-space: pre-wrap; }
             <string>Measure</string>
            </property>
           </widget>
-          <widget class="QPushButton" name="assign_spectral_calibraion_button">
+          <widget class="QPushButton" name="assign_spectral_calibration_button">
            <property name="geometry">
             <rect>
              <x>90</x>

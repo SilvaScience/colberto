@@ -106,7 +106,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration_button')
         self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
         self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
-        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibraion_button')
+        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
 
 
         # initial parameter values, retrieved from devices
@@ -207,6 +207,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.shortest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
         self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
         self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
+        self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
         # run some functions once to define default values
         self.change_filename()
 
@@ -390,10 +391,17 @@ class MainInterface(QtWidgets.QMainWindow):
             bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
             label=table.item(row,0).text() if table.item(row,0).text() is not None else None
             if all([label is not None, bottom_index is not None, top_index is not None]):
-                beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                if 'ALL' in self.DataHandling.get_beams():
+                    beam=self.DataHandling.get_beams()['ALL']
+                else:
+                    beam=Beam(self.SLM.get_width(),self.SLM.get_height())
                 beam.set_beamVerticalDelimiters([top_index,bottom_index])
                 beam.set_gratingAmplitude(self.grating_period_edit.value())
                 self.DataHandling.set_beam((label,beam))
+            if not 'ALL' in self.DataHandling.get_beams():
+                beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam.set_gratingAmplitude(self.grating_period_edit.value())
+                self.DataHandling.set_beam(('ALL',beam))
 
     def spectralBeamCalibrationMeasurement(self):
         '''
@@ -411,6 +419,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.spectralfitting.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
             self.spectralfitting.send_maxima.connect(self.SpectralCalibrationFitPlot.set_data)
             self.spectralfitting.send_polynomial.connect(self.SpectralCalibrationFitPlot.set_fit)
+            self.spectralfitting.send_spectral_calibration_fit.connect(self.DataHandling.add_calibration)
             self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
@@ -442,6 +451,19 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
         except KeyError:
             print('Spectral calibration data has not been processed. Run a spectral beam calibration measurement first')
+    
+    def assign_spectral_calibration(self):
+        '''
+            Saves the current spectral beam calibration fit and parameters to the calibration thread
+        '''
+        beam_dict=self.DataHandling.get_beams()
+        if beam_dict=={}:
+            beam_dict={'ALL':Beam(self.SLM.get_width(),self.SLM.get_height())}
+        for key in beam_dict:
+            beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
+            beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
+            self.DataHandling.set_beam((key,beam_dict[key]))
+
 
     def stop_measurement(self):
         # stop measurement
