@@ -107,7 +107,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
 
     def __init__(self,devices,grating_period,column_increment, column_width):
         '''
-         Initializes the Vertical beam calibration measurement
+         Initializes the Spectral beam calibration measurement
          input:
              - devices: the devices dictionnary holding at least a spectrometer and a SLM
              - grating_period: (int) the vertical period (in pixels) of the phase grating
@@ -121,9 +121,11 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
         self.wls = self.spectrometer.get_wavelength()
         self.terminate = False
         self.acquire_measurement = True
-        self.columns=np.arange(0,self.SLM.get_width(),column_increment)
+        self.columns=np.arange(0,self.SLM.get_width(),column_increment,dtype=int)
+        self.columns_out=[]
         self.column_width=column_width
-        self.intensities= np.zeros((len(self.columns),len(self.wls)))# preallocate spec array
+        #self.intensities= np.zeros((len(self.columns),len(self.wls)))# preallocate spec array
+        self.intensities=[]
         self.spectral_calibration_data={
             'columns' : self.columns,
             'wavelengths' : self.wls,
@@ -146,15 +148,20 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
                 self.take_spectrum()
                 if self.isDemo:
                     fakeSpectrum=self.fakeSignal(self.wls,column,self.column_width)
-                    self.intensities[i,:]=fakeSpectrum
+                    self.intensities.append(fakeSpectrum)
                     self.sendSpectrum.emit(self.wls,fakeSpectrum)
                 else:
-                    self.intensities[i,:]=self.spectra
+                    self.intensities.append(self.spectra)
+                self.columns_out.append(column)
                 # Emit the data through signals 
                 self.sendProgress.emit(i/len(self.columns)*100)
-                self.spectral_calibration_data['intensities']=self.intensities
-                self.send_intensities.emit(self.columns,self.wls,self.intensities)
-        self.spectral_calibration_data['intensities']=self.intensities
+                self.spectral_calibration_data['intensities']=np.array(self.intensities)
+                self.spectral_calibration_data={
+                    'columns' : np.array(self.columns_out),
+                    'wavelengths' : self.wls,
+                    'intensities' : np.array(self.intensities)
+                }
+                self.send_intensities.emit(np.array(self.columns_out),self.wls,np.array(self.intensities))
         self.send_spectral_calibration_data.emit(('spectral_calibration_data',self.spectral_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
@@ -164,15 +171,69 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo:
             self.sendSpectrum.emit(self.wls, self.spec)
-
     def stop(self):
         self.terminate = True
         print(time.strftime('%H:%M:%S') + ' Request Stop')
     def fakeSignal(self,wls,current_col,col_width):
-        wave_per_pix=0.5 #Arbitrary but reasonnable parameters to simulate data acq.
+        wave_per_pix=0.1 #Arbitrary but reasonnable parameters to simulate data acq.
         min_wave=600
         fakeSpectrum=np.zeros(wls.shape)
         for i,wave in enumerate(wls):
             if wave-min_wave<=(current_col+col_width/2)*wave_per_pix and wave-min_wave>(current_col-col_width/2)*wave_per_pix:
                 fakeSpectrum[i]= 1000
         return fakeSpectrum
+
+    
+class FitSpectralBeamCalibration(QtCore.QThread):
+    '''
+        Manipulates the data to extract the SLM pixel to wavelength calibration from a previous measurement:
+            - send_maxima : column and wavelength of maximum detected by the spectrometer
+            - send_polynomial: np.ndarray representing a polynomial p[0]+p[1]*x+p[2]*x**2+...
+    '''
+    send_maxima = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    send_polynomial= QtCore.pyqtSignal(np.ndarray)
+
+    def __init__(self):
+        '''
+         Initializes the Vertical beam calibration measurement
+         input:
+             - devices: the devices dictionnary holding at least a spectrometer and a SLM
+             - grating_period: (int) the vertical period (in pixels) of the phase grating
+             - column_increment: (int) the step by which to shift the columns 
+             - column_width: (int) the width (in pixels) of the scanned column
+        ''' 
+        super(FitSpectralBeamCalibration, self).__init__()
+
+    def extractMaxima(self,column_array,wavelength_array, data, boundaries=None):
+        '''
+            Finds the maximum of spectra
+            input:
+                - column_array: (np.ndarray) 1D array holding the scanned axis of the 2D data plot
+                - wavelength_array: (np.ndarray) 1D array holding the wavelength axis of the 2D data plot
+                - data: (np.ndarray) 2D array of scanned spectra where spectra are arranged by row
+                - boundaries: (np.1darray) Minimum and maximal wavelengths to consider in the fitting
+            output:
+                - column_out: (np.ndarray) indices of the SLM columns. Emitted through send_maxima signal
+                - wavelengths_out: (np.ndarray) maxima of the spectra acquired in spectral calibration measurement. Emitted through send_maxima signal
+        '''
+        wavelengths=[]
+        if boundaries is None:
+            boundaries=[np.min(wavelength_array), np.max(wavelength_array)]
+            print('Boundaries set to %.2f and %.2f'%(boundaries[0],boundaries[1]))
+        for spectrum in data:
+            wavelengths.append(wavelength_array[np.mean(np.argmax(spectrum),dtype=int)])
+        print(wavelengths[-1])
+        wavelengths=np.array(wavelengths)
+        columns_out=column_array[np.logical_and(wavelengths>=boundaries[0],wavelengths<=boundaries[1])]
+        wavelengths_out=wavelengths[np.logical_and(wavelengths>=boundaries[0],wavelengths<=boundaries[1])]
+        self.send_maxima.emit(columns_out,wavelengths_out)
+        return columns_out,wavelengths_out
+
+#    def fitSpectraMaxima(self,columns,maxima_wavelengths):
+#        '''
+#            Extracts the polynomial converting SLM column into the incident wavelength
+#            input:
+#                - columns: (nd.array) array of SLM columns indices
+#                - maxima_wavelenghts: (nd.array) array of the maxima (wavelengths) of the spectral calibration measurements
+#        '''
+#

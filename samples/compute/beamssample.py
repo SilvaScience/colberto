@@ -14,7 +14,7 @@ import numpy as np
 A snippet of code demonstrating how to use some of the features in the Beams class
 '''
 
-bm=Beam(300,600)
+bm=Beam(1200,1920)
 bm.set_pixelToWavelength(P(1e-9*np.array([500,1/6])))# Sets bogus polynomial for pix to wave conversionpix2wave
 bm.set_compressionCarrierWave(532e-9)
 print('Wavelength at pixel 111:  %.3e m'%bm.get_spectrumAtPixel(111))
@@ -24,7 +24,7 @@ print('Energy at pixel 111:  %.3e eV'%bm.get_spectrumAtPixel(111,unit='energy'))
 print('Compression carrier wavelenght is %.2e nm'%bm.get_compressionCarrier(unit='wavelength'))
 print('Compression carrier angular frequency is %.2e rad.Hz'%bm.get_compressionCarrier(unit='ang_frequency'))
 bm.set_optimalPhase(P([0,0,1000,500]))
-bm.set_currentPhase(P([0,100,-1000,-500]),mode='relative')
+bm.set_currentPhase(P([0,10,-1000,-500]),mode='relative')
 bm.set_beamVerticalDelimiters([100,250])
 
 print('Optimal phase is now:')
