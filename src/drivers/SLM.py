@@ -23,28 +23,25 @@ from ctypes import *
 import time
 import sys
 import os
-import math as m
 
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
 from src.drivers.Slm_Meadowlark_optics import SLM
-from src.drivers.Slm_Meadowlark_optics import ImageGen
-from src.compute.beams import Beam
-from src.compute.calibration import Calibration
-from src.compute.SLMBogus import SLM2 
+from samples.drivers.exemple_image_generation import beam_image_gen
 
 
-class SLMDemo(QtWidgets.QMainWindow):
+class Slm(QtWidgets.QMainWindow):
     name = 'SLM'
 
     def __init__(self):
-        super(SLMDemo, self).__init__()
+        super(Slm, self).__init__()
 
         self.slm_worker= SLMWorker()
         self.slm_worker.start()
 
         
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
+        self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
         
 
 
@@ -99,8 +96,6 @@ class SLMDemo(QtWidgets.QMainWindow):
 
         self.slm_worker.newImageSignal.connect(self.update_image_from_array)
        
-
-
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """
@@ -120,7 +115,10 @@ class SLMDemo(QtWidgets.QMainWindow):
     - Function that updtaded the parameter into the dictionnary
     '''
 
-
+    def handle_slm_temperature(self, temperature):
+        self.parameter_display_dict['temperature']['val'] = temperature
+        self.parameter_dict['temperature'] = temperature
+    
     def handle_slm_params(self, height, width, depth, rgb, is8bit):
        
         self.parameter_display_dict['Height']['val'] = height
@@ -138,14 +136,11 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.parameter_display_dict['is8bit']['val'] = is8bit
         self.parameter_dict['is8bit'] = is8bit
 
-
-
-
     def update_image_from_array(self, np_img):
-    
+
         """
-        Reçoit un numpy array (H x W x 3) en 8 bits, le convertit en QPixmap,
-        puis l’affiche dans le QGraphicsView.
+         Receive an numpy array (H x W x 3) in 8 bits, make the conversion in QPixmap,
+        and display it in  QGraphicsView.
         """
         np_img = np.reshape(np_img, (1200, 1920))
         if np_img is None:
@@ -164,22 +159,23 @@ class SLMDemo(QtWidgets.QMainWindow):
     # 4) Convert QImage -> QPixmap
         pixmap = QPixmap.fromImage(q_img)
 
+        view_size = self.graphicsView.size()
+        scaled_pixmap = pixmap.scaled(view_size, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+
     # 5) Display in the graphical interface
         scene = QGraphicsScene()
-        pixmap_item = QGraphicsPixmapItem(pixmap)
+        pixmap_item = QGraphicsPixmapItem(scaled_pixmap)
         scene.addItem(pixmap_item)
         self.graphicsView.setScene(scene)
+
 
 
 
 class SLMWorker(QtCore.QThread):
     errorSignal = QtCore.pyqtSignal(str)
     slmParamsSignal = QtCore.pyqtSignal(int, int, int, int, int)
+    slmParamsTemperature = QtCore.pyqtSignal(int)
     newImageSignal = QtCore.pyqtSignal(np.ndarray)
-
-
-
-
 
     def __init__(self):
         super(SLMWorker, self).__init__() # Elevates this thread to be independent.
@@ -195,8 +191,7 @@ class SLMWorker(QtCore.QThread):
         self.height = 1 
         self.width = 1
         self.depth = 1
-
-        
+     
 
     '''
     Run function
@@ -243,36 +238,36 @@ class SLMWorker(QtCore.QThread):
 
 
             while not self._stop_flag:
+                
+                self.temperature= self.get_temperature()
+                self.slmParamsTemperature.emit(self.temperature)
+
                 start_time = time.time()
-                
-                for i in [0, 1, 2, 3,4,5,6,7,8]:
-                    for j in [0,1,2,3,4,5]:
-                        start_time = time.time()                                 
-                        self.current_image= self.beam_image()
-                #self.newImageSignal.emit(self.current_image)
-                
-                # Éventuellement, si on n’a pas d’image valide, on peut soit
-                # afficher un pattern neutre, soit skipper l’envoi
-                
+                                               
+                self.current_image= beam_image_gen()
+                self.current_image= self.normalize_phase_image(self.current_image)
+                #import the image from an external file (in phase format 0 to 2pi)
+                #use normalize_phase_image to normalise the image in the good format for the slm (0,255)
+
            
                 
 
 
-                        if self.current_image is not None:
+                if self.current_image is not None:
                     # Envoyer l'image au SLM
-                            self.write_image_slm(self.current_image)
+                    self.write_image_slm(self.current_image)
                   
-                            self.newImageSignal.emit(self.current_image)
+                    self.newImageSignal.emit(self.current_image)
                     
                     
 
 
 
                 # Calculer le temps écoulé
-                        elapsed = time.time() - start_time
-                        frame_duration = 1/self.target_fps
+                elapsed = time.time() - start_time
+                frame_duration = 1/self.target_fps
                 # Si on veut viser 30Hz, on « dort » le reste du temps
-                        if elapsed < frame_duration:
+                if elapsed < frame_duration:
                             time.sleep(frame_duration - elapsed)
 
         except Exception as e:
@@ -283,9 +278,6 @@ class SLMWorker(QtCore.QThread):
             if self.slm is not None:
                 self.slm.delete_sdk()
 
-
-
-
     def create_slm_sdk(self):
         #Connect and create the sdk"
         
@@ -293,54 +285,36 @@ class SLMWorker(QtCore.QThread):
         slm.create_sdk()
         return slm
     
-    #def stop(self):
-    #   self._stop_flag = True
-
-    #get the parameter from the slm
     def get_parameter(self):
         slm=SLM()
         h, w, d, rgbCtype, bitCtype=slm.parameter_slm()
         return h, w, d, rgbCtype, bitCtype
+    
+    def get_temperature(self):
+        slm=SLM()
+        temperature=slm.get_slm_temp()
+        return temperature
     
     #Write image on the slm
     def write_image_slm(self,image):
         slm=SLM()
         slm.write_image(image,c_uint(1))
         return
-
-
+    
     def load_lut(self, lut_path):
         """ Load lut file in the SDK Meadowlark."""
         if self.slm is not None:
             self.slm.load_lut(lut_path)
         else:
-            print(" Impossible to load the LUT file.") 
-
-
-    
-    def beam_image(self):
+            print(" Lut file not found.") 
         
-        slm=SLM()
-        cal = Calibration(slm)
-        
-        
-        pix2wave = P(1e-7 * np.array([50000, 1/6000000]))  # Sets bogus polynomial for pix to wave conversion
-        cal.set_pixelToWavelength(pix2wave)
-        bm = Beam(cal)
-
-        
-        bm.set_compressionCarrierWave(532e-9)
-        bm.set_optimalPhase(P([0, 0, 1000, 500]))
-        bm.set_currentPhase(P([0, 100, 500]), mode='relative')
-        #bm.set_beamVerticalDelimiters([1000, 1100])
-       
-        amplitude = 0.1
-        bm.set_gratingAmplitude(amplitude)
-        period = 10
-        bm.set_gratingPeriod(period)
-        image = bm.makeGrating()
-        #print(f"Image générée - shape: {image.shape}, taille: {image.size}")
-        return image
+    def normalize_phase_image(self,image, max_phase=2 * np.pi):
+        """
+        Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
+        """
+        image = np.clip(image, 0, max_phase)  # safety
+        norm_img = (image / max_phase) * 255
+        return norm_img.astype(np.uint8)
 
 
 
@@ -359,79 +333,6 @@ class SLMWorker(QtCore.QThread):
 
 
 
-
-"""
-    def generate_slm_image(self,i,j):
-        '''
-    Generating an exemple image for the SLM based on Esteban code. 
-    
-    Returns:
-        np.ndarray: Image en uint8 (1200x1920) <<<(H x W x 3) en 8 bits>>> Ready to write to the slm
-        '''
-     
-    # === Définition des paramètres ===
-        A = 2
-        d = 128
-        chirp = [j, j, i, 0]  # 3, 2, 1, 0 ordre  
-        coeff_wavepix = np.array([0.06313, 485])
-        w_c = 505
-        w_c_delay = 505
-        taille = np.array([1920, 1200])  # Taille SLM (Largeur x Hauteur)
-        active = np.array([1, 1920, 1, 1920])  # Zone active (adaptée au SLM)
-        micaslope = 0
-        c = 299792458  # Vitesse de la lumière
-
-    # === Prétraitement du chirp ===
-        end = len(chirp) - 1
-        for i in range(len(chirp)):
-            chirp[end - i] = chirp[end - i] * (1e-15) ** i / m.factorial(i)
-        chirp_delay = np.array([chirp[end - 1], 0])
-        chirp[end - 1] = 0
-        chirp_mica = np.array([micaslope * 1e-15, 0])
-
-        A = A * np.pi
-        w_c = 2 * np.pi * c / (w_c * 1e-9)
-        w_c_delay = 2 * np.pi * c / (w_c_delay * 1e-9)
-
-    # === Génération de l'image ===
-        Image = []
-
-        for i in range(1, taille[1] + 1):  # Balayage ligne par ligne (hauteur)
-            if active[0] <= i <= active[1]:
-                w = 2 * np.pi * c / (np.polyval(coeff_wavepix, i) * 1e-9)
-
-                if micaslope != 0 and np.mod(i, 2) == 0:
-                    offset = np.polyval(chirp, (w - w_c)) / (2 * np.pi)
-                    offset += np.polyval(chirp_mica, (w - w_c_delay)) / (2 * np.pi)
-                else:
-                    offset = np.polyval(chirp, (w - w_c)) / (2 * np.pi)
-                    offset += np.polyval(chirp_delay, (w - w_c_delay)) / (2 * np.pi)
-
-                temp = A * np.remainder(1 / d * np.arange(active[2] - 1, active[3], 1) - offset, 1)
-                temp = np.pad(temp, (active[2] - 1, taille[0] - active[3]), mode='constant', constant_values=0)
-            else:
-                temp = np.zeros(taille[0])
-
-            Image.append(temp)
-
-    # === Convertir en tableau numpy et normaliser ===
-        Image = np.transpose(np.array(Image))  # Transposer pour correspondre aux dimensions SLM (H x W)
-    
-    # Normalisation et conversion en uint8
-        Image = 255 * (Image - np.min(Image)) / (np.max(Image) - np.min(Image))
-        Image = Image.astype(np.uint8)
-
-        data = np.reshape(Image,(1200*1920,)) 
-
-# changing data type from np.float64 to np.uint8
-        data = data.astype(np.float64) / np.max(data) # normalize the data to 0 - 1
-        data = 255 * data # Now scale by 255
-        img = data.astype(np.uint8)
-        
-        
-        return img       
-
-"""
             
 
 

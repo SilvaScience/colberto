@@ -16,7 +16,7 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-from drivers.SLMDemo import SLMDemo
+from drivers.SLM import Slm
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement, KineticMeasurement
@@ -51,7 +51,7 @@ class MainInterface(QtWidgets.QMainWindow):
         print('Spectrometer connection failed, use DEMO')
 
         # Call the class SLMDemo that initialize the worker
-        self.SLM = SLMDemo()
+        self.SLM = Slm()
         self.devices['SLM'] = self.SLM
         
         
@@ -378,3 +378,5 @@ class UpdateWorker(QtCore.QThread):
 app = QtWidgets.QApplication(sys.argv)
 window = MainInterface()
 app.exec_()
+
+

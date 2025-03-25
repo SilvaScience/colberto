@@ -42,10 +42,10 @@ print(bm.get_currentPhase(mode='absolute'))
 amplitude=1
 bm.set_gratingAmplitude(amplitude)
 print('Current amplitude (units of 2*pi) is %.2f'%bm.get_gratingAmplitude())
-period=10
+period=100
 bm.set_gratingPeriod(period)
 print('Current grating period is %d pixels'%bm.get_gratingPeriod())
-plt.figure("")
+plt.figure()
 num=100
 plt.plot(bm.generate_1Dgrating(amplitude,period,0,num),'s',label='0')
 plt.plot(bm.generate_1Dgrating(amplitude,period,pi,num),'s',label='Pi')
