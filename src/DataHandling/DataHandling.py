@@ -47,7 +47,6 @@ class DataHandling(QtCore.QThread):
         self.correct_background = False
         self.send_x_idx = 'time'
         self.send_y_idx = 'absolute_time'
-
         # initialize parameter array
         self.parameter_matrix_full = False
         self.data_in_flash = 0

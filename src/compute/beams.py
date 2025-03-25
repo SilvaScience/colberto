@@ -220,7 +220,7 @@ class Beam:
         '''
             Makes the phase grating using the current phase, amplitude and period
             output:
-                - 2d.array: A 2D phase array corresponding to the current phase profile 
+                - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
         phaseGratingImage=[]
         numberVerticalPixels=self.beamVerticalDelimiters[1]-self.beamVerticalDelimiters[0]
