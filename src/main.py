@@ -9,6 +9,7 @@ import time
 import re
 import os
 from collections import defaultdict
+from pathlib import Path
 import numpy as np
 from PyQt5 import QtCore, QtWidgets, uic
 from functools import partial
@@ -17,6 +18,8 @@ from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLM import Slm
+from drivers.StresingDemo import StresingDemo
+from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement, KineticMeasurement
@@ -26,8 +29,8 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainInterface, self).__init__()
-        project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\src\GUI\main_GUI.ui', self)
+        project_folder = Path(__file__).parent.resolve()
+        uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
 
         # fancy name
         self.setWindowTitle('COLBERTo')
@@ -57,6 +60,15 @@ class MainInterface(QtWidgets.QMainWindow):
         
     
 
+        # initialize StresingDemo
+        self.Stresing = StresingDemo()
+        self.devices['Stresing'] = self.Stresing
+        print('Stresing connected')
+
+        # initialize MonochromDemo
+        self.Monochrom = MonochromDemo() 
+        self.devices['Monochrom'] = self.Monochrom 
+        print('Monochrom DEMO connected')
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -378,5 +390,3 @@ class UpdateWorker(QtCore.QThread):
 app = QtWidgets.QApplication(sys.argv)
 window = MainInterface()
 app.exec_()
-
-
