@@ -17,9 +17,12 @@ class AcquireMeasurement(QtCore.QThread):
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, parameter):
+    def __init__(self, devices, parameter):
         super(AcquireMeasurement, self).__init__()
-        self.spectrometer = devices['spectrometer']
+        if devices['Stresing']:
+            self.stresing = devices['Stresing']
+        else:
+            self.spectrometer = devices['Spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.terminate = False
@@ -28,13 +31,19 @@ class AcquireMeasurement(QtCore.QThread):
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
             self.sendProgress.emit(50)
-            self.wls = np.array(self.spectrometer.get_wavelength())
+            try:
+                self.wls = np.array(self.stresing.get_wavelength())
+            except:
+                self.wls = np.array(self.spectrometer.get_wavelength())
             self.take_spectrum()
             print(time.strftime('%H:%M:%S') + ' Finished')
             self.sendProgress.emit(100)
 
     def take_spectrum(self):
-        self.spec = np.array(self.spectrometer.get_intensities())
+        try:
+            self.spec = np.array(self.stresing.get_spectrum())
+        except:
+            self.spec = np.array(self.spectrometer.get_intensities())
         self.sendSpectrum.emit(self.wls, self.spec)
 
     def stop(self):
@@ -51,7 +60,7 @@ class ViewMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter):
         super(ViewMeasurement, self).__init__()
-        self.spectrometer = devices['spectrometer']
+        self.spectrometer = devices['Spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.terminate = False
@@ -86,7 +95,7 @@ class RunMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter):
         super(RunMeasurement, self).__init__()
-        self.spectrometer = devices['spectrometer']
+        self.spectrometer = devices['Spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.terminate = False
@@ -124,7 +133,7 @@ class BackgroundMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter, scans, filename, comments):
         super(BackgroundMeasurement, self).__init__()
-        self.spectrometer = devices['spectrometer']
+        self.spectrometer = devices['Spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.summedspec = []
@@ -161,7 +170,7 @@ class KineticMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter, kinetic_interval):
         super(KineticMeasurement, self).__init__()
-        self.Spectrometer = devices['spectrometer']
+        self.Spectrometer = devices['Spectrometer']
         #self.orpheus = devices['thorlabs_shutter']
         self.kinetic_interval = kinetic_interval
         self.wls = []

@@ -18,7 +18,7 @@ from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
-from drivers.StresingDemo import StresingDemo
+from drivers.Stresing import StresingCamera
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
@@ -33,7 +33,7 @@ class MainInterface(QtWidgets.QMainWindow):
         uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
 
         # fancy name
-        self.setWindowTitle('COLBERTo')
+        self.setWindowTitle('COLBERT')
 
         # set devices dict
         self.devices = defaultdict(dict)
@@ -45,23 +45,25 @@ class MainInterface(QtWidgets.QMainWindow):
         # This is extremely useful for debugging and troubleshooting.
         print('WARNING you are using a DEMO version of the cryostat')
         self.cryostat = CryoDemo() # launch cryostat interface
-        self.devices['cryostat'] = self.cryostat # store in global device dict.
-
-        # initialize Spectrometer
-        self.spectrometer = SpectrometerDemo()
-        self.spec_length = self.spectrometer.spec_length
-        self.devices['spectrometer'] = self.spectrometer
-        print('Spectrometer connection failed, use DEMO')
+        self.devices['Cryostat'] = self.cryostat # store in global device dict.
 
         # initialize SLMDemo
         self.SLM = SLMDemo()
         self.devices['SLM'] = self.SLM
         print('SLMDemo connected')
 
-        # initialize StresingDemo
-        self.Stresing = StresingDemo()
-        self.devices['Stresing'] = self.Stresing
-        print('Stresing connected')
+        try:
+            # initialize Stresing
+            self.stresing = StresingCamera()
+            self.spec_length = self.stresing.spec_length
+            self.devices['Stresing'] = self.stresing
+            print('Stresing connected')    
+        except:
+            # initialize Spectrometer
+            self.spectrometer = SpectrometerDemo()
+            self.spec_length = self.spectrometer.spec_length
+            self.devices['Spectrometer'] = self.spectrometer
+            print('Spectrometer demo connected')
 
         # initialize MonochromDemo
         self.Monochrom = MonochromDemo() 
