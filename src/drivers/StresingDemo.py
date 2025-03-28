@@ -15,6 +15,10 @@ import numpy as np
 from PyQt5 import QtCore
 from collections import defaultdict
 import time
+from pathlib import Path
+from drivers.stresing_camera import camera_settings
+from drivers.stresing_camera import measurement_settings
+from drivers.stresing_camera import stresing
 
 class StresingDemo(QtCore.QThread):
 
@@ -37,6 +41,34 @@ class StresingDemo(QtCore.QThread):
         self.parameter_dict = {}
         for key in self.parameter_display_dict.keys():
             self.parameter_dict[key] = self.parameter_display_dict[key]['val']
+
+        # path to the DLL file 
+        folder_path = Path(__file__).resolve().parent #add or remove parent based on the file location
+
+        path_camera_dll = folder_path / "stresing" / "ESLSCDLL.dll"
+        path_camera_dll = str(path_camera_dll)
+
+        path_config = folder_path / "stresing" / "config_WFU.ini"
+        path_config = str(path_config)
+
+        # initialize stresing camera
+        self.camera = stresing(path_config, path_camera_dll)
+
+        use_blocking_call = True
+            # True = returns data when measurement is finished
+            # False = returns data immediately
+
+        self.camera.measure(use_blocking_call)
+
+        sample = 5
+        block = 0
+        list_frame_buffer = CAM.get_data_one_frame(sample,block)
+        # Plot the frame
+        plt.plot(list_frame_buffer) #pixel number vs intensity 
+        plt.title('One Frame')
+        plt.show()
+
+        CAM.close()
 
         # initialize Worker
         self.worker = StresingWorker()
