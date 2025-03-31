@@ -33,7 +33,7 @@ class MainInterface(QtWidgets.QMainWindow):
         uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
 
         # fancy name
-        self.setWindowTitle('COLBERT')
+        self.setWindowTitle('COLBERTo')
 
         # set devices dict
         self.devices = defaultdict(dict)
