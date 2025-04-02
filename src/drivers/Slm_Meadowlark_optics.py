@@ -8,6 +8,7 @@ Created on Mon May 13 15:06:04 2024
 import ctypes
 from ctypes import *
 from pathlib import Path
+from collections import defaultdict
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
 print(awareness.value)
@@ -193,7 +194,7 @@ class SLM:
 
 
 class ImageGen:
-    def __init__(self):
+    def __init__(self, path_image_gen):
         # Load the DLL
         self.image_gen_dll = ctypes.CDLL(path_image_gen)
         #print("Le DDL est chargé ")
@@ -228,7 +229,15 @@ class ImageGen:
         self.image_gen_dll.GetBESTAxialPSF.restype = ctypes.c_int
         self.image_gen_dll.Generate_BESTRings.restype = None
 
+        # test!!!
+        self.parameter_dict = defaultdict()
+        """ Set up the parameter dict. 
+        Here, all properties of parameters to be handled by the parameter dict are defined."""
+        self.parameter_display_dict = defaultdict(dict)
 
+        self.parameter_dict = {}
+        for key in self.parameter_display_dict.keys():
+            self.parameter_dict[key] = self.parameter_display_dict[key]['val']
 
     def concatenate_ten_bit(self, array_one, array_two, width, height):
         self.image_gen_dll.Concatenate_TenBit(array_one, array_two, width, height)
