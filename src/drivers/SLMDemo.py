@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 import sys
 import os
+import ctypes
 
 
 class SLMDemo(QtWidgets.QMainWindow):
@@ -35,7 +36,7 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.parameter_display_dict['amplitude']['val'] = 1
         self.parameter_display_dict['amplitude']['unit'] = ' V'
         self.parameter_display_dict['amplitude']['max'] = 1000
-        self.parameter_display_dict['amplitude']['read'] = False
+        self.parameter_display_dict['amplitude']['read'] = True
         self.parameter_display_dict['greyscale_val']['val'] = 0
         self.parameter_display_dict['greyscale_val']['unit'] = ' '
         self.parameter_display_dict['greyscale_val']['max'] = 255
@@ -55,7 +56,7 @@ class SLMDemo(QtWidgets.QMainWindow):
         project_folder = Path(__file__).parents[1].resolve()
         uic.loadUi(Path(project_folder,r'GUI/SLM_GUI.ui'), self)
 
-        def set_parameter(self, parameter, value):
+    def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """
         if parameter == 'amplitude':
@@ -80,4 +81,3 @@ class SLMDemo(QtWidgets.QMainWindow):
 
     def write_image(self, image):
         return 42
-
