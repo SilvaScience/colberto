@@ -65,6 +65,15 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['SLM'] = self.SLM
         print('SLMDemo connected')
 
+        # initialize ImageGen
+        folder_path = Path(__file__).resolve().parent.parent
+        path_image_gen = folder_path / "src" / "drivers" / "SDK" / "ImageGen.dll"  # Path to the DLL file
+        path_image_gen = str(path_image_gen)
+
+        self.ImageGen = ImageGen(path_image_gen)
+        self.devices['ImageGen'] = self.ImageGen
+        print('ImageGen connected')
+
         # initialize StresingDemo
         self.Stresing = StresingDemo()
         self.devices['Stresing'] = self.Stresing
