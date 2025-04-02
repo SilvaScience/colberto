@@ -90,6 +90,17 @@ class MainInterface(QtWidgets.QMainWindow):
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
         self.SLM_tab = self.findChild(QtWidgets.QWidget, 'SLM_tab')
 
+        #LUT Calibration - Utilities
+        self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
+        self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
+        self.LUT_calib_spectra_avg_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_spectra_avg_spinBox')
+        self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
+        self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget,'LUT_calib_plot_layout')
+        self.measure_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'measure_LUT_calib')
+        self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
+        self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
+        self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
         for device in self.devices.keys():
@@ -111,6 +122,7 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.SLM)
         self.SLM_tab.setLayout(vbox)
+        self.LUT_Calib_plot= LUT_Calib_plot(self.LUT_calib_plot_layout)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -181,6 +193,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
         self.kinetic_lineEdit.editingFinished.connect(self.change_kinetic_interval)
         self.kinetic_run_button.clicked.connect(self.kinetic_measurement)
+        #LUT Calibration Measurement Connect Events
+        self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale) # measure spectrum
+        self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
+        self.generate_LUT_calib_button.clicked.connect(self.Generate_LUT_PhasetoGreyscale) # use spectrum data to generate LUT file
 
         # run some functions once to define default values
         self.change_filename()
@@ -285,6 +301,17 @@ class MainInterface(QtWidgets.QMainWindow):
         except:
             print('Lecture of kinetic interval failed')
 
+    def load_LUT_Data_file(self):
+        # open background file and set as background
+        LUT_DataFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select LUT Data File')
+        #print('complete')
+        LUT_DataFile_path = LUT_DataFile[0]
+        #print(LUT_DataFile_path)
+
+        # display measured spectra filepath
+        self.LUT_Data_file_edit.setText(LUT_DataFile_path)
+        print('Data path stored')    
+
     ##### Measurements #####
 
     def acquire_measurement(self):
@@ -360,6 +387,46 @@ class MainInterface(QtWidgets.QMainWindow):
         # stop measurement
         self.measurement.stop()
         self.measurement_busy = False
+
+    def Measure_LUT_PhasetoGreyscale(self):
+        '''
+                    Sets up and starts a Phase to Greyscale LUT Measurement. 
+        '''
+
+        if not self.measurement_busy:
+            print('Start LUT Calibration Measurement')
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement = Measure_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_int_time_box.value(),
+                                                            self.LUT_calib_spectra_avg_box.value(),
+                                                            self.LUT_calib_scans_number_box.value())
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.DataHandling.sendSpectrum.connect(self.LUT_Calib_plot.set_data)
+
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendParameter.connect(self.change_parameter)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def Generate_LUT_PhasetoGreyscale(self):
+        '''
+                    Analyzes measured spectrum file and generates a Phase to Greyscale LUT File.
+        '''
+
+        if not self.measurement_busy:
+            print('Start LUT File Generation')
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement = Generate_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_Data_file_edit.text())
+            self.measurement.sendProgress.connect(self.set_progress)
+            #self.DataHandling.sendSpectrum.connect(self.LUT_Calib_plot.set_data)
+            #self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            #self.measurement.sendParameter.connect(self.change_parameter)
+
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
 
 
 class UpdateWorker(QtCore.QThread):
