@@ -11,18 +11,25 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
+import pyqtgraph as pg
 from PyQt5 import QtCore, QtWidgets, uic
 from functools import partial
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
+from GUI.LUT_Calib_plot import LUT_Calib_plot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
+
+from drivers.Slm_Meadowlark_optics import SLM
+from drivers.Slm_Meadowlark_optics import ImageGen
+
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement, KineticMeasurement
+from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 
 
 class MainInterface(QtWidgets.QMainWindow):
