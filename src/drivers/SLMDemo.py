@@ -36,7 +36,7 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.parameter_display_dict['amplitude']['unit'] = ' V'
         self.parameter_display_dict['amplitude']['max'] = 1000
         self.parameter_display_dict['amplitude']['read'] = False
-
+    
         # set parameters
         self.amplitude = 5
 
@@ -49,10 +49,28 @@ class SLMDemo(QtWidgets.QMainWindow):
         project_folder = Path(__file__).parents[1].resolve()
         uic.loadUi(Path(project_folder,r'GUI/SLM_GUI.ui'), self)
 
+    def write_image(self,image):
+        '''
+            Placeholder for image writing on the SLM
+            input:
+                - image (nd.array)
+        '''
+        return 42
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """
         if parameter == 'amplitude':
             self.parameter_dict['amplitude'] = value
             self.amplitude = value
+    
+    def get_height(self):
+        '''
+            Dummy function for SLM height
+        '''
+        return 300
 
+    def get_width(self):
+        '''
+            Dummy function for SLM width
+        '''
+        return 600

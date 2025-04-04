@@ -8,7 +8,8 @@ set_parameter function (assign set functions)
 
 """
 """TO DOS:
-- think of TO DOs
+- Connect the camera with the PC. Try the different functionalities and choose the relevant one.
+- Define these functions in the worker.
 """
 
 import numpy as np

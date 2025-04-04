@@ -15,23 +15,24 @@ import numpy as np
 A snippet of code demonstrating how to use some of the features in the Beams class
 '''
 
-slm=SLM2(600,300)
-print('Widht: %d and heigth %d of SLM '%(slm.get_size()))
-print("tyoyo slm",slm)
-cal=Calibration(slm)# Initialize calibration with SLM object
-pix2wave=P(1e-9*np.array([500,1/6]))# Sets bogus polynomial for pix to wave conversion
-cal.set_pixelToWavelength(pix2wave)
-bm=Beam(cal)
+
+bm=Beam(1200,1920)
+bm.set_pixelToWavelength(P(1e-9*np.array([500,1/6])))# Sets bogus polynomial for pix to wave conversionpix2wave
 bm.set_compressionCarrierWave(532e-9)
+print('Wavelength at pixel 111:  %.3e m'%bm.get_spectrumAtPixel(111))
+print('Frequency at pixel 111:  %.3e Hz'%bm.get_spectrumAtPixel(111,unit='frequency'))
+print('Angular frequency at pixel 111:  %.3e rad Hz'%bm.get_spectrumAtPixel(111,unit='ang_frequency'))
+print('Energy at pixel 111:  %.3e eV'%bm.get_spectrumAtPixel(111,unit='energy'))
 print('Compression carrier wavelenght is %.2e nm'%bm.get_compressionCarrier(unit='wavelength'))
 print('Compression carrier angular frequency is %.2e rad.Hz'%bm.get_compressionCarrier(unit='ang_frequency'))
 bm.set_optimalPhase(P([0,0,1000,500]))
-bm.set_currentPhase(P([0,100,500]),mode='relative')
+bm.set_currentPhase(P([0,10,-1000,-500]),mode='relative')
 bm.set_beamVerticalDelimiters([100,250])
 
 print('Optimal phase is now:')
 print(bm.get_optimalPhase())
 plt.figure()
+plt.title('Example of phase profile vs Column index')
 plt.plot(bm.get_horizontalIndices(),bm.get_sampledCurrentPhase())
 plt.xlabel('Pixel column index')
 plt.ylabel('Phase (rad)')
@@ -51,18 +52,22 @@ plt.plot(bm.generate_1Dgrating(amplitude,period,0,num),'s',label='0')
 plt.plot(bm.generate_1Dgrating(amplitude,period,pi,num),'s',label='Pi')
 plt.ylabel('Phase (rad.)')
 plt.xlabel('Pixel index')
+plt.legend()
+plt.title('1D grating examples')
 
 plt.figure()
+plt.title('Phase grating')
 plt.imshow(bm.makeGrating())
 
 # Here is how to constraint the horizontal extent of the pattern
-mask=np.zeros(slm.get_size()[0])
-mask[325:330]=1
-bm.set_gratingAmplitudeMask(mask)
+bm.make_mask(horizontalDelimiters=[325,400])
 bm.set_maskStatus(True)
 plt.figure()
-plt.plot(mask)
+mask,isMaskOn=bm.get_mask()
+plt.title('Amplitude mask profile is %s'% 'On' if isMaskOn else 'Off')
+plt.imshow(mask)
 plt.figure()
+plt.title('Phase grating with mask (Mask is %s)'%'On' if isMaskOn else 'Off')
 plt.imshow(bm.makeGrating())
 
 

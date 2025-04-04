@@ -1,4 +1,6 @@
 var searchData=
 [
-  ['user_5finput_5fassign_5fpixelnumber_5fto_5fwavelength_0',['user_input_assign_pixelnumber_to_wavelength',['../classcalibration_1_1Calibration.html#aabc4824a8e013b48f3c720c061569a4e',1,'calibration::Calibration']]]
+  ['make_5fmask_0',['make_mask',['../classbeams_1_1Beam.html#a25f15b6c4f1235b0fcc08bc565dc69bf',1,'beams::Beam']]],
+  ['makegrating_1',['makeGrating',['../classbeams_1_1Beam.html#ad4ed00fd5756f16d79c8c51a5a9180b9',1,'beams::Beam']]],
+  ['measure_2',['measure',['../classstreising__camera_1_1streising.html#a3742ac7b986c83cc4eb2d8c29304aba5',1,'streising_camera::streising']]]
 ];

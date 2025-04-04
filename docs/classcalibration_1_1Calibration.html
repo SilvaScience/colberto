@@ -102,10 +102,6 @@ $(document).ready(function(){initNavTree('classcalibration_1_1Calibration.html',
 Public Member Functions</h2></td></tr>
 <tr class="memitem:a6d8d4e31dd465add73a87292177ebd14" id="r_a6d8d4e31dd465add73a87292177ebd14"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classcalibration_1_1Calibration.html#a6d8d4e31dd465add73a87292177ebd14">__init__</a> (self, SLM)</td></tr>
 <tr class="separator:a6d8d4e31dd465add73a87292177ebd14"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac2bb36b0f781cddb4c107efd9cd9c331" id="r_ac2bb36b0f781cddb4c107efd9cd9c331"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classcalibration_1_1Calibration.html#ac2bb36b0f781cddb4c107efd9cd9c331">set_pixelToWavelength</a> (self, polynomial)</td></tr>
-<tr class="separator:ac2bb36b0f781cddb4c107efd9cd9c331"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae17f2339e773195889f449a427e5fef9" id="r_ae17f2339e773195889f449a427e5fef9"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classcalibration_1_1Calibration.html#ae17f2339e773195889f449a427e5fef9">get_spectrumAtPixel</a> (self, pixels, unit='wavelength')</td></tr>
-<tr class="separator:ae17f2339e773195889f449a427e5fef9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aabc4824a8e013b48f3c720c061569a4e" id="r_aabc4824a8e013b48f3c720c061569a4e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classcalibration_1_1Calibration.html#aabc4824a8e013b48f3c720c061569a4e">user_input_assign_pixelnumber_to_wavelength</a> (self, peak_pos)</td></tr>
 <tr class="separator:aabc4824a8e013b48f3c720c061569a4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:acd56ff5c2fbd0809d9815d5d27ca9a8a" id="r_acd56ff5c2fbd0809d9815d5d27ca9a8a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classcalibration_1_1Calibration.html#acd56ff5c2fbd0809d9815d5d27ca9a8a">spectral_camera_pixel2wavelength_calib</a> (self, peak_pos, wave, degree, pixels)</td></tr>
@@ -170,79 +166,6 @@ Input:
 </div>
 </div>
 <h2 class="groupheader">Member Function Documentation</h2>
-<a id="ae17f2339e773195889f449a427e5fef9" name="ae17f2339e773195889f449a427e5fef9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ae17f2339e773195889f449a427e5fef9">&#9670;&#160;</a></span>get_spectrumAtPixel()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">calibration.Calibration.get_spectrumAtPixel </td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>self</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>pixels</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>unit</em> = <code>'wavelength'</code>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<pre class="fragment">Gets the spectral position of light associated with a pixel on the SLM
-input:
-    - pixels: (nd.array) the horizontal pixel index on the SLM
-    - unit: the unit in which to return the spectrum axis allows for
-        - 'wavelength' (default): Returns in units of wavelength (m)
-        - 'frequency' : Returns in units of frequency (Hz)
-        - 'ang_frequency' : Returns in units of angular frequency (rad.Hz)
-        - 'energy' : Returns in units of energy (eV)
-output: (nd.array) the spectral position associated with the pixels in pixels</pre> 
-</div>
-</div>
-<a id="ac2bb36b0f781cddb4c107efd9cd9c331" name="ac2bb36b0f781cddb4c107efd9cd9c331"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ac2bb36b0f781cddb4c107efd9cd9c331">&#9670;&#160;</a></span>set_pixelToWavelength()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">calibration.Calibration.set_pixelToWavelength </td>
-          <td>(</td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>self</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>polynomial</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<pre class="fragment">Sets the pixel to wavelength calibration polynomial
-input:
-    - polynomial: (Polynomial object) a Numpy Power series polynomial relating a pixel index to a wavelength in m
-</pre> 
-</div>
-</div>
 <a id="acd56ff5c2fbd0809d9815d5d27ca9a8a" name="acd56ff5c2fbd0809d9815d5d27ca9a8a"></a>
 <h2 class="memtitle"><span class="permalink"><a href="#acd56ff5c2fbd0809d9815d5d27ca9a8a">&#9670;&#160;</a></span>spectral_camera_pixel2wavelength_calib()</h2>
 

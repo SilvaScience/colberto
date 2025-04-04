@@ -20,7 +20,7 @@ Follow common [Python DocStrings guidelines](https://www.doxygen.nl/manual/docbl
 4. You can then locate your environnement using which `which python` in Linux or `where python` in Windows and import it into your IDE (e.g. VCode with Python pluggin)
 ## Updating python environnement
 
-When developping new features in your branch, it is very likely that you will need to add python packages. You can do this using `conda install packagename`. You will then need to update the required package list by naviguating to /dependencies/ and using the command `conda list -e > requirements.txt`. This will dump your current package list into the file so that the packages will be appended to the project requirements. Don't forget to add requirements.txt to your commit.
+When developping new features in your branch, it is very likely that you will need to add python packages. You can do this using `conda install packagename`. You will then need to update the required package list by naviguating to /dependencies/ and using the command `conda env export --no-builds > environment.yml`. This will dump your current package list into the file so that the packages will be appended to the project requirements. Don't forget to add requirements.txt to your commit.
 
 ## Naming Conventions
 In this project, we follow standard Python naming conventions to ensure that our code is readable and consistent. Below are the guidelines for naming functions and classes:

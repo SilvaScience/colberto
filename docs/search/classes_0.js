@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['beam_0',['Beam',['../classbeams_1_1Beam.html',1,'beams']]]
+  ['acquiremeasurement_0',['AcquireMeasurement',['../classMeasurementClasses_1_1AcquireMeasurement.html',1,'MeasurementClasses']]]
 ];
