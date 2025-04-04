@@ -17,7 +17,7 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-from drivers.SLMDemo import SLMDemo
+from drivers.SLM import Slm
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
@@ -56,9 +56,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['spectrometer'] = self.spectrometer
         logger.warning('%s Spectrometer connection failed, use DEMO'%datetime.datetime.now())
 
-        # initialize SLMDemo
-        self.SLM = SLMDemo()
+        # Call the class SLMDemo that initialize the worker
+        self.SLM = Slm()
         self.devices['SLM'] = self.SLM
+        
         logger.info('%s SLMDemo connected'%datetime.datetime.now())
 
         # initialize StresingDemo

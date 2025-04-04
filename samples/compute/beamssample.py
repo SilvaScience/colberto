@@ -4,7 +4,8 @@ path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
 from src.compute.beams import Beam
 from src.compute.calibration import Calibration
-from src.compute.SLMBogus import SLM 
+from src.compute.SLMBogus import SLM2 
+
 from matplotlib import pyplot as plt
 from scipy.constants import pi
 from numpy.polynomial import Polynomial as P
@@ -14,8 +15,9 @@ import numpy as np
 A snippet of code demonstrating how to use some of the features in the Beams class
 '''
 
-slm=SLM(600,300)
+slm=SLM2(600,300)
 print('Widht: %d and heigth %d of SLM '%(slm.get_size()))
+print("tyoyo slm",slm)
 cal=Calibration(slm)# Initialize calibration with SLM object
 pix2wave=P(1e-9*np.array([500,1/6]))# Sets bogus polynomial for pix to wave conversion
 cal.set_pixelToWavelength(pix2wave)
@@ -40,7 +42,7 @@ print(bm.get_currentPhase(mode='absolute'))
 amplitude=1
 bm.set_gratingAmplitude(amplitude)
 print('Current amplitude (units of 2*pi) is %.2f'%bm.get_gratingAmplitude())
-period=10
+period=100
 bm.set_gratingPeriod(period)
 print('Current grating period is %d pixels'%bm.get_gratingPeriod())
 plt.figure()
