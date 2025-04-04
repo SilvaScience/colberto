@@ -50,3 +50,9 @@ Examples:
 - `get_depth()`
 - `write_image()`
 - `send_email()`
+
+### Logging
+
+Thread safe logs are instantiated in each modules by importing the `logging` module and invoking `logger=logging.getLogger(__name__)` right after the module import block.
+
+The log file location is configured in `main.py` and points to a `main.log` file at the root of the project. This file is ignored in commits. The logging level is also configured there. You can check out [the python documentation on `logging`](https://docs.python.org/3/library/logging.html) to see how to use this module for informing, debugging and error handling.

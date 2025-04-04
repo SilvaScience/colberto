@@ -190,6 +190,11 @@ class SLM:
         RGB   = ctypes.c_uint(rgb)
         isEightBitImage = ctypes.c_uint(bit)
         return height,width,depth,RGB,isEightBitImage
+    
+    def get_size(self):
+        width=SLM.get_width(self)
+        height=SLM.get_height(self)
+        return width,height
 
 
 class ImageGen:

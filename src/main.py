@@ -20,22 +20,26 @@ from GUI.VerticalCalibPlot import VerticalCalibPlot
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-from drivers.SLMDemo import SLMDemo
+from drivers.SLM import Slm
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
-from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
+from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement, KineticMeasurement
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration
 from compute.beams import Beam
+import logging
+import datetime
 
 
+logger = logging.getLogger(__name__)
 class MainInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainInterface, self).__init__()
         project_folder = Path(__file__).parent.resolve()
         uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
-
+        logging.basicConfig(filename='main.log', level=logging.INFO)
+        logger.info('%s Started log'%datetime.datetime.now())
         # fancy name
         self.setWindowTitle('COLBERTo')
 
@@ -47,7 +51,7 @@ class MainInterface(QtWidgets.QMainWindow):
         Illustrates use of parameters"""
         # always try to include communication on important events.
         # This is extremely useful for debugging and troubleshooting.
-        print('WARNING you are using a DEMO version of the cryostat')
+        logger.warning('%s You are using a DEMO version of the cryostat'%datetime.datetime.now())
         self.cryostat = CryoDemo() # launch cryostat interface
         self.devices['cryostat'] = self.cryostat # store in global device dict.
 
@@ -55,17 +59,24 @@ class MainInterface(QtWidgets.QMainWindow):
         self.spectrometer = SpectrometerDemo()
         self.spec_length = self.spectrometer.spec_length
         self.devices['spectrometer'] = self.spectrometer
-        print('Spectrometer connection failed, use DEMO')
+        logger.warning('%s Spectrometer connection failed, use DEMO'%datetime.datetime.now())
 
-        # Initialize SLM
-        self.SLM= SLMDemo()
+       
+        # Call the class SLMDemo that initialize the worker
+        self.SLM = Slm()
         self.devices['SLM'] = self.SLM
-        print('SLM connection failed, use DEMO')
+        
+        logger.info('%s SLMDemo connected'%datetime.datetime.now())
+
+        # initialize StresingDemo
+        self.Stresing = StresingDemo()
+        self.devices['Stresing'] = self.Stresing
+        logger.info('%s Stresing connected'%datetime.datetime.now())
 
         # initialize MonochromDemo
         self.Monochrom = MonochromDemo() 
         self.devices['Monochrom'] = self.Monochrom 
-        print('Monochrom DEMO connected')
+        logger.info('%s Monochrom DEMO connected'%datetime.datetime.now())
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -248,7 +259,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def test(self):
         # test function to test anything
-        print('I am testing')
+        logger.info('%s I am testing'%datetime.datetime.now())
 
     def set_progress(self, progress):
         # set progress bar and define whether a measurement is running. When progess ne 100, no new measurement starts
@@ -259,13 +270,13 @@ class MainInterface(QtWidgets.QMainWindow):
     def change_folder(self):
         # select folder to save data
         self.save_folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select data saving folder')
-        print('Data folder: ' + str(self.save_folder_path))
+        logger.info('%s Data folder: %s'%(datetime.datetime.now(),str(self.save_folder_path)))
         self.change_filename()
 
     def change_filename(self):
         # change filename to string of LineEdit
         self.filename = str(self.save_folder_path) + "/" + str(self.filename_edit.text().strip('\n'))
-        print('filename changed to: ' + str(self.filename))
+        logger.info('%s filename changed to: %s'%(datetime.datetime.now(),str(self.filename)))
 
     def save_data(self):
         # save data
@@ -277,7 +288,7 @@ class MainInterface(QtWidgets.QMainWindow):
         bg_path = BackgroundFile[0]
         bg = np.loadtxt(bg_path, delimiter=',')
         self.DataHandling.background = bg[-self.spec_length:, 1]
-        # print(np.shape(bg[1:,1]))
+        # logger.info(np.shape(bg[1:,1]))
 
         # display background filename
         idx = bg_path.rfind('/')
@@ -285,7 +296,31 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def update_check_bg(self):
         self.DataHandling.correct_background = self.bg_check_box.isChecked()
-    
+
+    def change_kinetic_interval(self):
+        # generate timing array for time resolved measurement
+        try:
+            self.kinetic_interval = []
+            txt = self.kinetic_lineEdit.text()
+            for s in re.split(' ', txt):
+                if s == "o":
+                    self.kinetic_interval.append('open')
+                elif s == "c":
+                    self.kinetic_interval.append('close')
+                elif s == "":
+                    pass
+                    pass
+                elif s[0] == "p":
+                    numbers = re.split(":", s[1:])
+                    probint = np.linspace(float(numbers[0]), float(numbers[2]), int(numbers[1]))
+                    for i in range(len(probint)):
+                        self.kinetic_interval.append('p'+str(probint[i]))
+                else:
+                    numbers = re.split(':', s)
+                    self.kinetic_interval.append(np.linspace(float(numbers[0]), float(numbers[2]), int(numbers[1])))
+            logger.info('%s Kinetic Interval: %s'%(datetime.datetime.now(),str(self.kinetic_interval)))
+        except:
+            logger.warning('%s Lecture of kinetic interval failed'%datetime.datetime.now())
     ##### Measurements #####
 
     def acquire_measurement(self):
@@ -294,7 +329,7 @@ class MainInterface(QtWidgets.QMainWindow):
             try:
                 self.measurement.take_spectrum()
             except AttributeError:
-                print('Measurement not started, devices are busy')
+                logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
         else:
             self.measurement_busy = True
             self.DataHandling.clear_data()
@@ -314,7 +349,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendClear.connect(self.SpectrometerPlot.clear_plot)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
     def run_measurement(self):
         # continuously taking spectra with spectrometer
@@ -326,7 +361,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
     def background_measurement(self):
         # acquire background to subtract from spectra. May average over several spectra
@@ -340,7 +375,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendSave.connect(self.DataHandling.save_data)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
     def verticalBeamCalibrationMeasurement(self):
         '''
@@ -356,7 +391,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
     
     def verticalBeamDelimitersChanged(self,row_index,col_index):
         '''
@@ -423,7 +458,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
     def update_spectra_calibration_boundaries(self):
         '''
@@ -450,7 +485,7 @@ class MainInterface(QtWidgets.QMainWindow):
             except AttributeError:
                 self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
         except KeyError:
-            print('Spectral calibration data has not been processed. Run a spectral beam calibration measurement first')
+            logger.warning('%s Spectral calibration data has not been processed. Run a spectral beam calibration measurement first'%datetime.datetime.now())
     
     def assign_spectral_calibration(self):
         '''
@@ -463,7 +498,6 @@ class MainInterface(QtWidgets.QMainWindow):
             beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
             beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
             self.DataHandling.set_beam((key,beam_dict[key]))
-
 
     def stop_measurement(self):
         # stop measurement

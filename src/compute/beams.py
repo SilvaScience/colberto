@@ -12,6 +12,7 @@ from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
 
+
 class Beam:
     def __init__(self,SLMWidth,SLMHeight):
         """
