@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 import sys
 import os
+import ctypes
 
 
 class SLMDemo(QtWidgets.QMainWindow):
@@ -35,10 +36,16 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.parameter_display_dict['amplitude']['val'] = 1
         self.parameter_display_dict['amplitude']['unit'] = ' V'
         self.parameter_display_dict['amplitude']['max'] = 1000
-        self.parameter_display_dict['amplitude']['read'] = False
+        self.parameter_display_dict['amplitude']['read'] = True
+        self.parameter_display_dict['greyscale_val']['val'] = 0
+        self.parameter_display_dict['greyscale_val']['unit'] = ' '
+        self.parameter_display_dict['greyscale_val']['max'] = 255
+        self.parameter_display_dict['greyscale_val']['read'] = False
 
         # set parameters
         self.amplitude = 5
+        self.temperature = 300
+        self.greyscale_val = 0
 
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
@@ -55,4 +62,22 @@ class SLMDemo(QtWidgets.QMainWindow):
         if parameter == 'amplitude':
             self.parameter_dict['amplitude'] = value
             self.amplitude = value
+        elif parameter == 'temperature':
+            self.parameter_dict['temperature'] = value
+            self.temperature = value
+        elif parameter == 'greyscale_val':
+            self.parameter_dict['greyscale_val'] = value
+            self.greyscale_val = value
 
+    def parameter_slm(self):
+        rgb=1
+        bit=1
+        height= 1200
+        width = 8
+        depth = 1920
+        RGB   = ctypes.c_uint(rgb)
+        isEightBitImage = ctypes.c_uint(bit)
+        return height,width,depth,RGB,isEightBitImage
+
+    def write_image(self, image):
+        return 42
