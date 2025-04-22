@@ -11,20 +11,26 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
+import pyqtgraph as pg
 from PyQt5 import QtCore, QtWidgets, uic
 from functools import partial
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
+from GUI.LUT_Calib_plot import LUT_Calib_plot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
+from drivers.OceanSpectrometer import OceanSpectrometer
 from drivers.SLM import Slm
+from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
-    ViewMeasurement, KineticMeasurement
+    ViewMeasurement
 import logging
 import datetime
+
+from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 
 logger = logging.getLogger(__name__)
 class MainInterface(QtWidgets.QMainWindow):
@@ -50,17 +56,28 @@ class MainInterface(QtWidgets.QMainWindow):
         self.cryostat = CryoDemo() # launch cryostat interface
         self.devices['cryostat'] = self.cryostat # store in global device dict.
 
-        # initialize Spectrometer
-        self.spectrometer = SpectrometerDemo()
-        self.spec_length = self.spectrometer.spec_length
-        self.devices['spectrometer'] = self.spectrometer
-        logger.warning('%s Spectrometer connection failed, use DEMO'%datetime.datetime.now())
+        try:
+            self.spectrometer = OceanSpectrometer()
+            self.spectrometer.start()
+            self.spec_length = self.spectrometer.spec_length
+            self.devices['spectrometer'] = self.spectrometer
+            logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
+        except:
+            self.spectrometer = SpectrometerDemo()
+            self.spec_length = self.spectrometer.spec_length
+            self.devices['spectrometer'] = self.spectrometer
+            logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
 
-        # Call the class SLMDemo that initialize the worker
-        self.SLM = Slm()
-        self.devices['SLM'] = self.SLM
-        
-        logger.info('%s SLMDemo connected'%datetime.datetime.now())
+        # initialize SLM
+        try:
+            self.SLM = Slm()
+            self.devices['SLM'] = self.SLM
+            #print('SLM Connected')
+            logger.info('%s SLM connected' % datetime.datetime.now())
+        except:
+            self.SLM = SLMDemo()
+            self.devices['SLM'] = self.SLM
+            logger.info('%s SLMDemo connected'%datetime.datetime.now())
 
         # initialize StresingDemo
         self.Stresing = StresingDemo()
@@ -93,6 +110,16 @@ class MainInterface(QtWidgets.QMainWindow):
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
         self.SLM_tab = self.findChild(QtWidgets.QWidget, 'SLM_tab')
+        # LUT Calibration - Utilities
+        self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
+        self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
+        self.LUT_calib_spectra_avg_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_spectra_avg_spinBox')
+        self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
+        self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout')
+        self.measure_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'measure_LUT_calib')
+        self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
+        self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
+        self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -115,6 +142,7 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.SLM)
         self.SLM_tab.setLayout(vbox)
+        self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -185,6 +213,11 @@ class MainInterface(QtWidgets.QMainWindow):
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
         self.kinetic_lineEdit.editingFinished.connect(self.change_kinetic_interval)
         self.kinetic_run_button.clicked.connect(self.kinetic_measurement)
+        # LUT Calibration Measurement Connect Events
+        self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
+        self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
+        self.generate_LUT_calib_button.clicked.connect(
+            self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
 
         # run some functions once to define default values
         self.change_filename()
@@ -289,6 +322,15 @@ class MainInterface(QtWidgets.QMainWindow):
         except:
             logger.warning('%s Lecture of kinetic interval failed'%datetime.datetime.now())
 
+    def load_LUT_Data_file(self):
+        # open background file and set as background
+        LUT_DataFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select LUT Data File')
+        LUT_DataFile_path = LUT_DataFile[0]
+
+        # display measured spectra filepath
+        self.LUT_Data_file_edit.setText(LUT_DataFile_path)
+        logger.warning('%s Data path stored' % datetime.datetime.now())
+
     ##### Measurements #####
 
     def acquire_measurement(self):
@@ -364,6 +406,47 @@ class MainInterface(QtWidgets.QMainWindow):
         # stop measurement
         self.measurement.stop()
         self.measurement_busy = False
+
+    def Measure_LUT_PhasetoGreyscale(self):
+        '''
+                    Sets up and starts a Phase to Greyscale LUT Measurement.
+        '''
+
+        if not self.measurement_busy:
+            logger.info('%s Start LUT Calibration Measurement' % datetime.datetime.now())
+            print('Start LUT Calibration Measurement')
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement = Measure_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_int_time_box.value(),
+                                                            self.LUT_calib_spectra_avg_box.value(),
+                                                            self.LUT_calib_scans_number_box.value())
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.DataHandling.sendSpectrum.connect(self.LUT_Calib_plot.set_data)
+
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendParameter.connect(self.change_parameter)
+            self.measurement.start()
+        else:
+            logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
+            #print('Measurement not started, devices are busy')
+
+    def Generate_LUT_PhasetoGreyscale(self):
+        '''
+                    Analyzes measured spectrum file and generates a Phase to Greyscale LUT File.
+        '''
+
+        if not self.measurement_busy:
+            logger.info('%s Start LUT Generation' % datetime.datetime.now())
+            print('Start LUT File Generation')
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement = Generate_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_Data_file_edit.text())
+            self.measurement.sendProgress.connect(self.set_progress)
+
+            self.measurement.start()
+        else:
+            logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
+            #print('Measurement not started, devices are busy')
 
 
 class UpdateWorker(QtCore.QThread):
