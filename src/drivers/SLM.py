@@ -39,14 +39,9 @@ class Slm(QtWidgets.QMainWindow):
         self.slm_worker= SLMWorker()
         self.slm_worker.start()
 
-        
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
         
-
-
-
-
         # set parameter dict
         self.parameter_dict = defaultdict()
         """ Set up the parameter dict. 
@@ -82,8 +77,16 @@ class Slm(QtWidgets.QMainWindow):
         self.parameter_display_dict['is8bit']['max'] = 1
         self.parameter_display_dict['is8bit']['read'] = True
 
+        self.parameter_display_dict['greyscale_val']['val'] = 0
+        self.parameter_display_dict['greyscale_val']['unit'] = ' '
+        self.parameter_display_dict['greyscale_val']['max'] = 255
+        self.parameter_display_dict['greyscale_val']['read'] = False
+
         # set parameters
         self.amplitude = 5
+        self.amplitude = 5
+        self.temperature = 300
+        self.greyscale_val = 0
 
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
@@ -112,7 +115,7 @@ class Slm(QtWidgets.QMainWindow):
         super().closeEvent(event)
 
     '''
-    - Function that updtaded the parameter into the dictionnary
+    - Function that updated the parameter into the dictionary
     '''
 
     def handle_slm_temperature(self, temperature):
@@ -168,7 +171,15 @@ class Slm(QtWidgets.QMainWindow):
         scene.addItem(pixmap_item)
         self.graphicsView.setScene(scene)
 
+    def get_parameter(self):
+        slm = SLM()
+        h, w, d, rgbCtype, bitCtype = slm.parameter_slm()
+        return h, w, d, rgbCtype, bitCtype
 
+    def write_image_slm(self,image):
+        slm=SLM()
+        slm.write_image(image,c_uint(1))
+        return
 
 
 class SLMWorker(QtCore.QThread):
@@ -180,7 +191,7 @@ class SLMWorker(QtCore.QThread):
     def __init__(self):
         super(SLMWorker, self).__init__() # Elevates this thread to be independent.
 
-           #parameter 
+        #parameter 
         self._stop_flag = False
         self.current_image = None
         self.isEightBitImage = True
@@ -209,18 +220,12 @@ class SLMWorker(QtCore.QThread):
 
         
     '''
-
-
     def run(self):
-
-
         try:
             # 1) Connect to the SDK
             self.slm = self.create_slm_sdk()
             
             self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
-
-
 
             # 2) Get the slm parameter 
             h, w, d, rgbCtype, bitCtype = self.get_parameter()
@@ -235,8 +240,6 @@ class SLMWorker(QtCore.QThread):
             self.slmParamsSignal.emit(self.height, self.width, self.depth,
                                       self.rgb, self.is_eight_bit)
             
-
-
             while not self._stop_flag:
                 
                 self.temperature= self.get_temperature()
@@ -249,20 +252,11 @@ class SLMWorker(QtCore.QThread):
                 #import the image from an external file (in phase format 0 to 2pi)
                 #use normalize_phase_image to normalise the image in the good format for the slm (0,255)
 
-           
-                
-
-
                 if self.current_image is not None:
                     # Envoyer l'image au SLM
                     self.write_image_slm(self.current_image)
-                  
                     self.newImageSignal.emit(self.current_image)
                     
-                    
-
-
-
                 # Calculer le temps écoulé
                 elapsed = time.time() - start_time
                 frame_duration = 1/self.target_fps
