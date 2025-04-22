@@ -83,8 +83,8 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
                     image = self.generate_calibibration_image(n)  # Generate Image for SLM
                     self.SLM.update_image_from_array(image)
 
-                    self.SLM.write_image_slm(image) #send image to SLM
-                    time.sleep(self.int_time / 1000 + 5.05)
+                    self.SLM.write_image_slm(image) #send image to SLM %% this is the line of code that produces the error
+                    time.sleep(self.int_time / 1000 + 1.05)
 
                     # Acquire Data
                     for m in range(self.spectra_number):  # might need to make this (self.spectra_number-1)
