@@ -173,8 +173,6 @@ class SLM:
     def get_depth(self):
         return self.blink_dll.Get_Depth()
     
-
-
     def get_slm_found(self):
         return self.blink_dll.Get_SLMFound()
 
@@ -232,8 +230,6 @@ class ImageGen:
         self.image_gen_dll.GetBESTAmplitudeMask.restype = ctypes.c_int
         self.image_gen_dll.GetBESTAxialPSF.restype = ctypes.c_int
         self.image_gen_dll.Generate_BESTRings.restype = None
-
-
 
     def concatenate_ten_bit(self, array_one, array_two, width, height):
         self.image_gen_dll.Concatenate_TenBit(array_one, array_two, width, height)
