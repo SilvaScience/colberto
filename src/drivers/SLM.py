@@ -95,7 +95,7 @@ class Slm(QtWidgets.QMainWindow):
 
         # load the GUI
         project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
+        uic.loadUi(project_folder + r'\GUI\SLM_GUI.ui', self)
 
         self.slm_worker.newImageSignal.connect(self.update_image_from_array)
        
