@@ -72,11 +72,11 @@ class MainInterface(QtWidgets.QMainWindow):
         try:
             self.SLM = Slm()
             self.devices['SLM'] = self.SLM
-            #print('SLM Connected')
             logger.info('%s SLM connected' % datetime.datetime.now())
-        except:
+        except Exception as e:
             self.SLM = SLMDemo()
             self.devices['SLM'] = self.SLM
+            logger.error('%s SLM initialization failed at interface startup. Error type %s'%(datetime.datetime.now(),str(e)))
             logger.info('%s SLMDemo connected'%datetime.datetime.now())
 
         # initialize StresingDemo

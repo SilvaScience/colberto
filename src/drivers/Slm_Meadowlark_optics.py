@@ -117,7 +117,6 @@ class SLM:
         # Chargement de la DLL
         # Loading the DLL
         self.blink_dll = ctypes.CDLL(path_blink_c_wrapper)
-        logger.info('%s SLM initialization got to the marker'%datetime.datetime.now())
 
         # Définition des types de données attendus pour les fonctions
         # Defining expected data types for functions 
@@ -147,7 +146,7 @@ class SLM:
         return self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
 
     def load_lut(self, file_path):
-        print ("LoadLUT Successful")
+        logger.info('%s LoadLUT Successful'%(datetime.datetime.now()))
         return self.blink_dll.Load_lut(file_path.encode())
 
     def set_post_ramp_slope(self, postRampSlope):
