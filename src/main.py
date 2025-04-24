@@ -11,8 +11,8 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
-import pyqtgraph as pg
 from PyQt5 import QtCore, QtWidgets, uic
+import pyqtgraph as pg
 from functools import partial
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot

@@ -3,9 +3,14 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - numpy
-  - matplotlib
-  - pyqt
   - pyqtgraph
+  - numpy
+  - pyqt
+  - matplotlib
+  - pip
+  - pillow
+  - requests
+  - pandas
   - h5py
   - scipy
+  - seabreeze
