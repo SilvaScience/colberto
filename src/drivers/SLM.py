@@ -28,8 +28,10 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
 from src.drivers.Slm_Meadowlark_optics import SLM
 from samples.drivers.exemple_image_generation import beam_image_gen
+import logging
+import datetime
 
-
+logger = logging.getLogger(__name__)
 class Slm(QtWidgets.QMainWindow):
     name = 'SLM'
 
@@ -196,7 +198,7 @@ class SLMWorker(QtCore.QThread):
         self.current_image = None
         self.isEightBitImage = True
         self.target_fps = 30
-        
+        self.slm=None 
         self.rgb = True
         self.is_eight_bit = 1
         self.height = 1 
@@ -224,7 +226,6 @@ class SLMWorker(QtCore.QThread):
         try:
             # 1) Connect to the SDK
             self.slm = self.create_slm_sdk()
-            
             self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
 
             # 2) Get the slm parameter 
@@ -266,15 +267,11 @@ class SLMWorker(QtCore.QThread):
 
         except Exception as e:
             # En cas d'erreur, émettre un signal
+            logger.error('%s SLM initialization failed. Error type %s'%(datetime.datetime.now(),str(e)))
             self.errorSignal.emit(str(e))
-        finally:
-            # Nettoyage : libérer le SDK proprement
-            if self.slm is not None:
-                self.slm.delete_sdk()
 
     def create_slm_sdk(self):
         #Connect and create the sdk"
-        
         slm = SLM()
         slm.create_sdk()
         return slm
@@ -309,6 +306,13 @@ class SLMWorker(QtCore.QThread):
         image = np.clip(image, 0, max_phase)  # safety
         norm_img = (image / max_phase) * 255
         return norm_img.astype(np.uint8)
+
+    def close(self):
+        """
+            Shutdown routine for the SLM Worker and SLM
+        """
+        if self.slm is not None:
+            self.slm.delete_sdk()
 
 
 
