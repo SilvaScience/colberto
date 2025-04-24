@@ -8,6 +8,9 @@ Created on Mon May 13 15:06:04 2024
 import ctypes
 from ctypes import *
 from pathlib import Path
+import logging
+import datetime
+logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
 print(awareness.value)
@@ -114,6 +117,7 @@ class SLM:
         # Chargement de la DLL
         # Loading the DLL
         self.blink_dll = ctypes.CDLL(path_blink_c_wrapper)
+        logger.info('%s SLM initialization got to the marker'%datetime.datetime.now())
 
         # Définition des types de données attendus pour les fonctions
         # Defining expected data types for functions 

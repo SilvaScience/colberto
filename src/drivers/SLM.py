@@ -219,7 +219,6 @@ class SLMWorker(QtCore.QThread):
         try:
             # 1) Connect to the SDK
             self.slm = self.create_slm_sdk()
-            
             self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
 
 
@@ -274,13 +273,11 @@ class SLMWorker(QtCore.QThread):
 
         except Exception as e:
             # En cas d'erreur, émettre un signal
-            logger.warning("")
             logger.error('%s SLM initialization failed. Error type %s'%(datetime.datetime.now(),str(e)))
             self.errorSignal.emit(str(e))
 
     def create_slm_sdk(self):
         #Connect and create the sdk"
-        
         slm = SLM()
         slm.create_sdk()
         return slm
