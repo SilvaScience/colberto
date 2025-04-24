@@ -19,7 +19,6 @@ from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-from drivers.OceanSpectrometer import OceanSpectrometer
 from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
@@ -57,6 +56,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['cryostat'] = self.cryostat # store in global device dict.
 
         try:
+            from drivers.OceanSpectrometer import OceanSpectrometer
             self.spectrometer = OceanSpectrometer()
             self.spectrometer.start()
             self.spec_length = self.spectrometer.spec_length
