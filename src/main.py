@@ -32,6 +32,7 @@ class MainInterface(QtWidgets.QMainWindow):
     def __init__(self):
         super(MainInterface, self).__init__()
         project_folder = Path(__file__).parent.resolve()
+        print(__name__)
         uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
         logging.basicConfig(filename='main.log', level=logging.INFO)
         logger.info('%s Started log'%datetime.datetime.now())
