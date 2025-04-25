@@ -248,10 +248,8 @@ class SLMWorker(QtCore.QThread):
             self.errorSignal.emit(str(e))
         self.start_time = time.time()
         self.get_parameter()
-        logger.info('LOOP STARTED')
         while not self.terminate:
             if self.new_image_available:
-                logger.info('NEW IMAGE')
 
                 ## Calculer le temps écoulé
                 elapsed = time.time() - self.start_time
