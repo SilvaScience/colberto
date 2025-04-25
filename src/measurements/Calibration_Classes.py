@@ -22,11 +22,6 @@ import logging
 import datetime
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
-from src.compute.beams import Beam
-from src.compute.calibration import Calibration
-
-from src.drivers.Slm_Meadowlark_optics import SLM
-from src.drivers.Slm_Meadowlark_optics import ImageGen
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +74,9 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
                     self.sendParameter.emit('greyscale_val', self.GreyScale_Vals[n])
                     self.sendParameter.emit('int_time', self.int_time)
 
-                    SLM._stop_flag = True
                     image = self.generate_calibibration_image(n)  # Generate Image for SLM
 
-                    self.SLM.write_image(image) #send image to SLM %% this is the line of code that produces the error
+                    self.SLM.write_image(image,imagetype='raw') 
                     time.sleep(self.int_time / 1000 + 1.05)
 
                     # Acquire Data
@@ -100,12 +94,9 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
                     self.spec = self.summedspec / self.spectra_number
                     self.sendSpectrum.emit(self.wls, self.spec)
 
-                    logger.info('%s Spectrum Acquired' % datetime.datetime.now())
-                    print(time.strftime('%H:%M:%S') + ' Spectrum Acquired')
 
         self.sendProgress.emit(100)
         logger.info('%s LUT File Calibration Measurement Finished ' % datetime.datetime.now())
-        print(time.strftime('%H:%M:%S') + ' LUT File Calibration Measurement Finished')
 
 
     def generate_calibibration_image(self, right_val):

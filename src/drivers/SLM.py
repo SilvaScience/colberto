@@ -38,11 +38,18 @@ class Slm(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(Slm, self).__init__()
+        # load the GUI
+        project_folder = os.getcwd()
+        uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
 
         self.slm_worker= SLMWorker()
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
+        self.slm_worker.newImageSignal.connect(self.update_image_from_array)
+        logger.info('%s SLM worker initialized'%datetime.datetime.now())
         self.slm_worker.start()
+        logger.info('%s SLM worker running'%datetime.datetime.now())
+
         
         # set parameter dict
         self.parameter_dict = defaultdict()
@@ -95,11 +102,6 @@ class Slm(QtWidgets.QMainWindow):
         for key in self.parameter_display_dict.keys():
             self.parameter_dict[key] = self.parameter_display_dict[key]['val']
 
-        self.slm_worker.newImageSignal.connect(self.update_image_from_array)
-
-            # load the GUI
-        project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
 
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
@@ -153,12 +155,13 @@ class Slm(QtWidgets.QMainWindow):
         self.parameter_display_dict['is8bit']['val'] = is8bit
         self.parameter_dict['is8bit'] = is8bit
 
-    def write_image(self,image):
+    def write_image(self,image,imagetype='phase'):
         """
             Feeds the image into the Worker to be displayed as soon as the SLM is ready
-                image: (2d.array of float) The phase image (float from 0 to 2pi)
+                image: (2d.array of float) The image 
+                imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
         """
-        self.slm_worker.change_image(image)
+        self.slm_worker.change_image(image,imagetype=imagetype)
         return
 
     def update_image_from_array(self, np_img):
@@ -213,7 +216,7 @@ class SLMWorker(QtCore.QThread):
         self.height = 1 
         self.width = 1
         self.depth = 1
-        self.current_image= beam_image_gen()
+        self.current_image= np.zeros((self.width,self.height,3))
         self.new_image_available= True 
         self.frame_duration = 1/self.target_fps
 
@@ -256,23 +259,30 @@ class SLMWorker(QtCore.QThread):
                 if elapsed < self.frame_duration:
                         time.sleep(self.frame_duration - elapsed)
                 try:
-                    self.write_image_slm(self.current_image)
+                    self.write_image_slm()
                 except Exception as e:
                     logger.error('Error when displaying image at the SLM %s'%e)
                 self.start_time = time.time()
-                self.newImageSignal.emit(self.current_image)
                 self.new_image_available=False
             else:
                 self.temperature= self.get_temperature()
 
                 
-    def change_image(self,image):
+    def change_image(self,image,imagetype='phase'):
         """
             Stores an image in the Worker and signals that a new image is ready to be displayed as soon as the SLM is ready.
             input:
-                image: (2d.array of float) The phase image (float from 0 to 2pi)
+                image: (2d.array of float) The image 
+                imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
         """
-        self.current_image=image
+
+        if imagetype=='phase':
+            self.newImageSignal.emit(image)
+            digital_image=np.tile(self.normalize_phase_image(image),(1,1,3))
+        if imagetype=='raw':
+            self.newImageSignal.emit(image)
+            digital_image=np.tile(image,(1,1,3))
+        self.current_image=digital_image
         self.new_image_available=True
 
     def create_slm_sdk(self):
@@ -309,14 +319,13 @@ class SLMWorker(QtCore.QThread):
         self.slmParamsTemperature.emit(temperature)
         return temperature
     
-    def write_image_slm(self,phase_image):
+    def write_image_slm(self):
         '''
             Takes as an input a phase image (float from 0 to 2pi) and displays it on the SLM
             input:
-                image: (2d.array of float) The phase image (float from 0 to 2pi)
+                image: (nd.array of uint8) The digital image (0 to 255 uint 8 3 channel RGB)
         '''
-        digital_image=np.tile(self.normalize_phase_image(phase_image),(1,1,3))
-        self.slm.write_image(digital_image,c_uint(1))
+        self.slm.write_image(self.current_image,c_uint(1))
     
     def load_lut(self, lut_path):
         """ Load lut file in the SDK Meadowlark."""
