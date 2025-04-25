@@ -32,6 +32,7 @@ import logging
 import datetime
 
 logger = logging.getLogger(__name__)
+
 class Slm(QtWidgets.QMainWindow):
     name = 'SLM'
 
@@ -39,9 +40,9 @@ class Slm(QtWidgets.QMainWindow):
         super(Slm, self).__init__()
 
         self.slm_worker= SLMWorker()
-        self.slm_worker.start()
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
+        self.slm_worker.start()
         
         # set parameter dict
         self.parameter_dict = defaultdict()
@@ -94,12 +95,30 @@ class Slm(QtWidgets.QMainWindow):
         for key in self.parameter_display_dict.keys():
             self.parameter_dict[key] = self.parameter_display_dict[key]['val']
 
+        self.slm_worker.newImageSignal.connect(self.update_image_from_array)
+
+            # load the GUI
+        project_folder = os.getcwd()
+        uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
+
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """
         if parameter == 'amplitude':
             self.parameter_dict['amplitude'] = value
             self.amplitude = value
+    def get_parameters(self):
+        """
+            Wrapper that returns the SLM parameters
+            returns:
+                - SLM height (int8)
+                - SLM width (int8)
+                - SLM depth(int8)
+                - RGB (int8)
+                - is8Bit(Bool)
+
+        """
+        return self.parameter_dict['Height'],self.parameter_dict['Width'],self.parameter_dict['Depth'],self.parameter_dict['rgb'],self.parameter_dict['is8bit']
 
     def closeEvent(self, event):
         # Si la fenêtre se ferme, on arrête le worker proprement
@@ -142,6 +161,38 @@ class Slm(QtWidgets.QMainWindow):
         self.slm_worker.change_image(image)
         return
 
+    def update_image_from_array(self, np_img):
+
+        """
+            Receive an numpy array (H x W x 3) in 8 bits, make the conversion in QPixmap,
+        and display it in  QGraphicsView.
+        """
+        np_img = np.reshape(np_img, (1200, 1920))
+        if np_img is None:
+            return
+
+        # 1) dimension of the image
+        height, width, = np_img.shape
+        channels=3
+
+        # 2) Number of octets by line
+        bytes_per_line = width  # For an 8 bits (grey level)
+
+    # 3) Create the Qimage in grey scale
+        q_img = QImage(np_img.data, width, height, bytes_per_line, QImage.Format_Grayscale8)
+
+    # 4) Convert QImage -> QPixmap
+        pixmap = QPixmap.fromImage(q_img)
+
+        view_size = self.graphicsView.size()
+        scaled_pixmap = pixmap.scaled(view_size, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation)
+
+    # 5) Display in the graphical interface
+        scene = QGraphicsScene()
+        pixmap_item = QGraphicsPixmapItem(scaled_pixmap)
+        scene.addItem(pixmap_item)
+        self.graphicsView.setScene(scene)
+
 
 class SLMWorker(QtCore.QThread):
     errorSignal = QtCore.pyqtSignal(str)
@@ -163,32 +214,8 @@ class SLMWorker(QtCore.QThread):
         self.width = 1
         self.depth = 1
         self.current_image= beam_image_gen()
-        logger.info('Made it this far in the interface setup')
         self.new_image_available= True 
         self.frame_duration = 1/self.target_fps
-        try:
-            # 1) Connect to the SDK
-            self.slm = self.create_slm_sdk()
-            self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
-
-            # 2) Get the slm parameter 
-            h, w, d, rgbCtype, bitCtype = self.get_parameter()
-            self.height = h
-            self.width = w
-            self.depth = d
-            self.rgb = rgbCtype.value     # ctypes.c_uint -> int
-            self.is_eight_bit = bitCtype.value
-
-            # Emit a signal to the interface that update the dictonnary.
-            #This is done only 1 time at the beginning, because this parameter doesn't change 
-            self.slmParamsSignal.emit(self.height, self.width, self.depth,
-                                      self.rgb, self.is_eight_bit)
-        except Exception as e:
-            # En cas d'erreur, émettre un signal
-            logger.error('%s SLM initialization failed at worker startup. Error type %s'%(datetime.datetime.now(),str(e)))
-            self.errorSignal.emit(str(e))
-            
-     
 
     def run(self):
         '''
@@ -206,21 +233,37 @@ class SLMWorker(QtCore.QThread):
 
             
         '''
+        try:
+            # 1) Connect to the SDK
+            self.slm = self.create_slm_sdk()
+            self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
+            # 2) Get the slm parameter 
+            logger.info('%s SLM Worker initialization success.'%datetime.datetime.now())
+        except Exception as e:
+            # En cas d'erreur, émettre un signal
+            logger.error('%s SLM initialization failed at worker startup. Error type %s'%(datetime.datetime.now(),str(e)))
+            self.errorSignal.emit(str(e))
         self.start_time = time.time()
-        while not self.terminate: 
+        self.get_parameter()
+        logger.info('LOOP STARTED')
+        while not self.terminate:
             if self.new_image_available:
-                # Calculer le temps écoulé
+                logger.info('NEW IMAGE')
+
+                ## Calculer le temps écoulé
                 elapsed = time.time() - self.start_time
-                # Si on veut viser 30Hz, on attends le reste du temps
+                ## Si on veut viser 30Hz, on attends le reste du temps
                 if elapsed < self.frame_duration:
                         time.sleep(self.frame_duration - elapsed)
-                self.write_image_slm(self.current_image)
+                try:
+                    self.write_image_slm(self.current_image)
+                except Exception as e:
+                    logger.error('Error when displaying image at the SLM %s'%e)
                 self.start_time = time.time()
                 self.newImageSignal.emit(self.current_image)
                 self.new_image_available=False
             else:
                 self.temperature= self.get_temperature()
-                self.slmParamsTemperature.emit(self.temperature)
 
                 
     def change_image(self,image):
@@ -233,19 +276,37 @@ class SLMWorker(QtCore.QThread):
         self.new_image_available=True
 
     def create_slm_sdk(self):
-        #Connect and create the sdk"
+        """
+            Instantiate the SLM driver and create the SDK
+        """
         slm = SLM()
         slm.create_sdk()
         return slm
     
     def get_parameter(self):
-        slm=SLM()
-        h, w, d, rgbCtype, bitCtype=slm.parameter_slm()
+        """
+            Retrieves the hardware parameters of the SLM
+        """
+        logger.info('SLM PARAMETERS READ')
+        h, w, d, rgbCtype, bitCtype=self.slm.parameter_slm()
+        self.height = h
+        self.width = w
+        self.depth = d
+        self.rgb = rgbCtype.value     # ctypes.c_uint -> int
+        self.is_eight_bit = bitCtype.value
+
+        # Emit a signal to the interface that update the dictonnary.
+        #This is done only 1 time at the beginning, because this parameter doesn't change 
+        self.slmParamsSignal.emit(self.height, self.width, self.depth,
+                                    self.rgb, self.is_eight_bit)
         return h, w, d, rgbCtype, bitCtype
     
     def get_temperature(self):
-        slm=SLM()
-        temperature=slm.get_slm_temp()
+        """
+            Queries the temperature from the SLM driver and emits the signal
+        """
+        temperature=self.slm.get_slm_temp()
+        self.slmParamsTemperature.emit(temperature)
         return temperature
     
     def write_image_slm(self,phase_image):
@@ -254,7 +315,7 @@ class SLMWorker(QtCore.QThread):
             input:
                 image: (2d.array of float) The phase image (float from 0 to 2pi)
         '''
-        digital_image=self.normalize_phase_image(phase_image)
+        digital_image=np.tile(self.normalize_phase_image(phase_image),(1,1,3))
         self.slm.write_image(digital_image,c_uint(1))
     
     def load_lut(self, lut_path):
@@ -262,7 +323,7 @@ class SLMWorker(QtCore.QThread):
         if self.slm is not None:
             self.slm.load_lut(lut_path)
         else:
-            print(" Lut file not found.") 
+            logger.error('%s  Lut file not found.'%datetime.datetime.now())
         
     def normalize_phase_image(self,image, max_phase=2 * np.pi):
         """

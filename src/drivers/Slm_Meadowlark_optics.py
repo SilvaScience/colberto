@@ -143,7 +143,8 @@ class SLM:
         self.blink_dll.Delete_SDK()
 
     def write_image(self, image_data, is_8_bit):
-        return self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        logger.info('Image written')
 
     def load_lut(self, file_path):
         logger.info('%s LoadLUT Successful'%(datetime.datetime.now()))

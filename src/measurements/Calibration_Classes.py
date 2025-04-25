@@ -81,9 +81,8 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
 
                     SLM._stop_flag = True
                     image = self.generate_calibibration_image(n)  # Generate Image for SLM
-                    self.SLM.update_image_from_array(image)
 
-                    self.SLM.write_image_slm(image) #send image to SLM %% this is the line of code that produces the error
+                    self.SLM.write_image(image) #send image to SLM %% this is the line of code that produces the error
                     time.sleep(self.int_time / 1000 + 1.05)
 
                     # Acquire Data
@@ -118,7 +117,7 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         Return :
             np.ndarray of shape (height, width) dtype uint8
         """
-        height, width, depth, RGB, isEightBitImage = self.SLM.get_parameter()
+        height, width, depth, RGB, isEightBitImage = self.SLM.get_parameters()
         left_val = 0
 
         # assert 0 <= left_val <= 255
