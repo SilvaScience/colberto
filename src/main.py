@@ -22,7 +22,7 @@ from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
-    ViewMeasurement, KineticMeasurement
+    ViewMeasurement
 import logging
 import datetime
 
