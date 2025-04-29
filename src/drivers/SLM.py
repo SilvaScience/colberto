@@ -40,7 +40,8 @@ class Slm(QtWidgets.QMainWindow):
         super(Slm, self).__init__()
         # load the GUI
         project_folder = os.getcwd()
-        uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
+        #uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
+        uic.loadUi(project_folder + r'\GUI\SLM_GUI.ui', self) #there seems to be a difference between the paths needed for WFU and Canada #this line is for WFU
 
         self.slm_worker= SLMWorker()
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
