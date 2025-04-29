@@ -10,6 +10,8 @@ You should also check it out and build it yourself in your own branch by running
 
 You can add manual pages in Markdown format to the `manual` folder. The `index.md` page is the main page shown in the documentation. The [Doxygen Markdown documentation](https://www.doxygen.nl/manual/markdown.html) and how to [add pages to Doxygen documentation](https://www.doxygen.nl/manual/markdown.html) are useful ressources.
 
+You can also reference classes, functions, methods in the manual using `[text to referece](\ref ModuleName.ClassName#methodName)`
+
 Follow common [Python DocStrings guidelines](https://www.doxygen.nl/manual/docblocks.html#pythonblocks)
 
 ## Setting up your Python environnement

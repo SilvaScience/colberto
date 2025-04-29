@@ -34,6 +34,7 @@ import datetime
 logger = logging.getLogger(__name__)
 
 class Slm(QtWidgets.QMainWindow):
+    """ Interface to the SLM worker thread."""
     name = 'SLM'
 
     def __init__(self):
@@ -198,6 +199,7 @@ class Slm(QtWidgets.QMainWindow):
 
 
 class SLMWorker(QtCore.QThread):
+    """Worker thread that host the SLM instantiation."""
     errorSignal = QtCore.pyqtSignal(str)
     slmParamsSignal = QtCore.pyqtSignal(int, int, int, int, int)
     slmParamsTemperature = QtCore.pyqtSignal(int)
@@ -227,13 +229,8 @@ class SLMWorker(QtCore.QThread):
         - Get the SLM parameter using the function get_parameter() and emit a signal to SLMDemo()
         - Principal loop
             - Initialize a chronometer to be use to the frameRate specification with time.time()
-            - Some loop to send more image. Will need to be remove when the image will be create outside of this code. 
-            - Create the image with different chirp (i,j index)
-            - Send the image to the SLM with the function  write_image_slm(current_image) and emit a signal to the SLMDemo()
-                -- Maybe we could send the image before when the code for the image generation will be done.
-            - FrameRate condition. If the time between the initialisation of the image and the writing is less than 30hz sleep for the remaining time 
-            - Will need a start stop, at some point if we want to keep the same image 
-
+                - FrameRate condition. If the time between the initialisation of the image and the writing is less than 30hz sleep for the remaining time 
+            - Checks if the image has been changed and if it is ready to be updated, otherwise measures the temperature.
             
         '''
         try:
