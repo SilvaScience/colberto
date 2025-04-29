@@ -47,7 +47,6 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
 
         self.spectrometer = devices['spectrometer']
         self.SLM= devices['SLM']
-        #self.ImageGen = devices['ImageGen']
         self.int_time = int_time
         self.spectra_number = spectra_number
         self.scan_number = scan_number
@@ -63,9 +62,8 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
 
     def run(self):
         logger.info('%s Run LUT File Calibration Measurement' % datetime.datetime.now())
-        print(time.strftime('%H:%M:%S') + ' Run LUT File Calibration Measurement')
+        #print(time.strftime('%H:%M:%S') + ' Run LUT File Calibration Measurement')
         progress = 0
-        #self._stop_flag = True
         for i in range(self.scan_number):
             self.sendProgress.emit(progress)
             for n in range(len(self.GreyScale_Vals)):
@@ -76,12 +74,16 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
 
                     image = self.generate_calibibration_image(n)  # Generate Image for SLM
 
-                    self.SLM.write_image(image,imagetype='raw') 
-                    time.sleep(self.int_time / 1000 + 1.05)
+                    self.SLM.write_image(image, imagetype='raw')
+                    time.sleep(0.3)
+                    logger.info(f'%s Image Sent n={n} {datetime.datetime.now()}')
+
+                    time.sleep(0.5)
 
                     # Acquire Data
                     for m in range(self.spectra_number):  # might need to make this (self.spectra_number-1)
                         self.summedspec = np.array(self.spectrometer.get_intensities())
+                        logger.info(f'%s Spectra #{m} Acquired {datetime.datetime.now()}')
                         progress = (((n + 1) + (i * len(self.GreyScale_Vals))) / (
                                         len(self.GreyScale_Vals) * self.scan_number)) * 100
 
@@ -94,9 +96,12 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
                     self.spec = self.summedspec / self.spectra_number
                     self.sendSpectrum.emit(self.wls, self.spec)
 
+                    logger.info(f'%s Spectrum Acquired for n={n} {datetime.datetime.now()}')
+
 
         self.sendProgress.emit(100)
         logger.info('%s LUT File Calibration Measurement Finished ' % datetime.datetime.now())
+        #print(time.strftime('%H:%M:%S') + ' LUT File Calibration Measurement Finished')
 
 
     def generate_calibibration_image(self, right_val):
@@ -110,9 +115,6 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         """
         height, width, depth, RGB, isEightBitImage = self.SLM.get_parameters()
         left_val = 0
-
-        # assert 0 <= left_val <= 255
-        # assert 0 <= right_val <= 255
 
         img = np.zeros((height, width), dtype=np.uint8)
         middle = width // 2
@@ -155,11 +157,12 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
 
         def run(self):
             logger.info('%s Run LUT File Generation ' % datetime.datetime.now())
-            print(time.strftime('%H:%M:%S') + ' Run LUT File Generation')
+            #print(time.strftime('%H:%M:%S') + ' Run LUT File Generation')
             progress = 0
 
             fn = self.filepath
-            print(fn)
+            logger.info(f' {fn} {(datetime.datetime.now())}')
+            
             with h5py.File(fn, 'r') as hdf: #analyze data file loaded
                 data = hdf.get('spectra')
                 data_set = np.array(data)
@@ -191,11 +194,14 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
                         avg_spectrum[:, j] = avg_spectrum[:, j] + spectra[:, i]
 
             scan_num = len(Total_GreyScale_Vals) / len(Uniq_GreyScale_Vals)
-            #print(Total_GreyScale_Vals)
+            
+            logger.info(f' Total_GreyScale_Vals = {len(Total_GreyScale_Vals)} {datetime.datetime.now()}')
             print(len(Total_GreyScale_Vals))
-            #print(Uniq_GreyScale_Vals)
+
+            logger.info(f' Uniq_GreyScale_Vals = {len(Uniq_GreyScale_Vals)} {datetime.datetime.now()}')
             print(len(Uniq_GreyScale_Vals))
 
+            logger.info(f' Number of Scans = {scan_num} {datetime.datetime.now()}')
             print(scan_num)
 
             avg_spectrum = avg_spectrum / scan_num
@@ -270,7 +276,7 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
 
                     for i in range(phase_shift_array.shape[0]):
                         writer.writerow([wave[i]] + list(phase_shift_array[i, :]))
-                logger.info(f"LUT file saved to: {output_file}" % datetime.datetime.now())
+                logger.info(f'LUT file saved to: {output_file} {datetime.datetime.now()}')
                 print(f"LUT file saved to: {output_file}")
             else:
                 logger.info('%s LUT File save canceled ' % datetime.datetime.now())
