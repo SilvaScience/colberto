@@ -100,7 +100,7 @@ class SLMDemo(QtWidgets.QMainWindow):
         scene.addItem(pixmap_item)
         self.graphicsView.setScene(scene)
 
-    def get_parameter(self):
+    def get_parameters(self):
         #slm = SLM()
         h, w, d, rgbCtype, bitCtype = 1200, 1920, 8, 1, 1
         return h, w, d, rgbCtype, bitCtype
