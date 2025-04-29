@@ -8,6 +8,9 @@ Created on Mon May 13 15:06:04 2024
 import ctypes
 from ctypes import *
 from pathlib import Path
+import logging
+import datetime
+logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
 print(awareness.value)
@@ -140,10 +143,11 @@ class SLM:
         self.blink_dll.Delete_SDK()
 
     def write_image(self, image_data, is_8_bit):
-        return self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        logger.info('Image written')
 
     def load_lut(self, file_path):
-        print ("LoadLUT Successful")
+        logger.info('%s LoadLUT Successful'%(datetime.datetime.now()))
         return self.blink_dll.Load_lut(file_path.encode())
 
     def set_post_ramp_slope(self, postRampSlope):

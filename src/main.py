@@ -11,15 +11,14 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
-import pyqtgraph as pg
 from PyQt5 import QtCore, QtWidgets, uic
+import pyqtgraph as pg
 from functools import partial
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-from drivers.OceanSpectrometer import OceanSpectrometer
 from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
@@ -57,6 +56,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['cryostat'] = self.cryostat # store in global device dict.
 
         try:
+            from drivers.OceanSpectrometer import OceanSpectrometer
             self.spectrometer = OceanSpectrometer()
             self.spectrometer.start()
             self.spec_length = self.spectrometer.spec_length
@@ -70,13 +70,16 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # initialize SLM
         try:
+            from samples.drivers.exemple_image_generation import beam_image_gen
             self.SLM = Slm()
             self.devices['SLM'] = self.SLM
-            #print('SLM Connected')
+            test_image=beam_image_gen()
+            self.SLM.write_image(test_image)
             logger.info('%s SLM connected' % datetime.datetime.now())
-        except:
+        except Exception as e:
             self.SLM = SLMDemo()
             self.devices['SLM'] = self.SLM
+            logger.error('%s SLM initialization failed at interface startup. Error type %s'%(datetime.datetime.now(),str(e)))
             logger.info('%s SLMDemo connected'%datetime.datetime.now())
 
         # initialize StresingDemo

@@ -12,28 +12,55 @@ from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
 
-
 class Beam:
-    def __init__(self,currentCalibration):
+    def __init__(self,SLMWidth,SLMHeight):
         """
-        Instantiates a Beam object describing all properties of a single beam
+        Instantiates a Beam object describing all properties of a single beam. All phase are in rad (units of 2*pi)
         Input:
             currentCalibration: Calibration object corresponding to the current setup
         output:
             Beam Object           
         """
-        self.optimalPhasePolynomial=None
-        self.currentPhasePolynomial=None
-        self.phaseGratingAmplitude=None
+        self.SLMWidth=SLMWidth
+        self.SLMHeight=SLMHeight
+        # initilization of parameters to default benign values
+        self.beamHorizontalDelimiters=[0,SLMWidth]
+        self.beamVerticalDelimiters=[0,SLMHeight]
+        self.make_mask()
+        self.set_optimalPhase(P([0]))
+        self.set_currentPhase(P([0]))
+        self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
-        self.compressionCarrierFreq=None#stored internally in angular frequency
-        self.delayCarrierFreq=None
-        self.calibration=currentCalibration
-        self.beamHorizontalDelimiters=[0,self.calibration.SLM.get_size()[0]]
-        self.beamVerticalDelimiters=None # Vertical position delimiter of beam on SLM in pixels. Default is whole SLM
-        self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
+        self.set_compressionCarrierWave(600)
+        self.set_delayCarrierWave(600)
         self.maskOn=False #Is the mask enabled in the output grating?
+        self.pixelToWavelength=P([600])
 
+    def make_mask(self,horizontalDelimiters=None,verticalDelimiters=None):
+        '''
+            Makes an amplitude mask corresponding to the vertical and horizontal delimiters
+            input:
+                - horizontalDelimiters (nd.array, Default None) Indices of the two horizontal limiting edges of the beam. Default uses internal delimiters
+                - verticalDelimiters (nd.array, Default None) Indices of the two vertical limiting edges of the beam. Default uses internal delimiters
+        '''
+        self.mask=np.zeros((self.SLMWidth,self.SLMHeight))
+        if horizontalDelimiters is None:
+            horizontalDelimiters=self.get_beamHorizontalDelimiters()
+        if verticalDelimiters is None:
+            verticalDelimiters=self.get_beamVerticalDelimiters()
+        self.mask[verticalDelimiters[0]:verticalDelimiters[1],horizontalDelimiters[0]:horizontalDelimiters[1]]=1
+
+    def get_mask(self):
+        ''' 
+            Returns the amplitude mask currently set and the wether it is on or not.
+            input:
+                None
+            output:
+                - nd.array: the amplitude mask currently configured
+                - bool: True if the mask is applied to the beam
+        '''
+        return self.mask, self.maskOn
+    
     def set_beamVerticalDelimiters(self,delimiters):
         '''
             Sets the vertical delimiters of the beam
@@ -41,6 +68,24 @@ class Beam:
                 - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
         '''
         self.beamVerticalDelimiters=delimiters
+        self.make_mask()
+
+    def get_beamVerticalDelimiters(self):
+        '''
+            Returns the vertical delimiters of the beam
+            input:
+                - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
+        '''
+        return self.beamVerticalDelimiters
+
+    def get_beamHorizontalDelimiters(self):
+        '''
+            Returns the vertical delimiters of the beam
+            input:
+                - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
+        '''
+        return self.beamHorizontalDelimiters
+
 
     def set_beamHorizontalDelimiters(self,delimiters):
         '''
@@ -49,8 +94,64 @@ class Beam:
                 - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
         '''
         self.beamHorizontalDelimiters=delimiters
+        self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
+        self.make_mask()
 
-    def set_compressionCarrierWave(self,compCarrierWave):
+    def get_spectrumAtPixel(self,pixels,unit='wavelength'):
+        '''
+        Gets the spectral position of light associated with a pixel on the SLM
+        input:
+            - pixels: (nd.array) the horizontal pixel index on the SLM
+            - unit: the unit in which to return the spectrum axis allows for
+                - 'wavelength' (default): Returns in units of wavelength (m)
+                - 'frequency' : Returns in units of frequency (Hz)
+                - 'ang_frequency' : Returns in units of angular frequency (rad.Hz)
+                - 'energy' : Returns in units of energy (eV)
+        output: (nd.array) the spectral position associated with the pixels in pixels
+
+        '''
+        conversionFunction={'wavelength':lambda x: x,
+                            'frequency':co.waveToFreq,
+                            'ang_frequency':co.waveToAngFreq,
+                            'energy':co.waveToeV}
+        wavelength=self.pixelToWavelength(pixels)
+        return conversionFunction[unit](wavelength)
+
+    def set_pixelToWavelength(self,polynomial):
+        '''
+        Sets the pixel to wavelength calibration polynomial for this beam
+        input:
+            - polynomial: (Polynomial object) a Numpy Power series polynomial relating a pixel index to a wavelength in m
+        ''' 
+        self.pixelToWavelength=polynomial
+
+    def set_delayCarrierWave(self,compCarrierWave=None):
+        """
+        Sets the wavelength around which the phase coefficients for delay are defined
+        input:
+            wavelength: Compression carrier wavelength in m
+        """
+        self.compressionCarrierFreq=co.waveToAngFreq(compCarrierWave)
+
+    def get_delayCarrier(self,unit='ang_frequency'):
+        """
+        Gets the wavelength around which the phase coefficients for pulse delaying (rotating frame) are defined
+        input:
+            - unit: the unit in which to return the compression carrier frequency 
+                - 'wavelength' : Returns in units of wavelength (m)
+                - 'frequency' : Returns in units of frequency (Hz)
+                - 'ang_frequency' (default): Returns in units of angular frequency (rad.Hz)
+                - 'energy' : Returns in units of energy (eV)
+        output:
+            float: Delay carrier in specified units
+        """
+        conversionFunction={'wavelength':co.angFreqToWave,
+                            'frequency':co.angFreqToFreq,
+                            'ang_frequency': lambda x: x,
+                            'energy':co.angFreqToeV}
+        return conversionFunction[unit](self.delayCarrierFreq)
+
+    def set_compressionCarrierWave(self,compCarrierWave=None):
         """
         Sets the wavelength around which the phase coefficients for compression are defined
         input:
@@ -87,14 +188,6 @@ class Beam:
             phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial)
         self.optimalPhasePolynomial=phasePolynomial
 
-    def get_optimalPhase(self,indices):
-        '''
-            Gets the optimal phase for the beam (spectral phase profile to apply to get best compression and synchronization with the LO)
-            output:
-                - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
-        '''
-        return self.optimalPhasePolynomial
-
     def set_currentPhase(self,phasePolynomial,mode='relative',unit='fs'):
         '''
             Sets the beam's phase profile 
@@ -124,11 +217,11 @@ class Beam:
             return self.currentPhasePolynomial
     def get_horizontalIndices(self):
         '''
-            Returns an array with indices from to 0 to the width of the SLM
+            Returns an array with indices from the active part of the SLM
             output:
                 - nd.array (int): indices of the SLM's columns
         '''
-        return np.arange(self.calibration.SLM.get_size()[0])
+        return np.arange(self.beamHorizontalDelimiters[0],self.beamHorizontalDelimiters[1])
 
     def get_sampledCurrentPhase(self,indices=None):
         '''
@@ -142,7 +235,7 @@ class Beam:
         '''
         if indices is None:
             indices=self.get_horizontalIndices()
-        angFreq=self.calibration.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
+        angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.currentPhasePolynomial(angFreq)
 
 
@@ -166,16 +259,6 @@ class Beam:
         angFreq=self.calibration.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.optimalPhasePolynomial(angFreq)
     
-    def set_gratingAmplitudeMask(self, mask):
-        '''
-            Sets the amplitude modulation along the horizontal axis of the phase grating.
-            input:
-                - mask (1d.array): The modulation of the grating's amplitude at a given pixel index from 0 (totally off) to 1 (fully on). The mask length must match the number of columns on the SLM's.
-        '''
-        if mask.shape[0]==self.get_horizontalIndices().shape[0]:
-            self.phaseGratingAmplitudeMask=mask
-        else:
-            raise(IndexError("The mask length must match the number of columns on the SLM's."))
     def set_maskStatus(self,maskOn):
         '''
             Sets wether the mask should be applied or not.
@@ -223,15 +306,18 @@ class Beam:
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
+        if self.phaseGratingPeriod is None:
+            
+            return np.zeros((self.SLMWidth,self.SLMHeight))
         phaseGratingImage=[]
-        numberVerticalPixels=self.beamVerticalDelimiters[1]-self.beamVerticalDelimiters[0]
+        numberVerticalPixels=self.SLMHeight
         phaseProfile=self.get_sampledCurrentPhase()
-        for mask,phase in zip(self.phaseGratingAmplitudeMask,phaseProfile):
+        for phase in phaseProfile:
             row=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
-            if self.maskOn:
-                row=mask*row
             phaseGratingImage.append(row)
         phaseGratingImage=np.array(phaseGratingImage)
+        if self.maskOn:
+            phaseGratingImage=phaseGratingImage*self.mask
         return phaseGratingImage 
 
     @staticmethod 
