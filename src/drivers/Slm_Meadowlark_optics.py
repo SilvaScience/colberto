@@ -8,6 +8,9 @@ Created on Mon May 13 15:06:04 2024
 import ctypes
 from ctypes import *
 from pathlib import Path
+import logging
+import datetime
+logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
 print(awareness.value)
@@ -134,16 +137,36 @@ class SLM:
         self.blink_dll.Get_COMFound.restype = ctypes.c_int
 
     def create_sdk(self):
+        """Loads the DLLs and creates the window in the off-screen required to send the image to the SLM """
         self.blink_dll.Create_SDK()
 
     def delete_sdk(self):
+        """Graciously closes the communication with the SLM"""
         self.blink_dll.Delete_SDK()
 
     def write_image(self, image_data, is_8_bit):
-        return self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        """
+        Writes an image to the SLM.
+        input:
+            - image_data (uint8 np.array): either a 1D 8-bit array of image data that has 1920*1152 or 1920*1200 elements or can be an RGB 1D 8-bit
+                array that has 1920x1152*3 elements or 1920*1200*3. RGB data is expected as follows: pixel 0 Red, pixel
+                0 green, pixel 0 blue, pixel 1 red, pixel 1 green, pixel 1 blue, and so on. It is expected through the SDK that
+                the array size will match the SLM dimensions
+            - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
+        """
+        self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        logger.info('Image written')
 
     def load_lut(self, file_path):
-        print ("LoadLUT Successful")
+        """
+        Loads a calibration to the hardware that corrects for the nonlinear response of the
+        liquid crystal to voltage
+        input:
+            - file_path: Path to the LUT file. Because images are processed through the LUT in hardware, it is important that the LUT file be loaded to
+                the hardware prior to writing images to the SLM. The function takes a path to a LUT file and supports file
+                types of: *.blt, *.lut, and *.txt.
+        """
+        logger.info('%s LoadLUT Successful'%(datetime.datetime.now()))
         return self.blink_dll.Load_lut(file_path.encode())
 
     def set_post_ramp_slope(self, postRampSlope):
@@ -173,8 +196,6 @@ class SLM:
     def get_depth(self):
         return self.blink_dll.Get_Depth()
     
-
-
     def get_slm_found(self):
         return self.blink_dll.Get_SLMFound()
 
@@ -232,8 +253,6 @@ class ImageGen:
         self.image_gen_dll.GetBESTAmplitudeMask.restype = ctypes.c_int
         self.image_gen_dll.GetBESTAxialPSF.restype = ctypes.c_int
         self.image_gen_dll.Generate_BESTRings.restype = None
-
-
 
     def concatenate_ten_bit(self, array_one, array_two, width, height):
         self.image_gen_dll.Concatenate_TenBit(array_one, array_two, width, height)
