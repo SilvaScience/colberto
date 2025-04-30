@@ -206,7 +206,7 @@ class StresingCamera(QtCore.QThread):
     def get_wavelength(self):
         return np.linspace(1, self.spec_length, self.spec_length)
 
-    def get_spectrum(self):
+    def get_intensities(self):
         use_blocking_call = True
         self.spectrum = StresingWorker.worker_spectrum(self, use_blocking_call)
         while not self.new_spectrum:
