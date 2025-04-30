@@ -19,10 +19,7 @@ class AcquireMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter):
         super(AcquireMeasurement, self).__init__()
-        if devices['Stresing']:
-            self.stresing = devices['Stresing']
-        else:
-            self.spectrometer = devices['Spectrometer']
+        self.spectrometer = devices['spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.terminate = False
@@ -31,19 +28,13 @@ class AcquireMeasurement(QtCore.QThread):
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
             self.sendProgress.emit(50)
-            try:
-                self.wls = np.array(self.stresing.get_wavelength())
-            except:
-                self.wls = np.array(self.spectrometer.get_wavelength())
+            self.wls = np.array(self.spectrometer.get_wavelength())
             self.take_spectrum()
             print(time.strftime('%H:%M:%S') + ' Finished')
             self.sendProgress.emit(100)
 
     def take_spectrum(self):
-        try:
-            self.spec = np.array(self.stresing.get_spectrum())
-        except:
-            self.spec = np.array(self.spectrometer.get_intensities())
+        self.spec = np.array(self.spectrometer.get_intensities())
         self.sendSpectrum.emit(self.wls, self.spec)
 
     def stop(self):
