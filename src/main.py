@@ -53,7 +53,7 @@ class MainInterface(QtWidgets.QMainWindow):
         print('SLMDemo connected')
 
         try:
-            # initialize Stresing
+            # initialize Stresing bla bla
             self.stresing = StresingCamera()
             self.spec_length = self.stresing.spec_length
             self.devices['Stresing'] = self.stresing
