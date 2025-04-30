@@ -98,7 +98,7 @@ def init_driver(self, path_dll, path_config):
     # Set all settings that are needed for the measurement. 
     self.settings.board_sel = int(config.get("General","boardSel")) # Controls which boards are used for the measurement.
     self.settings.nos = int(config.get("General","nos")) # Number of samples (nos). One sample is one readout of the camera.
-    self.settings.nob = int(config.get("General","nob")) # Number of boards (nob). One block contains nos readouts.
+    self.settings.nob = int(config.get("General","nob")) # Number of blocks (nob). One block contains nos readouts.
     self.settings.camera_settings[self.drvno].CAMCNT = int(config.get("Board0","camcnt")) # Number of cameras which are connected to one PCIe board.
     self.settings.camera_settings[self.drvno].fft_mode = int(config.get("Board0","fftMode")) # Controls the operating mode for FFT sensors.
     self.settings.camera_settings[self.drvno].FFT_LINES = int(config.get("Board0","fftLines")) # Count of vertical lines for FFT sensors (sensor S14290).
