@@ -45,7 +45,7 @@ class MainInterface(QtWidgets.QMainWindow):
         # This is extremely useful for debugging and troubleshooting.
         print('WARNING you are using a DEMO version of the cryostat')
         self.cryostat = CryoDemo() # launch cryostat interface
-        self.devices['Cryostat'] = self.cryostat # store in global device dict.
+        self.devices['cryostat'] = self.cryostat # store in global device dict.
 
         # initialize SLMDemo
         self.SLM = SLMDemo()
@@ -53,16 +53,16 @@ class MainInterface(QtWidgets.QMainWindow):
         print('SLMDemo connected')
 
         try:
-            # initialize Stresing bla bla
-            self.stresing = StresingCamera()
-            self.spec_length = self.stresing.spec_length
-            self.devices['Stresing'] = self.stresing
+            # initialize Stresing
+            self.spectrometer = StresingCamera()
+            self.spec_length = self.spectrometer.spec_length
+            self.devices['spectrometer'] = self.spectrometer
             print('Stresing connected')    
         except:
             # initialize Spectrometer
             self.spectrometer = SpectrometerDemo()
             self.spec_length = self.spectrometer.spec_length
-            self.devices['Spectrometer'] = self.spectrometer
+            self.devices['spectrometer'] = self.spectrometer
             print('Spectrometer demo connected')
 
         # initialize MonochromDemo
