@@ -21,7 +21,7 @@ from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
-from drivers.Stresing import StresingCamera
+from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
@@ -56,24 +56,17 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['cryostat'] = self.cryostat # store in global device dict.
 
         try:
-            # initialize Stresing
-            self.spectrometer = StresingCamera()
+            from drivers.OceanSpectrometer import OceanSpectrometer
+            self.spectrometer = OceanSpectrometer()
+            self.spectrometer.start()
             self.spec_length = self.spectrometer.spec_length
             self.devices['spectrometer'] = self.spectrometer
-            print('Stresing connected' % datetime.datetime.now())
+            logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
         except:
-            try:
-                from drivers.OceanSpectrometer import OceanSpectrometer
-                self.spectrometer = OceanSpectrometer()
-                self.spectrometer.start()
-                self.spec_length = self.spectrometer.spec_length
-                self.devices['spectrometer'] = self.spectrometer
-                logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
-            except:
-                self.spectrometer = SpectrometerDemo()
-                self.spec_length = self.spectrometer.spec_length
-                self.devices['spectrometer'] = self.spectrometer
-                logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
+            self.spectrometer = SpectrometerDemo()
+            self.spec_length = self.spectrometer.spec_length
+            self.devices['spectrometer'] = self.spectrometer
+            logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
 
         # initialize SLM
         try:
