@@ -39,9 +39,8 @@ class Slm(QtWidgets.QMainWindow):
     def __init__(self):
         super(Slm, self).__init__()
         # load the GUI
-        project_folder = os.getcwd()
-        #uic.loadUi(project_folder + r'\src\GUI\SLM_GUI.ui', self)
-        uic.loadUi(project_folder + r'\GUI\SLM_GUI.ui', self) #there seems to be a difference between the paths needed for WFU and Canada #this line is for WFU
+        project_folder=os.path.dirname(sys.modules['__main__'].__file__)
+        uic.loadUi(project_folder + r'\GUI\SLM_GUI.ui', self) 
 
         self.slm_worker= SLMWorker()
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
@@ -296,7 +295,6 @@ class SLMWorker(QtCore.QThread):
         """
             Retrieves the hardware parameters of the SLM
         """
-        logger.info('SLM PARAMETERS READ')
         h, w, d, rgbCtype, bitCtype=self.slm.parameter_slm()
         self.height = h
         self.width = w
