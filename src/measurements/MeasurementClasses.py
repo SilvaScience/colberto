@@ -51,7 +51,7 @@ class ViewMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter):
         super(ViewMeasurement, self).__init__()
-        self.spectrometer = devices['Spectrometer']
+        self.spectrometer = devices['spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.terminate = False
@@ -86,7 +86,7 @@ class RunMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter):
         super(RunMeasurement, self).__init__()
-        self.spectrometer = devices['Spectrometer']
+        self.spectrometer = devices['spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.terminate = False
