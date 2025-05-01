@@ -124,7 +124,7 @@ class BackgroundMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter, scans, filename, comments):
         super(BackgroundMeasurement, self).__init__()
-        self.spectrometer = devices['Spectrometer']
+        self.spectrometer = devices['spectrometer']
         self.wls = []  # preallocate wls array
         self.spec = []  # preallocate spec array
         self.summedspec = []
@@ -161,7 +161,7 @@ class KineticMeasurement(QtCore.QThread):
 
     def __init__(self, devices, parameter, kinetic_interval):
         super(KineticMeasurement, self).__init__()
-        self.Spectrometer = devices['Spectrometer']
+        self.Spectrometer = devices['spectrometer']
         #self.orpheus = devices['thorlabs_shutter']
         self.kinetic_interval = kinetic_interval
         self.wls = []
