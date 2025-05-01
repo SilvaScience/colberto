@@ -18,7 +18,7 @@ class AcquireMeasurement(QtCore.QThread):
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, parameter):
+    def __init__(self, devices, parameter):
         super(AcquireMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
         self.wls = []  # preallocate wls array
