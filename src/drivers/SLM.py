@@ -284,7 +284,9 @@ class SLMWorker(QtCore.QThread):
         """
             Instantiate the SLM driver and create the SDK
         """
+        logger.info('Trying to create the SLM()')
         slm = SLM()
+        logger.info('Created the SLM()')
         slm.create_sdk()
         return slm
     

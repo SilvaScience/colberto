@@ -116,7 +116,9 @@ class SLM:
     def __init__(self):
         # Chargement de la DLL
         # Loading the DLL
+        logger.info('Trying to create the blink dll using path %s'%path_blink_c_wrapper)
         self.blink_dll = ctypes.CDLL(path_blink_c_wrapper)
+        logger.info('Created the blink dll()')
 
         # Définition des types de données attendus pour les fonctions
         # Defining expected data types for functions 
@@ -339,3 +341,6 @@ class ImageGen:
     
     def generate_best_rings(self, array, wfc, width, height, depth, center_x, center_y, s, rgb):
         self.image_gen_dll.Generate_BESTRings(array, wfc, width, height, depth, center_x, center_y, s, rgb)
+
+if __name__ == "__main__":
+    SLM()
