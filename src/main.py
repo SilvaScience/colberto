@@ -24,6 +24,7 @@ from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
+from GUI.BeamExplorer import BeamExplorer
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement
 import logging
@@ -123,6 +124,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
         self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
         self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+        # Beam explorer relatet
+        self.show_beam_explorer_button= self.findChild(QtWidgets.QPushButton, 'show_beam_explorer_button')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -188,6 +191,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
 
+        #start Beam explorer
+        self.beam_explorer= BeamExplorer()
+        self.show_beam_explorer()
+
         # start Updater to update device read parameters
         self.Updater = UpdateWorker(self.devices, self.readonly_parameter)
         self.Updater.new_parameter.connect(self.update_read_parameter)
@@ -221,6 +228,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
         self.generate_LUT_calib_button.clicked.connect(
             self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
+        # Beam explorer related events
+        self.show_beam_explorer_button.clicked.connect(self.show_beam_explorer)
+        self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
 
         # run some functions once to define default values
         self.change_filename()
@@ -450,6 +460,12 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
             #print('Measurement not started, devices are busy')
+    def show_beam_explorer(self):
+        """
+            Shows the beam explorer if it is not already shown
+        """
+        self.beam_explorer.show()
+
 
 
 class UpdateWorker(QtCore.QThread):
