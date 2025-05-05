@@ -14,9 +14,12 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets, uic
 import pyqtgraph as pg
 from functools import partial
+import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
+from GUI.VerticalCalibPlot import VerticalCalibPlot 
+from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLM import Slm
@@ -29,6 +32,9 @@ from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,Ba
     ViewMeasurement
 import logging
 import datetime
+from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration
+from compute.beams import Beam
 
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 
@@ -126,6 +132,29 @@ class MainInterface(QtWidgets.QMainWindow):
         self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
         # Beam explorer relatet
         self.show_beam_explorer_button= self.findChild(QtWidgets.QPushButton, 'show_beam_explorer_button')
+        self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
+        # Spatial calibration tab
+        ## Vertical calibration tab
+        self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
+        self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
+        self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
+        self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
+        self.assign_beams_vertical_delimiters_button= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
+        self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
+        self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
+        ## Spectral calibration tab
+        self.column_increment_spinbox=self.findChild(QtWidgets.QSpinBox,'column_increment_spin_box')
+        self.column_width_spinbox=self.findChild(QtWidgets.QSpinBox,'column_width_spin_box')
+        self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
+        self.spectral_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'spectral_calib_plot_layout')
+        self.shortest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'shortest_fitting_wave_spin_box')
+        self.longest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'longest_fitting_wave_spin_box')
+        self.spectral_fit_polynomial_order_spinbox=self.findChild(QtWidgets.QSpinBox,'polynomial_order_spin_box')
+        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration_button')
+        self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
+        self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
+        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
+
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -149,6 +178,9 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox.addWidget(self.SLM)
         self.SLM_tab.setLayout(vbox)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
+        self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
+        self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
+        self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -232,6 +264,16 @@ class MainInterface(QtWidgets.QMainWindow):
         self.show_beam_explorer_button.clicked.connect(self.show_beam_explorer)
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
 
+        # Vertical calibration connect events
+        self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
+        self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
+        self.assign_beams_vertical_delimiters_button.clicked.connect(self.assign_vertical_beam_calibration)
+        # Spectral calibration connect events
+        self.spectral_calibration_runButton.clicked.connect(self.spectralBeamCalibrationMeasurement)
+        self.shortest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
+        self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
         # run some functions once to define default values
         self.change_filename()
 
@@ -400,20 +442,128 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
-    def kinetic_measurement(self):
-        # take time resolved measurements as defined in automation GUI section
+    def verticalBeamCalibrationMeasurement(self):
+        '''
+             Sets up and starts a vertical Beam Calibration.
+        ''' 
         if not self.measurement_busy:
             self.measurement_busy = True
-            #self.DataPlot.clear_data()
             self.DataHandling.clear_data()
-            self.change_kinetic_interval()
-            self.measurement =KineticMeasurement(self.devices, self.parameter, self.kinetic_interval)
+            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            self.measurement.sendParameter.connect(self.change_parameter)
+            self.measurement.send_intensities.connect(self.VerticalCalibPlot.set_data)
+            self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
             logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
+    
+    def verticalBeamDelimitersChanged(self,row_index,col_index):
+        '''
+            Validates the vertical delimiter change and refreshes the vertical beam delimiters plot when they are changed in the table
+            input:
+                - row_index (int): the index of the row of the changed column
+                - col_index (int): the index of the row of the changed column
+        '''
+        regions={}
+        table=self.beam_vertical_delimiters_table
+        if not col_index==0: #In case didn,t change the label of the beam
+            try:
+                added_item=int(table.item(row_index,col_index).text())# Check for integer
+                if any([added_item<0,added_item>self.devices['SLM'].get_height()]):# Check for proper bounds
+                    raise ValueError
+                for row in range(table.rowCount()):
+                    top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+                    bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+                    label=table.item(row,0).text()
+                    regions[label]=[top_index,bottom_index]
+                self.VerticalCalibPlot.draw_regions(regions)
+            except ValueError:
+                table.setItem(row_index,col_index,None)
+
+    def assign_vertical_beam_calibration(self):
+        '''
+            Saves the current vertical beam calibration to the DataHandling
+        '''
+        table=self.beam_vertical_delimiters_table
+        for row in range(table.rowCount()):
+            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
+            if all([label is not None, bottom_index is not None, top_index is not None]):
+                if 'ALL' in self.DataHandling.get_beams():
+                    beam=self.DataHandling.get_beams()['ALL']
+                else:
+                    beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam.set_beamVerticalDelimiters([top_index,bottom_index])
+                beam.set_gratingAmplitude(self.grating_period_edit.value())
+                self.DataHandling.set_beam((label,beam))
+            if not 'ALL' in self.DataHandling.get_beams():
+                beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam.set_gratingAmplitude(self.grating_period_edit.value())
+                self.DataHandling.set_beam(('ALL',beam))
+
+    def spectralBeamCalibrationMeasurement(self):
+        '''
+             Sets up and starts a spectral Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value())
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_intensities.connect(self.SpectralCalibDataPlot.set_data)
+            self.measurement.send_intensities.connect(self.spectralfitting.extractMaxima)
+            self.spectralfitting.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
+            self.spectralfitting.send_maxima.connect(self.SpectralCalibrationFitPlot.set_data)
+            self.spectralfitting.send_polynomial.connect(self.SpectralCalibrationFitPlot.set_fit)
+            self.spectralfitting.send_spectral_calibration_fit.connect(self.DataHandling.add_calibration)
+            self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def update_spectra_calibration_boundaries(self):
+        '''
+            Updates the boundaries to consider when processing spectral calibration data
+        '''
+        try:
+            self.spectralfitting.set_boundaries([self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+            try:
+                spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_raw_data']
+                self.spectralfitting.extractMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],spectral_calib_dict['data'])
+            except KeyError:
+                print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
+        except AttributeError:
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+
+    def fit_spectral_calibration(self):
+        '''
+            Fits the last spectral beam calibration data using the displayed valued and updates the result in the Datahandling thread.
+        '''
+        try:
+            spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_processed_data']
+            try:
+                self.spectralfitting.fitSpectraMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],self.spectral_fit_polynomial_order_spinbox.value())
+            except AttributeError:
+                self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+        except KeyError:
+            print('Spectral calibration data has not been processed. Run a spectral beam calibration measurement first')
+    
+    def assign_spectral_calibration(self):
+        '''
+            Saves the current spectral beam calibration fit and parameters to the calibration thread
+        '''
+        beam_dict=self.DataHandling.get_beams()
+        if beam_dict=={}:
+            beam_dict={'ALL':Beam(self.SLM.get_width(),self.SLM.get_height())}
+        for key in beam_dict:
+            beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
+            beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
+            self.DataHandling.set_beam((key,beam_dict[key]))
+
 
     def stop_measurement(self):
         # stop measurement

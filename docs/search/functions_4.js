@@ -1,0 +1,25 @@
+var searchData=
+[
+  ['generate_5f1dgrating_0',['generate_1Dgrating',['../classbeams_1_1Beam.html#a6b4752e69f7333983923f7c76903d28b',1,'beams::Beam']]],
+  ['get_5fall_5fdata_1',['get_all_data',['../classstreising__camera_1_1streising.html#a0c457a54d987d30f825113f136318ccb',1,'streising_camera::streising']]],
+  ['get_5fbeamhorizontaldelimiters_2',['get_beamHorizontalDelimiters',['../classbeams_1_1Beam.html#a9a0a3e61ab3a64a9ad71c445096944af',1,'beams::Beam']]],
+  ['get_5fbeams_3',['get_beams',['../classDataHandling_1_1DataHandling.html#a4925557a4003f3cd0e5a9ea0e229ccd3',1,'DataHandling::DataHandling']]],
+  ['get_5fbeamverticaldelimiters_4',['get_beamVerticalDelimiters',['../classbeams_1_1Beam.html#a6768478c19cbed5da290cf7077bc4c27',1,'beams::Beam']]],
+  ['get_5fcompressioncarrier_5',['get_compressionCarrier',['../classbeams_1_1Beam.html#a2ddc5716efd57131606abe5b2eb1b764',1,'beams::Beam']]],
+  ['get_5fcurrentphase_6',['get_currentPhase',['../classbeams_1_1Beam.html#a0706190af41d92bf11ec0a53883cddeb',1,'beams::Beam']]],
+  ['get_5fdata_5fone_5fblock_7',['get_data_one_block',['../classstreising__camera_1_1streising.html#aad600d02ada7757f0f4170254c7acf3d',1,'streising_camera::streising']]],
+  ['get_5fdata_5fone_5fframe_8',['get_data_one_frame',['../classstreising__camera_1_1streising.html#af3ba600c95a139582c1951c26b60935d',1,'streising_camera::streising']]],
+  ['get_5fdelaycarrier_9',['get_delayCarrier',['../classbeams_1_1Beam.html#abc3afb6e45a494fb4cf24289123a15b3',1,'beams::Beam']]],
+  ['get_5fgratingamplitude_10',['get_gratingAmplitude',['../classbeams_1_1Beam.html#a6a5223ef6d094fda2d0973596884226d',1,'beams::Beam']]],
+  ['get_5fgratingperiod_11',['get_gratingPeriod',['../classbeams_1_1Beam.html#a4d5346cc7659447229f98f8b98ccadf8',1,'beams::Beam']]],
+  ['get_5fheight_12',['get_height',['../classSLMDemo_1_1SLMDemo.html#a579412f6271abecf01d957b73c0408ce',1,'SLMDemo::SLMDemo']]],
+  ['get_5fhorizontalindices_13',['get_horizontalIndices',['../classbeams_1_1Beam.html#af521187525c86a76ece3d4d2db1db536',1,'beams::Beam']]],
+  ['get_5fintensities_14',['get_intensities',['../classSpectrometerDemo__advanced_1_1SpectrometerDemo.html#ac7c2eb6ba56f54ff3cf72dc7450b10fe',1,'SpectrometerDemo_advanced::SpectrometerDemo']]],
+  ['get_5fmask_15',['get_mask',['../classbeams_1_1Beam.html#a6685b012dad2947fec9eb73d65a501b1',1,'beams::Beam']]],
+  ['get_5foptimalphase_16',['get_optimalPhase',['../classbeams_1_1Beam.html#acd3042cd7ccd5957d9c27c3739312e6f',1,'beams::Beam']]],
+  ['get_5fsampledcurrentphase_17',['get_sampledCurrentPhase',['../classbeams_1_1Beam.html#a7681226126b73a2bb0f796e3d1490a71',1,'beams::Beam']]],
+  ['get_5fsampledoptimalphase_18',['get_sampledOptimalPhase',['../classbeams_1_1Beam.html#aaa8c725e1d4732d0387d1d817f0811a0',1,'beams::Beam']]],
+  ['get_5fspectrumatpixel_19',['get_spectrumAtPixel',['../classbeams_1_1Beam.html#af262ab48fe7d8e3f9578783c0ed64731',1,'beams::Beam']]],
+  ['get_5fwavelength_20',['get_wavelength',['../classSpectrometerDemo__advanced_1_1SpectrometerDemo.html#a04f3f522ccdc1de4796bb32c95a3669a',1,'SpectrometerDemo_advanced::SpectrometerDemo']]],
+  ['get_5fwidth_21',['get_width',['../classSLMDemo_1_1SLMDemo.html#afc401d06d2146115d808e4fe0a55123e',1,'SLMDemo::SLMDemo']]]
+];
