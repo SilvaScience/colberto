@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>590</width>
+    <height>490</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="QTableWidget" name="opt_phase_table">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>40</y>
+     <width>561</width>
+     <height>101</height>
+    </rect>
+   </property>
+   <row>
+    <property name="text">
+     <string>Current</string>
+    </property>
+   </row>
+   <row>
+    <property name="text">
+     <string>Optimal</string>
+    </property>
+   </row>
+   <column>
+    <property name="text">
+     <string>Phase</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Delay (fs)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>GDD (fs^2)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>O(3) (fs^3)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>O(4) (fs^4)</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QLabel" name="beam_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>10</y>
+     <width>131</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Beam NAME</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="apply_pushbutton">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>180</y>
+     <width>161</width>
+     <height>111</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>APPLY</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="relative_checkbox">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>150</y>
+     <width>92</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Relative</string>
+   </property>
+  </widget>
+  <widget class="PlotWidget" name="beam_plot" native="true">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>150</y>
+     <width>381</width>
+     <height>141</height>
+    </rect>
+   </property>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QWidget</extends>
+   <header>pyqtgraph</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
