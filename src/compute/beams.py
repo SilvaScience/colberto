@@ -12,7 +12,6 @@ from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
 
-
 class Beam:
     def __init__(self,SLMWidth,SLMHeight):
         """
@@ -44,7 +43,11 @@ class Beam:
                 - horizontalDelimiters (nd.array, Default None) Indices of the two horizontal limiting edges of the beam. Default uses internal delimiters
                 - verticalDelimiters (nd.array, Default None) Indices of the two vertical limiting edges of the beam. Default uses internal delimiters
         '''
+<<<<<<< HEAD
         self.mask=np.zeros((self.SLMWidth,self.SLMHeight))
+=======
+        self.mask=np.zeros((self.SLMHeight,self.SLMWidth))
+>>>>>>> origin/dev
         if horizontalDelimiters is None:
             horizontalDelimiters=self.get_beamHorizontalDelimiters()
         if verticalDelimiters is None:
@@ -307,6 +310,7 @@ class Beam:
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
+<<<<<<< HEAD
         if self.phaseGratingPeriod is None:
             
             return np.zeros((self.SLMWidth,self.SLMHeight))
@@ -316,6 +320,16 @@ class Beam:
         for phase in phaseProfile:
             row=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
             phaseGratingImage.append(row)
+=======
+        phaseGratingImage=np.zeros((self.SLMHeight,self.SLMWidth))
+        if self.phaseGratingPeriod is None:
+            return phaseGratingImage
+        numberVerticalPixels=self.SLMHeight
+        print('Number of vertical pixels %.0f'%numberVerticalPixels)
+        phaseProfile=self.get_sampledCurrentPhase()
+        for i,phase in enumerate(phaseProfile):
+            phaseGratingImage[:,i]=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
+>>>>>>> origin/dev
         phaseGratingImage=np.array(phaseGratingImage)
         if self.maskOn:
             phaseGratingImage=phaseGratingImage*self.mask
