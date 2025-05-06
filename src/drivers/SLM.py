@@ -123,6 +123,14 @@ class Slm(QtWidgets.QMainWindow):
         """
         return self.parameter_dict['Height'],self.parameter_dict['Width'],self.parameter_dict['Depth'],self.parameter_dict['rgb'],self.parameter_dict['is8bit']
 
+    def get_height(self):
+        """Wrapper to get SLM height"""
+        return self.parameter_dict['Height']
+
+    def get_width(self):
+        """Wrapper to get SLM width"""
+        return self.parameter_dict['Width']
+
     def closeEvent(self, event):
         # Si la fenêtre se ferme, on arrête le worker proprement
         if self.slm_worker.isRunning():

@@ -13,16 +13,9 @@ import numpy as np
 A snippet of code demonstrating how to use some of the features in the Beams class
 '''
 
-<<<<<<< HEAD
-
-bm=Beam(1200,1920)
-bm.set_pixelToWavelength(P(1e-9*np.array([500,1/6])))# Sets bogus polynomial for pix to wave conversionpix2wave
-bm.set_compressionCarrierWave(532e-9)
-=======
 bm=Beam(1920,1200)
 bm.set_pixelToWavelength(P(1e-9*np.array([500,1/6])))# Sets bogus polynomial for pix to wave conversionpix2wave
 bm.set_compressionCarrierWave(630e-9)
->>>>>>> origin/dev
 print('Wavelength at pixel 111:  %.3e m'%bm.get_spectrumAtPixel(111))
 print('Frequency at pixel 111:  %.3e Hz'%bm.get_spectrumAtPixel(111,unit='frequency'))
 print('Angular frequency at pixel 111:  %.3e rad Hz'%bm.get_spectrumAtPixel(111,unit='ang_frequency'))
@@ -30,11 +23,7 @@ print('Energy at pixel 111:  %.3e eV'%bm.get_spectrumAtPixel(111,unit='energy'))
 print('Compression carrier wavelenght is %.2e nm'%bm.get_compressionCarrier(unit='wavelength'))
 print('Compression carrier angular frequency is %.2e rad.Hz'%bm.get_compressionCarrier(unit='ang_frequency'))
 bm.set_optimalPhase(P([0,0,1000,500]))
-<<<<<<< HEAD
-bm.set_currentPhase(P([0,10,-1000,-500]),mode='relative')
-=======
 bm.set_currentPhase(P([0,10,-500,-500]),mode='relative')
->>>>>>> origin/dev
 bm.set_beamVerticalDelimiters([100,250])
 
 print('Optimal phase is now:')

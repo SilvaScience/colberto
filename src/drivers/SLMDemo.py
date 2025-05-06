@@ -41,16 +41,12 @@ class SLMDemo(QtWidgets.QMainWindow):
         self.parameter_display_dict['amplitude']['unit'] = ' V'
         self.parameter_display_dict['amplitude']['max'] = 1000
         self.parameter_display_dict['amplitude']['read'] = False
-<<<<<<< HEAD
-    
-=======
 
         self.parameter_display_dict['greyscale_val']['val'] = 0
         self.parameter_display_dict['greyscale_val']['unit'] = ' '
         self.parameter_display_dict['greyscale_val']['max'] = 255
         self.parameter_display_dict['greyscale_val']['read'] = False
 
->>>>>>> origin/dev
         # set parameters
         self.amplitude = 5
         self.temperature = 300
@@ -85,13 +81,6 @@ class SLMDemo(QtWidgets.QMainWindow):
         '''
         return 300
 
-<<<<<<< HEAD
-    def get_width(self):
-        '''
-            Dummy function for SLM width
-        '''
-        return 600
-=======
     def update_image_from_array(self, np_img):
 
         """
@@ -131,4 +120,3 @@ class SLMDemo(QtWidgets.QMainWindow):
 
     def write_image_slm(self,image):
         return
->>>>>>> origin/dev

@@ -32,12 +32,14 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
     send_vertical_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, grating_period,rows_multiple):
+    def __init__(self,devices, grating_period,rows_multiple,demo=False):
         '''
          Initializes the Vertical beam calibration measurement
          input:
              - devices: the devices dictionnary holding at least a spectrometer and a SLM
-             - parameters: dictonnary holding the grating period and the increment in number of activated rows.
+             - grating_period (int): the grating period in pixels
+             - rows_multiple (int): Multiples by which to increment the length of the vertical grating
+             - demo (bool): Run the calibration in demo mode (True) or not (False, default) 
         ''' 
         super(VerticalBeamCalibrationMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
@@ -57,7 +59,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
         self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
         self.monobeam.set_gratingPeriod(grating_period)
-        self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
+        self.isDemo= demo
         if self.isDemo:
             fakeBeamshape = lambda x,x0: 1000*(special.erf((x-x0)/10)+1)
             self.demoIntensities=fakeBeamshape(self.rows,self.SLM.get_height()/8)+fakeBeamshape(self.rows,3*self.SLM.get_height()/8)+fakeBeamshape(self.rows,5*self.SLM.get_height()/8)+fakeBeamshape(self.rows,7*self.SLM.get_height()/8)
@@ -106,7 +108,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
     send_spectral_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices,grating_period,column_increment, column_width):
+    def __init__(self,devices,grating_period,column_increment, column_width,demo=False):
         '''
          Initializes the Spectral beam calibration measurement
          input:
@@ -114,6 +116,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
              - grating_period: (int) the vertical period (in pixels) of the phase grating
              - column_increment: (int) the step by which to shift the columns 
              - column_width: (int) the width (in pixels) of the scanned column
+             - demo (bool): Run the calibration in demo mode (True) or not (False, default) 
         ''' 
         super(SpectralBeamCalibrationMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
@@ -137,7 +140,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
         self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
         self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
         self.monobeam.set_gratingPeriod(grating_period)
-        self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
+        self.isDemo= demo
 
     def run(self):
         for i,column in enumerate(self.columns):

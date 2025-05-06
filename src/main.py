@@ -116,6 +116,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
         # Spatial calibration tab
         ## Vertical calibration tab
+        self.spatial_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
         self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
         self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
         self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
@@ -253,8 +254,6 @@ class MainInterface(QtWidgets.QMainWindow):
         self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
         self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
         self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
-        self.kinetic_lineEdit.editingFinished.connect(self.change_kinetic_interval)
-        self.kinetic_run_button.clicked.connect(self.kinetic_measurement)
         # LUT Calibration Measurement Connect Events
         self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
         self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
@@ -436,7 +435,7 @@ class MainInterface(QtWidgets.QMainWindow):
         if not self.measurement_busy:
             self.measurement_busy = True
             self.DataHandling.clear_data()
-            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value())
+            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value(),demo=self.spatial_calib_demo_mode_checkbox.checked)
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_intensities.connect(self.VerticalCalibPlot.set_data)
