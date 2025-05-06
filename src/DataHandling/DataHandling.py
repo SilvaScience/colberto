@@ -86,8 +86,7 @@ class DataHandling(QtCore.QThread):
 
     def concatenate_data(self, wls, spec):
         """ This function concatenates all received spectra. it keeps the last 100 spectra directly accessible. If
-        more than 100 spectra are acquired, they are buffersaved in a .h5 file, to prevent memory overload and allow
-        acquisiton of infinite spectra. """
+        more than 100 spectra are acquired, they are dumped to prevent memory overload. """
         # add data to data array, not used for now
         curr_time = time.time() - self.starttime
         self.wavelength_axis = wls
@@ -101,7 +100,8 @@ class DataHandling(QtCore.QThread):
         # to prevent memory overload, save to temp file every 100th spectrum
         self.data_in_flash =self.data_in_flash + 1
         if self.data_in_flash > 99:
-            self.save_buffer()
+            self.clear_memory()
+            #self.save_buffer() #Will turn this feature on if necessary
             self.data_in_flash = 0
 
         # Extract maxima of data to display them in SpectrumViewer
@@ -129,8 +129,10 @@ class DataHandling(QtCore.QThread):
             with h5py.File(self.temp_filename, 'a') as hf:
                 hf["spectra"].resize((hf["spectra"].shape[1] + spectrum_w_param.shape[1]), axis=1)
                 hf["spectra"][:,-spectrum_w_param.shape[1]:] = spectrum_w_param
+        self.clear_memory()
 
-        # clear arrays in memory
+    def clear_memory(self):
+        """clear arrays in memory"""
         self.spec = np.empty([self.speclength, 0])
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
 

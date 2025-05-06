@@ -15,8 +15,9 @@ path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
 from src.compute.beams import Beam
 from src.compute.calibration import Calibration
+import logging
 
-
+logger = logging.getLogger(__name__)
 
 class VerticalBeamCalibrationMeasurement(QtCore.QThread):
     '''
@@ -83,7 +84,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         self.send_vertical_calibration_data.emit(('vertical_calibration_data',self.vertical_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
-        print('Vertical Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
+        logger.info('Vertical Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
 
     def take_spectrum(self):
         self.spec = np.array(self.spectrometer.get_intensities())
@@ -91,7 +92,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
 
     def stop(self):
         self.terminate = True
-        print(time.strftime('%H:%M:%S') + ' Request Stop')
+        logger.info(time.strftime('%H:%M:%S') + ' Request Stop')
 
 
 class SpectralBeamCalibrationMeasurement(QtCore.QThread):
@@ -168,7 +169,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
         self.send_spectral_calibration_data.emit(('spectral_calibration_raw_data',self.spectral_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
-        print('Spêctral Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
+        logger.info('Spêctral Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
 
     def take_spectrum(self):
         self.spec = np.array(self.spectrometer.get_intensities())
@@ -176,7 +177,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
             self.sendSpectrum.emit(self.wls, self.spec)
     def stop(self):
         self.terminate = True
-        print(time.strftime('%H:%M:%S') + ' Request Stop')
+        logger.info(time.strftime('%H:%M:%S') + ' Request Stop')
     def fakeSignal(self,wls,current_col,col_width):
         wave_per_pix=0.1 #Arbitrary but reasonnable parameters to simulate data acq.
         min_wave=600

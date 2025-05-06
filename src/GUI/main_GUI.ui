@@ -333,7 +333,7 @@ p, li { white-space: pre-wrap; }
             <x>20</x>
             <y>70</y>
             <width>731</width>
-            <height>271</height>
+            <height>311</height>
            </rect>
           </property>
           <property name="font">
@@ -502,7 +502,7 @@ p, li { white-space: pre-wrap; }
             <number>1</number>
            </property>
            <property name="value">
-            <number>5</number>
+            <number>25</number>
            </property>
           </widget>
          </widget>
@@ -548,7 +548,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="measure_spectral_calibration">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>120</y>
              <width>88</width>
              <height>27</height>
@@ -561,7 +561,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="assign_spectral_calibration_button">
            <property name="geometry">
             <rect>
-             <x>90</x>
+             <x>120</x>
              <y>300</y>
              <width>131</width>
              <height>27</height>
@@ -574,7 +574,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_spectral_calibration_box">
            <property name="geometry">
             <rect>
-             <x>10</x>
+             <x>40</x>
              <y>0</y>
              <width>231</width>
              <height>19</height>
@@ -592,7 +592,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="column_increment_label">
            <property name="geometry">
             <rect>
-             <x>10</x>
+             <x>40</x>
              <y>60</y>
              <width>171</width>
              <height>19</height>
@@ -605,7 +605,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="column_increment_spin_box">
            <property name="geometry">
             <rect>
-             <x>180</x>
+             <x>210</x>
              <y>54</y>
              <width>44</width>
              <height>28</height>
@@ -624,7 +624,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="column_width_label">
            <property name="geometry">
             <rect>
-             <x>10</x>
+             <x>40</x>
              <y>96</y>
              <width>171</width>
              <height>19</height>
@@ -637,7 +637,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="column_width_spin_box">
            <property name="geometry">
             <rect>
-             <x>180</x>
+             <x>210</x>
              <y>90</y>
              <width>44</width>
              <height>28</height>
@@ -669,7 +669,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_spectral_calibration_box_measurement">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>30</y>
              <width>231</width>
              <height>19</height>
@@ -690,7 +690,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_spectral_calibration_box_fitting">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>160</y>
              <width>231</width>
              <height>19</height>
@@ -709,7 +709,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="polynomial_order_label">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>260</y>
              <width>171</width>
              <height>19</height>
@@ -722,7 +722,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="shorter_fit_wave_label">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>200</y>
              <width>191</width>
              <height>19</height>
@@ -735,7 +735,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="shortest_fitting_wave_spin_box">
            <property name="geometry">
             <rect>
-             <x>203</x>
+             <x>233</x>
              <y>194</y>
              <width>61</width>
              <height>28</height>
@@ -757,7 +757,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="polynomial_order_spin_box">
            <property name="geometry">
             <rect>
-             <x>170</x>
+             <x>200</x>
              <y>254</y>
              <width>44</width>
              <height>28</height>
@@ -776,7 +776,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="fit_spectral_calibration_button">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>300</y>
              <width>88</width>
              <height>27</height>
@@ -828,7 +828,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="longer_fit_wave_label">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>230</y>
              <width>191</width>
              <height>19</height>
@@ -841,7 +841,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="longest_fitting_wave_spin_box">
            <property name="geometry">
             <rect>
-             <x>203</x>
+             <x>233</x>
              <y>224</y>
              <width>61</width>
              <height>28</height>
@@ -890,7 +890,7 @@ p, li { white-space: pre-wrap; }
            <number>2</number>
           </property>
           <property name="value">
-           <number>5</number>
+           <number>50</number>
           </property>
          </widget>
          <widget class="QCheckBox" name="spatial_calib_demo_mode_checkbox">
@@ -1106,6 +1106,206 @@ Start:Stepnumber:Stop  Start:Stepnum...
            <property name="text">
             <string>This measurement acquires spectra according  
  to a user-defined pattern. </string>
+           </property>
+          </widget>
+         </widget>
+         <widget class="QGroupBox" name="LUT_calibration_groupbox">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>260</y>
+            <width>851</width>
+            <height>281</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <weight>50</weight>
+            <bold>false</bold>
+            <underline>false</underline>
+            <kerning>false</kerning>
+           </font>
+          </property>
+          <property name="title">
+           <string/>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <widget class="QLabel" name="LUT_calib_label_int_time">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>30</y>
+             <width>131</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Integration Time (ms)</string>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="LUT_calib_plot_layout" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>280</x>
+             <y>10</y>
+             <width>551</width>
+             <height>251</height>
+            </rect>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="measure_LUT_calib">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>150</y>
+             <width>231</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Measure Spectrum - Phase2Grey Calibration</string>
+           </property>
+          </widget>
+          <widget class="QDoubleSpinBox" name="LUT_int_time_doubleSpinBox">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>30</y>
+             <width>91</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="suffix">
+            <string> ms</string>
+           </property>
+           <property name="maximum">
+            <double>10000.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>10.000000000000000</double>
+           </property>
+          </widget>
+          <widget class="QLabel" name="LUT_calib_label_num_spectra">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>70</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Number of Spectra</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="LUT_calib_spectra_avg_spinBox">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>70</y>
+             <width>101</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="suffix">
+            <string>  spectra</string>
+           </property>
+           <property name="maximum">
+            <number>10000</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+          <widget class="QLabel" name="LUT_calib_scans_number_spectra">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>110</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Number of Scans</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="LUT_calib_scans_number_spinBox">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>110</y>
+             <width>101</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="toolTipDuration">
+            <number>-2</number>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="suffix">
+            <string>  scans</string>
+           </property>
+           <property name="maximum">
+            <number>10000</number>
+           </property>
+           <property name="value">
+            <number>2</number>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="LUT_Data_file_lineEdit">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>190</y>
+             <width>101</width>
+             <height>25</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Data_File</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="generate_LUT_calib">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>230</y>
+             <width>231</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Generate LUT File - Phase2Grey Calibration</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="select_LUT_Data_file_pushButton">
+           <property name="geometry">
+            <rect>
+             <x>130</x>
+             <y>190</y>
+             <width>111</width>
+             <height>23</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Select Data File</string>
            </property>
           </widget>
          </widget>

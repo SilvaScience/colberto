@@ -29,8 +29,8 @@ success = ctypes.windll.user32.SetProcessDPIAware()
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
 # Path to the DLL file
-path_blink_c_wrapper = folder_path / "src" / "drivers" / "SDK" / "Blink_C_Wrapper.dll"
-path_image_gen = folder_path / "src" / "drivers" / "SDK" / "Imagegen.dll"
+path_blink_c_wrapper = Path(r'C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_Wrapper.dll')
+path_image_gen = Path(r'C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen.dll')
 path_blink_c_wrapper = str(path_blink_c_wrapper)
 path_image_gen = str(path_image_gen)
 
@@ -155,7 +155,6 @@ class SLM:
             - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
         """
         self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
-        logger.info('Image written')
 
     def load_lut(self, file_path):
         """
@@ -223,7 +222,6 @@ class ImageGen:
         # Load the DLL
         self.image_gen_dll = ctypes.CDLL(path_image_gen)
         #print("Le DDL est chargé ")
-        print("The DDL is loaded")
         # Define function prototypes for the image generation functions
         self.image_gen_dll.Concatenate_TenBit.restype = None
         self.image_gen_dll.Generate_Stripe.restype = None
