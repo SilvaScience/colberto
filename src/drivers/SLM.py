@@ -1,7 +1,7 @@
 """
 Created on Tue Feb  06 15:26:53 2025
 
-@author: Mathieu Desmarais
+@authors: Mathieu Desmarais, Felix Thouin
 Hardware class to control SLM. All hardware classes require a definition of
 parameter_display_dict (set Spinbox options and read/write)
 set_parameter function (assign set functions)
@@ -15,8 +15,6 @@ from numpy.polynomial import Polynomial as P
 
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, uic
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from PyQt5.QtGui import QPixmap, QImage
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from ctypes import *
@@ -27,7 +25,6 @@ import os
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
 from src.drivers.Slm_Meadowlark_optics import SLM
-from samples.drivers.exemple_image_generation import beam_image_gen
 import logging
 import datetime
 

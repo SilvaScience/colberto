@@ -75,6 +75,7 @@ class MainInterface(QtWidgets.QMainWindow):
         # initialize SLM
         try:
             from samples.drivers.exemple_image_generation import beam_image_gen
+            raise Exception('DEMO')
             self.SLM = Slm()
             self.devices['SLM'] = self.SLM
             logger.info('%s SLM connected' % datetime.datetime.now())
