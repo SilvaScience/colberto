@@ -120,3 +120,11 @@ class SLMDemo(QtWidgets.QMainWindow):
 
     def write_image_slm(self,image):
         return
+
+    def get_height(self):
+        """Wrapper to get SLM height"""
+        return self.parameter_dict['Height']
+
+    def get_width(self):
+        """Wrapper to get SLM width"""
+        return self.parameter_dict['Width']
