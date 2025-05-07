@@ -311,7 +311,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -322,6 +322,16 @@ p, li { white-space: pre-wrap; }
          <attribute name="title">
           <string>SLM View</string>
          </attribute>
+         <widget class="GraphicsLayoutWidget" name="slm_display" native="true">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>10</y>
+            <width>640</width>
+            <height>400</height>
+           </rect>
+          </property>
+         </widget>
         </widget>
         <widget class="QWidget" name="spatial_tab">
          <attribute name="title">

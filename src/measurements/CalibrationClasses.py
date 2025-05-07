@@ -57,8 +57,6 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         }
         # Configure single beam over which the rows will be scanned
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
-        self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
-        self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
         self.monobeam.set_gratingPeriod(grating_period)
         self.isDemo= demo
         if self.isDemo:
@@ -66,6 +64,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
             self.demoIntensities=fakeBeamshape(self.rows,self.SLM.get_height()/8)+fakeBeamshape(self.rows,3*self.SLM.get_height()/8)+fakeBeamshape(self.rows,5*self.SLM.get_height()/8)+fakeBeamshape(self.rows,7*self.SLM.get_height()/8)
 
     def run(self):
+        logger.info('Vertical Calibration Measurement '+time.strftime('%H:%M:%S') + ' started')
         for i,row in enumerate(self.rows):
             if not self.terminate:  # check whether stopping measurement is called
                 #Take the data

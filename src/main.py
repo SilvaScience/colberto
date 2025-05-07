@@ -20,6 +20,7 @@ from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
+from GUI.SLMDisplay import SLMDisplay
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLM import Slm
@@ -76,8 +77,6 @@ class MainInterface(QtWidgets.QMainWindow):
             from samples.drivers.exemple_image_generation import beam_image_gen
             self.SLM = Slm()
             self.devices['SLM'] = self.SLM
-            test_image=beam_image_gen()
-            self.SLM.write_image(test_image)
             logger.info('%s SLM connected' % datetime.datetime.now())
         except Exception as e:
             self.SLM = SLMDemo()
@@ -139,7 +138,6 @@ class MainInterface(QtWidgets.QMainWindow):
 
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
-        self.SLM_tab = self.findChild(QtWidgets.QWidget, 'SLM_tab')
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
         self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
@@ -150,6 +148,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
         self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
         self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+        #SLM Related
+        self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -172,10 +172,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
         self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
         self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.SLM)
-        self.SLM_tab.setLayout(vbox)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
+        self.slm_display_plot= SLMDisplay(self.slm_display)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -259,7 +257,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
         self.generate_LUT_calib_button.clicked.connect(
             self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
-
+        # SLM display connections
+        self.SLM.slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
+        test_image=beam_image_gen()
+        self.SLM.write_image(test_image)
         # run some functions once to define default values
         self.change_filename()
 
