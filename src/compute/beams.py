@@ -34,6 +34,7 @@ class Beam:
         self.set_currentPhase(P([0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
+        self.indices=self.get_horizontalIndices()
         self.set_compressionCarrierWave(600)
         self.set_delayCarrierWave(600)
         self.maskOn=True
@@ -237,7 +238,7 @@ class Beam:
         
         '''
         if indices is None:
-            indices=self.get_horizontalIndices()
+            indices=self.indices
         angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.currentPhasePolynomial(angFreq)
 

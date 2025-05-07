@@ -137,8 +137,6 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
         }
         # Configure single beam over which the columns will be scanned
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
-        self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
-        self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
         self.monobeam.set_gratingPeriod(grating_period)
         self.isDemo= demo
 
