@@ -23,8 +23,9 @@ import shutil
 class DataHandling(QtCore.QThread):
 
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    sendMaximum = QtCore.pyqtSignal(np.ndarray) # not used for now, to be implemented for direct measurment control
+    sendMaximum = QtCore.pyqtSignal(np.ndarray) # not used for now, to be implemented for direct measurement control
     sendParameterarray = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    bufferSaveSignal = QtCore.pyqtSignal(object, object, object, object)
 
     def __init__(self, parameter, speclength):
         super(DataHandling, self).__init__()
@@ -33,6 +34,7 @@ class DataHandling(QtCore.QThread):
 
         # initialize data arrays, their uses are explained in the corresponding functions
         self.speclength = speclength
+        self.data_dim = np.size(speclength) #dimension of data
         self.parameter_queue = {} # initialize FIFO queues for parameter storage
         self.parameter_queue['time'] = deque(maxlen=100000)
         self.parameter_queue['absolute_time'] = deque(maxlen=100000)
@@ -40,9 +42,14 @@ class DataHandling(QtCore.QThread):
             self.parameter_queue[param] = deque(maxlen=100000)
         self.param_from_deque = np.zeros([len(self.parameter) + 2, 1])
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
-        self.spec = np.empty([self.speclength, 0])
-        self.background = np.empty([self.speclength, 1])
-        self.wls = np.empty([self.speclength, 1])
+        if self.data_dim  == 1:
+            self.spec = np.empty([self.speclength, 0])
+            self.background = np.empty([self.speclength, 1])
+            self.wls = np.empty([self.speclength, 1])
+        else:
+            self.spec = np.empty([0,self.speclength[0],self.speclength[1]])
+            self.background = np.empty([0,self.speclength[0],self.speclength[1]])
+            self.wls = np.empty([self.speclength[1], 1])
         self.maximum = np.zeros([3])
         self.correct_background = False
         self.send_x_idx = 'time'
@@ -51,11 +58,18 @@ class DataHandling(QtCore.QThread):
         self.parameter_matrix_full = False
         self.data_in_flash = 0
         self.firstbuffer = True
-        self.temp_filename = r"C:\Data\temp.h5"
+        self.temp_filename = r"C:\TEMP\temp.h5"
         self.filename = 'test'
 
         # initialize Calibration dict
         self.calibration = {}
+
+        # initialize BufferWorker
+        self.thread = QtCore.QThread()
+        self.BufferWorker = BufferWorker(self.temp_filename,self.data_dim)
+        self.BufferWorker.moveToThread(self.thread)
+        self.thread.start()
+        self.bufferSaveSignal.connect(self.BufferWorker.save_buffer)
 
     # main update device parameter function
     def update_parameter(self, parameter):
@@ -72,8 +86,11 @@ class DataHandling(QtCore.QThread):
     def clear_data(self):
         """Each time a new measurement is started, DataHandling is reset."""
         self.starttime = time.time()
-        self.spec = np.empty([self.speclength, 0])
-        self.firstbuffer = 1
+        if self.data_dim == 1:
+            self.spec = np.empty([self.speclength, 0])
+        else:
+            self.spec = np.empty([1,self.speclength[0],self.speclength[1]])
+        self.BufferWorker.firstbuffer = True
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
         try:
             os.remove(self.temp_filename)
@@ -87,7 +104,10 @@ class DataHandling(QtCore.QThread):
         # add data to data array, not used for now
         curr_time = time.time() - self.starttime
         self.wls = wls
-        self.spec = np.c_[self.spec, spec]
+        if self.data_dim == 1:
+            self.spec = np.c_[self.spec, spec]
+        else:
+            self.spec = np.concatenate([self.spec, spec[np.newaxis,...]])
         for idx, param in enumerate(self.parameter_queue.keys()):
             self.param_from_deque[idx] = self.parameter_queue[param][-1]
         self.parameter_measured = np.c_[self.parameter_measured, self.param_from_deque]
@@ -96,13 +116,16 @@ class DataHandling(QtCore.QThread):
         self.sendSpectrum.emit(wls, spec)
         # to prevent memory overload, save to temp file every 100th spectrum
         self.data_in_flash =self.data_in_flash + 1
-        if self.data_in_flash > 99:
+        if self.data_in_flash > 49:
             self.save_buffer()
             self.data_in_flash = 0
 
         # Extract maxima of data to display them in SpectrumViewer
         self.maximum[1] = np.amax(spec)
-        self.maximum[2] = wls[np.argmax(spec)]
+        if self.data_dim == 1:
+            self.maximum[2] = wls[np.argmax(spec)]
+        else:
+            self.maximum[2] = wls[np.unravel_index(spec.argmax(), spec.shape)[1]]
         self.maximum[0] = curr_time
         self.sendMaximum.emit(self.maximum)
 
@@ -110,25 +133,16 @@ class DataHandling(QtCore.QThread):
     def save_buffer(self):
         """ Saves data to a temporary file and populates it each time more than 100 spectra have been acquired.
         If the file is created, some attributes such as yaxis and parameter keys are added."""
-        # check for first buffer saving to initialize data array
-        if self.firstbuffer:
-            spectrum_w_param = np.vstack([self.parameter_measured, self.spec])
-            print(np.shape(spectrum_w_param))
-            with h5py.File(self.temp_filename, 'w') as hf:
-                hf.create_dataset("spectra", data=spectrum_w_param, compression="gzip", chunks=True, maxshape=(np.shape(spectrum_w_param)[0],None))
-                hf["spectra"].attrs["yaxis"] = self.wls
-                hf["spectra"].attrs["parameter_keys"] = list(self.parameter_queue.keys())
-            print('First buffer saved')
-            self.firstbuffer = False
-        else:
-            spectrum_w_param = np.vstack([self.parameter_measured, self.spec])
-            with h5py.File(self.temp_filename, 'a') as hf:
-                hf["spectra"].resize((hf["spectra"].shape[1] + spectrum_w_param.shape[1]), axis=1)
-                hf["spectra"][:,-spectrum_w_param.shape[1]:] = spectrum_w_param
-
+        t1 = time.time()
+        self.bufferSaveSignal.emit(self.spec, self.wls, self.parameter_queue, self.parameter_measured)
+        #print(time.time()-t1)
         # clear arrays in memory
-        self.spec = np.empty([self.speclength, 0])
+        if self.data_dim == 1:
+            self.spec = np.empty([self.speclength, 0])
+        else:
+            self.spec = np.empty([0,self.speclength[0],self.speclength[1]])
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
+
 
     def save_parameter(self, filename):
         """ Saves parameters to an independent .h5 file. We still might want to adapt how this is handled."""
@@ -139,8 +153,8 @@ class DataHandling(QtCore.QThread):
         ty_res = time.localtime(time.time())
         timestamp = time.strftime("%H_%M_%S", ty_res)
         with h5py.File( filename + '_' + timestamp + '_parameters.h5', 'w') as hf:
-            hf.create_dataset("Parameter", data=save_array, compression="gzip", chunks=True)
-            hf['Parameter'].attrs["parameter_keys"] = list(self.parameter_queue.keys())
+            hf.create_dataset("parameter", data=save_array, compression="gzip", chunks=True)
+            hf['parameter'].attrs["parameter_keys"] = list(self.parameter_queue.keys())
         np.savetxt(filename, save_array)
         print('Parameter saved as: ' + filename)
 
@@ -148,13 +162,20 @@ class DataHandling(QtCore.QThread):
     def save_data(self, filename, comments):
         """saves data. Each time data is saved, parameters are saved aswell. """
         self.save_buffer()
+        time.sleep(0.5) # allow for BufferWorker to create temp file
         with h5py.File(self.temp_filename, 'a') as hf:
             hf.attrs["comments"] = comments
+            if len(self.calibration) > 0 :
+                for k in self.calibration.keys():
+                    hf.attrs[k] = self.calibration[k]
+
+
         ty_res = time.localtime(time.time())
         timestamp = time.strftime("%H_%M_%S", ty_res)
-        shutil.copyfile(self.temp_filename, filename + '_' + timestamp + '.h5')
-        self.save_parameter(filename)
-        print('Data saved ')
+        savename = filename + '_' + timestamp + '.h5'
+        shutil.copyfile(self.temp_filename, savename)
+        #self.save_parameter(filename)
+        print('Data saved as: ' + savename )
 
         # For now adding a worker for saving appears not be needed, if at some point DataHandling gets too busy, we
         # might want to outsource it to an independent worker.
@@ -169,7 +190,7 @@ class DataHandling(QtCore.QThread):
         self.calibration[calibration_name] = calibration_value
 
     def add_attribute(self,attribute):
-        # to be used from measurment each attribute should consist of a tuple of name and content
+        # to be used from measurement each attribute should consist of a tuple of name and content
         attribute_name, attribute_value = attribute
         with h5py.File(self.temp_filename, 'a') as hf:
             hf["spectra"].attrs[attribute_name] = attribute_value
@@ -196,18 +217,57 @@ class DataHandling(QtCore.QThread):
 
     def load_data(self):
         pass
-"""
-class SaveWorker(QtCore.QThread):
 
-    def __init__(self, filename, comments, parameter, spectrumlength, temp_filename):
-        super(SaveWorker, self).__init__()
-        self.filename = filename
-        self.comments = comments
-        self.parameter = parameter
-        self.spectrumlength = spectrumlength
+class BufferWorker(QtCore.QObject):
+
+    def __init__(self,temp_filename, data_dim):
+        super(BufferWorker, self).__init__()
         self.temp_filename = temp_filename
-        print('SAVE started')
+        self.data_dim = data_dim
+        self.firstbuffer = True
+        print('BufferWorker started')
+        self.terminate = False
 
+    @QtCore.pyqtSlot(object, object, object, object)
+    def save_buffer(self,spec,wls,parameter_queue,parameter_measured):
+        # check for first buffer saving to initialize data array
+        t1 = time.time()
+        if self.firstbuffer:
+            try:
+                os.remove(self.temp_filename) # clear temp file
+            except FileNotFoundError:
+                pass # no file to delete
+            #spectrum_w_param = np.vstack([self.parameter_measured, self.spec])
+            with h5py.File(self.temp_filename, 'w') as hf:
+                if self.data_dim == 1:
+                    hf.create_dataset("spectra", data=spec, compression="gzip", chunks=True,
+                                      maxshape=(np.shape(spec)[0], None))
+                else:
+                    # float16 is used for camera pixels, as max values is 65504.
+                    hf.create_dataset("spectra", data=spec, compression="gzip", chunks=True, maxshape=(None,np.shape(spec)[1],np.shape(spec)[2]),dtype='float16')
+                hf["spectra"].attrs["xaxis"] = wls
+                hf.create_dataset("parameter", data=parameter_measured, compression="gzip", chunks=True, maxshape=(np.shape(parameter_measured)[0],None))
+                hf["parameter"].attrs["parameter_keys"] = list(parameter_queue.keys())
+            print('First buffer saved')
+            self.firstbuffer = False
+        else:
+            #spectrum_w_param = np.vstack([self.parameter_measured, self.spec])
+            try:
+                with h5py.File(self.temp_filename, 'a') as hf:
+                    if self.data_dim == 1:
+                        hf["spectra"].resize((hf["spectra"].shape[1] + spec.shape[1]), axis=1)
+                        hf["spectra"][:, -spec.shape[1]:] = spec
+                    else:
+                        hf["spectra"].resize((hf["spectra"].shape[0] + spec.shape[0]), axis=0)
+                        hf["spectra"][-spec.shape[0]:] = spec
+                    hf["parameter"].resize((hf["parameter"].shape[1] + parameter_measured.shape[1]), axis=1)
+                    hf["parameter"][:, -parameter_measured.shape[1]:] = parameter_measured
+            except TypeError:
+                print('Saving failed. Did you already save?')
+        #print('worker time' + str(time.time()-t1))
+
+
+"""
     def run(self):
         # get time for timestamp
         ty_res = time.localtime(time.time())
