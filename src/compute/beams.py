@@ -11,6 +11,9 @@ from scipy.signal import sawtooth
 from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Beam:
     def __init__(self,SLMWidth,SLMHeight):
@@ -31,9 +34,10 @@ class Beam:
         self.set_currentPhase(P([0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
+        self.indices=self.get_horizontalIndices()
         self.set_compressionCarrierWave(600)
         self.set_delayCarrierWave(600)
-        self.maskOn=False #Is the mask enabled in the output grating?
+        self.maskOn=True
         self.pixelToWavelength=P([600])
 
     def make_mask(self,horizontalDelimiters=None,verticalDelimiters=None):
@@ -234,7 +238,7 @@ class Beam:
         
         '''
         if indices is None:
-            indices=self.get_horizontalIndices()
+            indices=self.indices
         angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.currentPhasePolynomial(angFreq)
 
@@ -310,7 +314,6 @@ class Beam:
         if self.phaseGratingPeriod is None:
             return phaseGratingImage
         numberVerticalPixels=self.SLMHeight
-        print('Number of vertical pixels %.0f'%numberVerticalPixels)
         phaseProfile=self.get_sampledCurrentPhase()
         for i,phase in enumerate(phaseProfile):
             phaseGratingImage[:,i]=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
