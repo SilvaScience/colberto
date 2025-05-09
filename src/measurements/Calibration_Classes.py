@@ -75,10 +75,10 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
                     image = self.generate_calibibration_image(n)  # Generate Image for SLM
 
                     self.SLM.write_image(image, imagetype='raw')
-                    time.sleep(0.3)
+                    #time.sleep(0.001)
                     logger.info(f'%s Image Sent n={n} {datetime.datetime.now()}')
 
-                    time.sleep(0.5)
+                    #time.sleep(0.5)
 
                     # Acquire Data
                     for m in range(self.spectra_number):  # might need to make this (self.spectra_number-1)
@@ -181,7 +181,7 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
                 print("String not found!")
 
             Total_GreyScale_Vals = data_set[idx_val, :]
-            #print(Total_GreyScale_Vals)
+            print(Total_GreyScale_Vals)
             Uniq_GreyScale_Vals = np.unique(Total_GreyScale_Vals)
 
             cut = len(params)
@@ -211,6 +211,8 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
             wavelength_shift = np.zeros((len(wave),len(Uniq_GreyScale_Vals)))#creating the right size array
             phase_shift = np.zeros((len(wave),len(Uniq_GreyScale_Vals)))#creating the right size array
 
+            print(wavelength_shift)
+            print(phase_shift)
             #function to determine phse shifts utilizing a fourier transform
             for i in range(len(Uniq_GreyScale_Vals)):
                 wavelength_shift[:, i], phase_shift[:, i] = self.detect_peak_shift(wave, avg_spectrum[:,0], avg_spectrum[:, i])
