@@ -1,9 +1,8 @@
-
 """
 Created on Tue Feb  06 15:26:53 2025
 
 @authors: Mathieu Desmarais, Felix Thouin
-DEMO Hardware class to control SLM. All hardware classes require a definition of
+Hardware class to control SLM. All hardware classes require a definition of
 parameter_display_dict (set Spinbox options and read/write)
 set_parameter function (assign set functions)
 
@@ -16,27 +15,27 @@ from numpy.polynomial import Polynomial as P
 
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, uic
-from PyQt5.QtWidgets import QGraphicsScene, QGraphicsPixmapItem
-from PyQt5.QtGui import QPixmap, QImage
 from collections import defaultdict
 import matplotlib.pyplot as plt
+from ctypes import *
 import time
 import sys
 import os
 
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
+from src.drivers.Slm_Meadowlark_optics import SLM
 import logging
 import datetime
 
 logger = logging.getLogger(__name__)
 
-class SLMDemo(QtCore.QThread):
+class Slm(QtCore.QThread):
     """ Interface to the SLM worker thread."""
     name = 'SLM'
 
     def __init__(self):
-        super(SLMDemo, self).__init__()
+        super(Slm, self).__init__()
         self.slm_worker= SLMWorker()
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
@@ -203,6 +202,9 @@ class SLMWorker(QtCore.QThread):
             
         '''
         try:
+            # 1) Connect to the SDK
+            self.slm = self.create_slm_sdk()
+            self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
             logger.info('%s SLM Worker initialization success.'%datetime.datetime.now())
         except Exception as e:
             # En cas d'erreur, émettre un signal
@@ -255,14 +257,14 @@ class SLMWorker(QtCore.QThread):
     
     def get_parameter(self):
         """
-            Retrieves the hardware parameters of the DEMO SLM
+            Retrieves the hardware parameters of the SLM
         """
-        h, w, d, rgbCtype, bitCtype=(1200,1920,8,True,True)
+        h, w, d, rgbCtype, bitCtype=self.slm.parameter_slm()
         self.height = h
         self.width = w
         self.depth = d
-        self.rgb = rgbCtype
-        self.is_eight_bit = bitCtype
+        self.rgb = rgbCtype.value     # ctypes.c_uint -> int
+        self.is_eight_bit = bitCtype.value
 
         # Emit a signal to the interface that update the dictonnary.
         #This is done only 1 time at the beginning, because this parameter doesn't change 
@@ -274,7 +276,7 @@ class SLMWorker(QtCore.QThread):
         """
             Queries the temperature from the SLM driver and emits the signal
         """
-        self.temperature=0
+        self.temperature=self.slm.get_slm_temp()
         self.slmParamsTemperature.emit(self.temperature)
     
     def write_image_slm(self):
@@ -284,7 +286,15 @@ class SLMWorker(QtCore.QThread):
                 image: (nd.array of uint8) The digital image (0 to 255 uint 8 3 channel RGB)
         '''
         self.imageSLM.emit(self.current_image)
+        self.slm.write_image(self.current_image.reshape(-1),c_uint(1))
     
+    def load_lut(self, lut_path):
+        """ Load lut file in the SDK Meadowlark."""
+        if self.slm is not None:
+            self.slm.load_lut(lut_path)
+        else:
+            logger.error('%s  Lut file not found.'%datetime.datetime.now())
+        
     def normalize_phase_image(self,image, max_phase=2 * np.pi):
         """
         Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
@@ -297,7 +307,9 @@ class SLMWorker(QtCore.QThread):
         """
             Shutdown routine for the SLM Worker and SLM
         """
-        return True
+        if self.slm is not None:
+            self.slm.delete_sdk()
+
 
 
 

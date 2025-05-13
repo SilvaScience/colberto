@@ -25,6 +25,7 @@ class DataHandling(QtCore.QThread):
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendMaximum = QtCore.pyqtSignal(np.ndarray) # not used for now, to be implemented for direct measurment control
     sendParameterarray = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendBeams = QtCore.pyqtSignal(object)
 
     def __init__(self, parameter, speclength):
         super(DataHandling, self).__init__()
@@ -42,12 +43,12 @@ class DataHandling(QtCore.QThread):
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
         self.spec = np.empty([self.speclength, 0])
         self.background = np.empty([self.speclength, 1])
-        self.wls = np.empty([self.speclength, 1])
+        self.wavelength_axis = np.empty([self.speclength, 1])
+        self.center_wavelength = 500
         self.maximum = np.zeros([3])
         self.correct_background = False
         self.send_x_idx = 'time'
         self.send_y_idx = 'absolute_time'
-
         # initialize parameter array
         self.parameter_matrix_full = False
         self.data_in_flash = 0
@@ -57,6 +58,8 @@ class DataHandling(QtCore.QThread):
 
         # initialize Calibration dict
         self.calibration = {}
+        # initialize beams dict
+        self.beams={}
 
     # main update device parameter function
     def update_parameter(self, parameter):
@@ -83,11 +86,10 @@ class DataHandling(QtCore.QThread):
 
     def concatenate_data(self, wls, spec):
         """ This function concatenates all received spectra. it keeps the last 100 spectra directly accessible. If
-        more than 100 spectra are acquired, they are buffersaved in a .h5 file, to prevent memory overload and allow
-        acquisiton of infinite spectra. """
+        more than 100 spectra are acquired, they are dumped to prevent memory overload. """
         # add data to data array, not used for now
         curr_time = time.time() - self.starttime
-        self.wls = wls
+        self.wavelength_axis = wls
         self.spec = np.c_[self.spec, spec]
         for idx, param in enumerate(self.parameter_queue.keys()):
             self.param_from_deque[idx] = self.parameter_queue[param][-1]
@@ -98,7 +100,8 @@ class DataHandling(QtCore.QThread):
         # to prevent memory overload, save to temp file every 100th spectrum
         self.data_in_flash =self.data_in_flash + 1
         if self.data_in_flash > 99:
-            self.save_buffer()
+            self.clear_memory()
+            #self.save_buffer() #Will turn this feature on if necessary
             self.data_in_flash = 0
 
         # Extract maxima of data to display them in SpectrumViewer
@@ -117,7 +120,7 @@ class DataHandling(QtCore.QThread):
             print(np.shape(spectrum_w_param))
             with h5py.File(self.temp_filename, 'w') as hf:
                 hf.create_dataset("spectra", data=spectrum_w_param, compression="gzip", chunks=True, maxshape=(np.shape(spectrum_w_param)[0],None))
-                hf["spectra"].attrs["yaxis"] = self.wls
+                hf["spectra"].attrs["yaxis"] = self.wavelength_axis
                 hf["spectra"].attrs["parameter_keys"] = list(self.parameter_queue.keys())
             print('First buffer saved')
             self.firstbuffer = False
@@ -126,8 +129,10 @@ class DataHandling(QtCore.QThread):
             with h5py.File(self.temp_filename, 'a') as hf:
                 hf["spectra"].resize((hf["spectra"].shape[1] + spectrum_w_param.shape[1]), axis=1)
                 hf["spectra"][:,-spectrum_w_param.shape[1]:] = spectrum_w_param
+        self.clear_memory()
 
-        # clear arrays in memory
+    def clear_memory(self):
+        """clear arrays in memory"""
         self.spec = np.empty([self.speclength, 0])
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
 
@@ -147,7 +152,7 @@ class DataHandling(QtCore.QThread):
 
     @QtCore.pyqtSlot(str, str)
     def save_data(self, filename, comments):
-        """saves data. Each time data is saved, parameters are saved aswell. """
+        """saves data. Each time data is saved, parameters are saved as well. """
         self.save_buffer()
         with h5py.File(self.temp_filename, 'a') as hf:
             hf.attrs["comments"] = comments
@@ -168,6 +173,22 @@ class DataHandling(QtCore.QThread):
         # to be used from calibration scripts. Each calibration should consist of a tuple of name and content
         calibration_name, calibration_value = calibration
         self.calibration[calibration_name] = calibration_value
+    
+    def set_beam(self, name_and_beam):
+        '''
+            Adds or updates the beam at the provided index
+            input:
+                - tuple: (name,Beam) First argument of tuple is beam name and second is Beam object to set
+        '''
+        beam_name,beam=name_and_beam
+        self.beams[beam_name]=beam
+
+    def get_beams(self):
+        '''
+            Triggers emission of beams to connected slots when called
+        '''
+        self.sendBeams.emit(self.beams)
+        return self.beams
 
     def add_attribute(self,attribute):
         # to be used from measurment each attribute should consist of a tuple of name and content
