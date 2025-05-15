@@ -21,17 +21,13 @@ from GUI.VerticalCalibPlot import VerticalCalibPlot
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
-from drivers.CryoDemo import CryoDemo
-from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-from drivers.SLM import Slm
-from drivers.SLMDemo import SLMDemo
-from drivers.StresingDemo import StresingDemo
-from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from compute.beams import Beam
+from samples.drivers.exemple_image_generation import beam_image_gen
+from drivers.Instruments import load_instruments
 import logging
 import datetime
 
@@ -47,53 +43,8 @@ class MainInterface(QtWidgets.QMainWindow):
         # fancy name
         self.setWindowTitle('COLBERTo')
 
-        # set devices dict
-        self.devices = defaultdict(dict)
-
-        # initialize cryostat
-        """ This is a demo devices that has read and write parameters. 
-        Illustrates use of parameters"""
-        # always try to include communication on important events.
-        # This is extremely useful for debugging and troubleshooting.
-        logger.warning('%s You are using a DEMO version of the cryostat'%datetime.datetime.now())
-        self.cryostat = CryoDemo() # launch cryostat interface
-        self.devices['cryostat'] = self.cryostat # store in global device dict.
-
-        try:
-            from drivers.OceanSpectrometer import OceanSpectrometer
-            self.spectrometer = OceanSpectrometer()
-            self.spectrometer.start()
-            self.spec_length = self.spectrometer.spec_length
-            self.devices['spectrometer'] = self.spectrometer
-            logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
-        except:
-            self.spectrometer = SpectrometerDemo()
-            self.spec_length = self.spectrometer.spec_length
-            self.devices['spectrometer'] = self.spectrometer
-            logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
-
-        # initialize SLM
-        try:
-            from samples.drivers.exemple_image_generation import beam_image_gen
-            #raise Exception('DEMO')
-            self.SLM = Slm()
-            self.devices['SLM'] = self.SLM
-            logger.info('%s SLM connected' % datetime.datetime.now())
-        except Exception as e:
-            self.SLM = SLMDemo()
-            self.devices['SLM'] = self.SLM
-            logger.error('%s SLM initialization failed at interface startup. Error type %s'%(datetime.datetime.now(),str(e)))
-            logger.info('%s SLMDemo connected'%datetime.datetime.now())
-
-        # initialize StresingDemo
-        self.Stresing = StresingDemo()
-        self.devices['Stresing'] = self.Stresing
-        logger.info('%s Stresing connected'%datetime.datetime.now())
-
-        # initialize MonochromDemo
-        self.Monochrom = MonochromDemo() 
-        self.devices['Monochrom'] = self.Monochrom 
-        logger.info('%s Monochrom DEMO connected'%datetime.datetime.now())
+        
+        self.devices = load_instruments()
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
