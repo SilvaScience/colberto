@@ -144,7 +144,6 @@ class DataHandling(QtCore.QThread):
         If the file is created, some attributes such as yaxis and parameter keys are added."""
         t1 = time.time()
         self.bufferSaveSignal.emit(self.spec, self.wls, self.parameter_queue, self.parameter_measured)
-        #print(time.time()-t1)
         # clear arrays in memory
         if self.data_dim == 1:
             self.spec = np.empty([self.speclength, 0])
