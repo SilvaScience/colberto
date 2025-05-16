@@ -20,6 +20,7 @@ DataHandling will have three main tasks: (1) It has to provide a large buffer of
 	Three kinds of data storage is thus required.
 - 	Spectra with according hardware parameters. All actual measurements require spectra. 
 - 	Global calibrations. Contains a data structure that can be filled either by loading calibrations or by filling them from MeasurementClasses. Should autosave after each calibration. 
+- 	Current status and calibration of beams on the SLM. See this page about [Beam management in Colberto](beam_management.md).
 - 	 Saved parameters. 
 
 **Spectra**: For easy access, spectra with parameters should be saved as one data frame. Groups for several measurement conditions can be created, where each group should contain a dataset that looks like:  
@@ -34,6 +35,7 @@ DataHandling will have three main tasks: (1) It has to provide a large buffer of
 The corresponding x-axis should be stored as an attribute. Also, the type of measurement can be stored as attribute. 
 
 **Calibrations**: Since we want to be able to load them independently, we should store them independent .hdf5 files. Each individual calibration should be a separate group with its own data and attributes. 
+[Beam](beam_management.md) related calibrations ([spatial](calibrations/spatial_calibration.md) and temporal) are stored separately from general calibrations
 
 **Parameters**: Should be saved as one big .hdf5 file that contains one dataset. Different attributes can be 
 
