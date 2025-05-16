@@ -16,6 +16,7 @@ from collections import deque
 import shutil
 """TO DOs: 
 - consider implementing data storage for several data acquiring devices (e.g. 2 spectrometer simultaneously) 
+- Implement proper saving of Beam object. Needs to be discussed. 
 """
 
 
