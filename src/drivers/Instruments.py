@@ -8,7 +8,7 @@ from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
 from drivers.Stresing import StresingCamera
-from drivers.MonochromDemo import MonochromDemo
+from drivers.Shamrock import Shamrock 
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +53,9 @@ def load_instruments():
         logger.error('%s SLM initialization failed at interface startup. Error type %s'%(datetime.datetime.now(),str(e)))
         logger.info('%s SLMDemo connected'%datetime.datetime.now())
 
-    # initialize StresingDemo
-    stresing_params={
-        'pixel_size_mm':26e-3,
+    # initialize MonochromDemo
+    grating_params={
         'focal_length_mm':150,
-        'num_pixels':1024,
         'f':np.float64(330605663.74965495),
         'delta':np.float64(-0.20488367116307532),
         'gamma':np.float64(2.021864300924973),
@@ -67,13 +65,18 @@ def load_instruments():
         'x_pixel':26000.0,
         'curvature':np.float64(3.1224154313329654e-06),
     }
-    camera= StresingCamera(stresing_params)
-    camera.update_grating(600,1200)#FICTITIOUS GRATING PARAMS
-    devices['Stresing'] = Stresing
-    logger.info('%s Stresing connected'%datetime.datetime.now())
-
-    # initialize MonochromDemo
-    Monochrom = MonochromDemo() 
+    Monochrom = Shamrock(grating_params) 
     devices['Monochrom'] = Monochrom 
     logger.info('%s Monochrom DEMO connected'%datetime.datetime.now())
+
+    # initialize StresingDemo
+    stresing_params={
+        'pixel_size_mm':24e-3,
+        'num_pixels':1024,
+    }
+    camera= StresingCamera(stresing_params)
+    camera.attach_to_monochromator(Monochrom)
+    devices['Stresing'] = camera
+    logger.info('%s Stresing connected'%datetime.datetime.now())
+
     return devices
