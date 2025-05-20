@@ -14,11 +14,14 @@ import numpy as np
 import os.path
 from collections import deque
 import shutil
+import logging
+import datetime
 """TO DOs: 
 - consider implementing data storage for several data acquiring devices (e.g. 2 spectrometer simultaneously) 
 - Implement proper saving of Beam object. Needs to be discussed. 
 """
 
+logger = logging.getLogger(__name__)
 
 class DataHandling(QtCore.QThread):
 
@@ -164,7 +167,7 @@ class DataHandling(QtCore.QThread):
             hf.create_dataset("parameter", data=save_array, compression="gzip", chunks=True)
             hf['parameter'].attrs["parameter_keys"] = list(self.parameter_queue.keys())
         np.savetxt(filename, save_array)
-        print('Parameter saved as: ' + filename)
+        logger.info('%s Parameter saved as: ' % datetime.datetime.now() + filename)
 
     @QtCore.pyqtSlot(str, str)
     def save_data(self, filename, comments):
@@ -177,7 +180,7 @@ class DataHandling(QtCore.QThread):
         timestamp = time.strftime("%H_%M_%S", ty_res)
         savename = filename + '_' + timestamp + '.h5'
         shutil.copyfile(self.temp_filename, savename)
-        print('Data saved as: ' + savename )
+        logger.info('%s Data saved as: ' %datetime.datetime.now() + savename )
 
     #@QtCore.pyqtSlot
     def add_calibration(self,calibration):
@@ -240,7 +243,6 @@ class BufferWorker(QtCore.QObject):
         self.temp_filename = temp_filename
         self.data_dim = data_dim
         self.firstbuffer = True
-        print('BufferWorker started')
         self.terminate = False
 
         # check if folder for buffer exists
@@ -270,7 +272,7 @@ class BufferWorker(QtCore.QObject):
                 hf["spectra"].attrs["xaxis"] = wls
                 hf.create_dataset("parameter", data=parameter_measured, compression="gzip", chunks=True, maxshape=(np.shape(parameter_measured)[0],None))
                 hf["parameter"].attrs["parameter_keys"] = list(parameter_queue.keys())
-            print('First buffer saved')
+            logger.info('%s First buffer saved' %datetime.datetime.now())
             self.firstbuffer = False
         else:
             try:
@@ -284,4 +286,4 @@ class BufferWorker(QtCore.QObject):
                     hf["parameter"].resize((hf["parameter"].shape[1] + parameter_measured.shape[1]), axis=1)
                     hf["parameter"][:, -parameter_measured.shape[1]:] = parameter_measured
             except TypeError:
-                print('Saving failed. Did you already save?')
+                logger.warning('% s Saving failed. Did you already save?' %datetime.datetime.now())
