@@ -153,7 +153,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
                     self.intensities.append(fakeSpectrum)
                     self.sendSpectrum.emit(self.wls,fakeSpectrum)
                 else:
-                    self.intensities.append(self.spectra)
+                    self.intensities.append(self.spec)
                 self.columns_out.append(column)
                 # Emit the data through signals 
                 self.sendProgress.emit(i/len(self.columns)*100)
