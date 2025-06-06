@@ -17,7 +17,12 @@ import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
+<<<<<<< Updated upstream
 from GUI.ChirpPlot import Chirp_calibration_plot 
+=======
+from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot
+from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
+>>>>>>> Stashed changes
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
@@ -25,7 +30,13 @@ from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
+<<<<<<< Updated upstream
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,ChirpTemporalCalibration
+=======
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration,ChirpCalibrationMeasurement
+from compute.beams import Beam
+>>>>>>> Stashed changes
+
 
 
 class MainInterface(QtWidgets.QMainWindow):
@@ -93,6 +104,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.assign_beams_vertical_delimiters= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
         self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
         self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
+<<<<<<< Updated upstream
         # Temporal calibration tab
         self.temporal_calibration_tab= self.findChild(QtWidgets.QWidget, 'temporal_tab')
         self.Chirp_scan_groupbox=self.findChild(QtWidgets.QGroupBox,'Chirp_scan_groupbox')
@@ -102,6 +114,28 @@ class MainInterface(QtWidgets.QMainWindow):
         self.Chirp_max = self.findChild(QtWidgets.QLineEdit,'Chirp_max')
         self.Chirp_step = self.findChild(QtWidgets.QLineEdit,'Chirp_step')
         self.chirp_calibration_plot=self.findChild(pg.PlotWidget,'Chirp_Scan')
+=======
+        ## Spectral calibration tab
+        self.column_increment_spinbox=self.findChild(QtWidgets.QSpinBox,'column_increment_spin_box')
+        self.column_width_spinbox=self.findChild(QtWidgets.QSpinBox,'column_width_spin_box')
+        self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
+        self.spectral_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'spectral_calib_plot_layout')
+        self.shortest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'shortest_fitting_wave_spin_box')
+        self.longest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'longest_fitting_wave_spin_box')
+        self.spectral_fit_polynomial_order_spinbox=self.findChild(QtWidgets.QSpinBox,'polynomial_order_spin_box')
+        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration_button')
+        self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
+        self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
+        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
+        ## Temp calibration tab
+        self.beam_spinbox=self.findChild(QtWidgets.QSpinBox,'Beam_spin_box')
+        self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit, 'Compression_carrier_wavelength')
+        self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
+        self.chirp_max_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_max')
+        self.chirp_min_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_min')
+        self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
+        self.chirp_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'Chirp_plot_layout')
+>>>>>>> Stashed changes
         
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -122,8 +156,16 @@ class MainInterface(QtWidgets.QMainWindow):
         self.parameter_tab.setLayout(vbox)
 
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
+<<<<<<< Updated upstream
         self.Chirp_calibration_plot = Chirp_calibration_plot(self.chirp_calibration_plot)
 
+=======
+        self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
+        self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
+        
+        self.ChirpCalibrationPlot= ChirpCalibrationPlot(self.chirp_calibration_image_layout)
+        
+>>>>>>> Stashed changes
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
         self.parameter_tree.setColumnCount(2)
@@ -192,7 +234,20 @@ class MainInterface(QtWidgets.QMainWindow):
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
         self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
+<<<<<<< Updated upstream
         self.Acquire_data_temp_calibration_Button.clicked.connect(self.ChirpCalibrationMeasurement)
+=======
+        self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
+        self.assign_beams_vertical_delimiters_button.clicked.connect(self.assign_vertical_beam_calibration)
+        # Spectral calibration connect events
+        self.spectral_calibration_runButton.clicked.connect(self.spectralBeamCalibrationMeasurement)
+        self.shortest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
+        self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
+        # Chirp calibration connect events
+        self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
+>>>>>>> Stashed changes
         # run some functions once to define default values
         self.change_filename()
 
@@ -342,7 +397,26 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
+<<<<<<< Updated upstream
     def ChirpCalibrationMeasurement(self):
+=======
+            
+    def chirpCalibrationMeasurement(self):
+        '''
+             Sets up and starts a spectral Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.DataHandling.clear_data()         
+            self.measurement= ChirpCalibrationMeasurement(self.devices,self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()))
+            self.measurement.send_Chirp_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+    
+    def verticalBeamDelimitersChanged(self,row_index,col_index):
+>>>>>>> Stashed changes
         '''
              Sets up and starts a Chirp calibration.
         ''' 
@@ -357,7 +431,78 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
+<<<<<<< Updated upstream
             print('Measurement not started, devices are busy')  
+=======
+            print('Measurement not started, devices are busy')
+    def add_chirp_plot(self):
+         # Simulated pcolor data
+         a = np.loadtxt('Chirp_dataset.txt')
+         
+         x = a[-1]
+         y = a[-2]
+         for h in range(len(y)):
+             if y[h]==0:
+                 f = h
+                 break
+         y = y[:f]        
+         z = a[:-3]
+
+         # Add a new plot to the existing GraphicsLayoutWidget
+         plot_item = self.graph_widget.addPlot(row=0, col=0)
+         plot_item.setAspectLocked(True)
+
+         # Create ImageItem and set its physical location using setRect
+         img = pg.ImageItem(z)
+         img.setRect(pg.QtCore.QRectF(x.min(), y.min(), x.ptp(), y.ptp()))
+         plot_item.addItem(img)
+
+         # Optional: Add a colorbar
+         hist = pg.HistogramLUTItem()
+         hist.setImageItem(img)
+         self.graph_widget.addItem(hist, row=0, col=1)
+         
+    def update_spectra_calibration_boundaries(self):
+        '''
+            Updates the boundaries to consider when processing spectral calibration data
+        '''
+        try:
+            self.spectralfitting.set_boundaries([self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+            try:
+                spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_raw_data']
+                self.spectralfitting.extractMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],spectral_calib_dict['data'])
+            except KeyError:
+                print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
+        except AttributeError:
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+
+    def fit_spectral_calibration(self):
+        '''
+            Fits the last spectral beam calibration data using the displayed valued and updates the result in the Datahandling thread.
+        '''
+        try:
+            spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_processed_data']
+            try:
+                self.spectralfitting.fitSpectraMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],self.spectral_fit_polynomial_order_spinbox.value())
+            except AttributeError:
+                self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+        except KeyError:
+            print('Spectral calibration data has not been processed. Run a spectral beam calibration measurement first')
+    
+    def assign_spectral_calibration(self):
+        '''
+            Saves the current spectral beam calibration fit and parameters to the calibration thread
+        '''
+        beam_dict=self.DataHandling.get_beams()
+        if beam_dict=={}:
+            beam_dict={'ALL':Beam(self.SLM.get_width(),self.SLM.get_height())}
+        for key in beam_dict:
+            beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
+            beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
+            self.DataHandling.set_beam((key,beam_dict[key]))
+
+
+>>>>>>> Stashed changes
     def stop_measurement(self):
         # stop measurement
         self.measurement.stop()
