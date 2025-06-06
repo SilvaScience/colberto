@@ -827,6 +827,9 @@ p, li { white-space: pre-wrap; }
            </rect>
           </property>
          </widget>
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         </widget>
         <widget class="QWidget" name="parameter_tab">

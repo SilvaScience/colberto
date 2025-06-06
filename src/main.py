@@ -18,8 +18,11 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from GUI.ChirpPlot import Chirp_calibration_plot 
 =======
+=======
+>>>>>>> Stashed changes
 from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
 >>>>>>> Stashed changes
@@ -31,11 +34,15 @@ from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,ChirpTemporalCalibration
 =======
+=======
+>>>>>>> Stashed changes
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration,ChirpCalibrationMeasurement
 from compute.beams import Beam
 >>>>>>> Stashed changes
+
 
 
 
@@ -135,6 +142,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.chirp_min_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_min')
         self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
         self.chirp_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'Chirp_plot_layout')
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         
         # initial parameter values, retrieved from devices
@@ -165,6 +175,9 @@ class MainInterface(QtWidgets.QMainWindow):
         
         self.ChirpCalibrationPlot= ChirpCalibrationPlot(self.chirp_calibration_image_layout)
         
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -247,6 +260,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
         # Chirp calibration connect events
         self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         # run some functions once to define default values
         self.change_filename()
@@ -398,7 +414,11 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             print('Measurement not started, devices are busy')
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     def ChirpCalibrationMeasurement(self):
+=======
+            
+    def chirpCalibrationMeasurement(self):
 =======
             
     def chirpCalibrationMeasurement(self):
@@ -414,6 +434,67 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
+    
+    def verticalBeamDelimitersChanged(self,row_index,col_index):
+        '''
+            Validates the vertical delimiter change and refreshes the vertical beam delimiters plot when they are changed in the table
+            input:
+                - row_index (int): the index of the row of the changed column
+                - col_index (int): the index of the row of the changed column
+        '''
+        regions={}
+        table=self.beam_vertical_delimiters_table
+        if not col_index==0: #In case didn,t change the label of the beam
+            try:
+                added_item=int(table.item(row_index,col_index).text())# Check for integer
+                if any([added_item<0,added_item>self.devices['SLM'].get_height()]):# Check for proper bounds
+                    raise ValueError
+                for row in range(table.rowCount()):
+                    top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+                    bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+                    label=table.item(row,0).text()
+                    regions[label]=[top_index,bottom_index]
+                self.VerticalCalibPlot.draw_regions(regions)
+            except ValueError:
+                table.setItem(row_index,col_index,None)
+
+    def assign_vertical_beam_calibration(self):
+        '''
+            Saves the current vertical beam calibration to the DataHandling
+        '''
+        table=self.beam_vertical_delimiters_table
+        for row in range(table.rowCount()):
+            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
+            if all([label is not None, bottom_index is not None, top_index is not None]):
+                if 'ALL' in self.DataHandling.get_beams():
+                    beam=self.DataHandling.get_beams()['ALL']
+                else:
+                    beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam.set_beamVerticalDelimiters([top_index,bottom_index])
+                beam.set_gratingAmplitude(self.grating_period_edit.value())
+                self.DataHandling.set_beam((label,beam))
+            if not 'ALL' in self.DataHandling.get_beams():
+                beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam.set_gratingAmplitude(self.grating_period_edit.value())
+                self.DataHandling.set_beam(('ALL',beam))
+
+    def spectralBeamCalibrationMeasurement(self):
+>>>>>>> Stashed changes
+        '''
+             Sets up and starts a spectral Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.DataHandling.clear_data()         
+            self.measurement= ChirpCalibrationMeasurement(self.devices,self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()))
+            self.measurement.send_Chirp_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+<<<<<<< Updated upstream
     
     def verticalBeamDelimitersChanged(self,row_index,col_index):
 >>>>>>> Stashed changes
@@ -435,6 +516,8 @@ class MainInterface(QtWidgets.QMainWindow):
             print('Measurement not started, devices are busy')  
 =======
             print('Measurement not started, devices are busy')
+=======
+>>>>>>> Stashed changes
     def add_chirp_plot(self):
          # Simulated pcolor data
          a = np.loadtxt('Chirp_dataset.txt')
