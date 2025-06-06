@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['calibration_0',['Calibration',['../classcalibration_1_1Calibration.html',1,'calibration']]],
-  ['camera_5fsettings_1',['camera_settings',['../classstreising__camera_1_1camera__settings.html',1,'streising_camera']]]
+  ['backgroundmeasurement_0',['BackgroundMeasurement',['../classMeasurementClasses_1_1BackgroundMeasurement.html',1,'MeasurementClasses']]],
+  ['beam_1',['Beam',['../classbeams_1_1Beam.html',1,'beams']]]
 ];

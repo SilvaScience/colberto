@@ -24,8 +24,9 @@ class Beam:
         self.SLMWidth=SLMWidth
         self.SLMHeight=SLMHeight
         # initilization of parameters to default benign values
-        self.set_beamHorizontalDelimiters([0,SLMWidth])
-        self.set_beamVerticalDelimiters([0,SLMHeight])
+        self.beamHorizontalDelimiters=[0,SLMWidth]
+        self.beamVerticalDelimiters=[0,SLMHeight]
+        self.make_mask()
         self.set_optimalPhase(P([0]))
         self.set_currentPhase(P([0]))
         self.phaseGratingAmplitude=1
@@ -67,6 +68,7 @@ class Beam:
                 - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
         '''
         self.beamVerticalDelimiters=delimiters
+        self.make_mask()
 
     def get_beamVerticalDelimiters(self):
         '''
@@ -93,6 +95,7 @@ class Beam:
         '''
         self.beamHorizontalDelimiters=delimiters
         self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
+        self.make_mask()
 
     def get_spectrumAtPixel(self,pixels,unit='wavelength'):
         '''

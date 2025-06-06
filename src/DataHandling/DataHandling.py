@@ -186,7 +186,7 @@ class DataHandling(QtCore.QThread):
             Triggers emission of beams to connected slots when called
         '''
         self.sendBeams.emit(self.beams)
-
+        return self.beams
 
     def add_attribute(self,attribute):
         # to be used from measurment each attribute should consist of a tuple of name and content

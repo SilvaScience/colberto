@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['up_20your_20python_20environnement_0',['Setting up your Python environnement',['../md_manual_2contributing.html#autotoc_md1',1,'']]],
-  ['updating_20python_20environnement_1',['Updating python environnement',['../md_manual_2contributing.html#autotoc_md2',1,'']]],
-  ['user_5finput_5fassign_5fpixelnumber_5fto_5fwavelength_2',['user_input_assign_pixelnumber_to_wavelength',['../classcalibration_1_1Calibration.html#aabc4824a8e013b48f3c720c061569a4e',1,'calibration::Calibration']]]
+  ['rgb_0',['rgb',['../namespaceExemple.html#af83dca900c365bea576f3e5e220c2bb9',1,'Exemple.rgb'],['../namespacetest__SLM.html#a23c8dad9d9f95dc0bf9265b3ac22885c',1,'test_SLM.RGB']]],
+  ['run_1',['run',['../classSpectrometerDemo__advanced_1_1SpectrometerWorker.html#a9fd856f346b3dc81d24481363c12c8b3',1,'SpectrometerDemo_advanced.SpectrometerWorker.run()'],['../classStresingDemo_1_1StresingWorker.html#a81ff86902198ad7ec250772b5ec0a30d',1,'StresingDemo.StresingWorker.run()'],['../classthreading_1_1DataWorker.html#abf2f35ccba8d76f21692d100145ba325',1,'threading.DataWorker.run()']]],
+  ['runmeasurement_2',['RunMeasurement',['../classMeasurementClasses_1_1RunMeasurement.html',1,'MeasurementClasses']]]
 ];
