@@ -92,103 +92,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
         print(time.strftime('%H:%M:%S') + ' Request Stop')
 
 
-class ChirpCalibrationMeasurement_(QtCore.QThread):
-    '''
-        Runs a measurement that will scan the columns of the SLM with a grating stripe and record the intensity on the spectrometer.
-        signals:
-            - sendSpectrum : wavelength and intensity detected by the spectrometer
-            - send_intensities: tuple with column index (np.1darray), wavelength axis (np.1darray) and associated spectra (np.2darray)
-            - send_spectral_calibration_data: tuple, first is label 'vertical_calibration_data' and second is row and intensities tuple
-            - sendProgress :  float representing the progress of the measurement.
-    '''
-    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    send_intensities= QtCore.pyqtSignal(np.ndarray,np.ndarray,np.ndarray)
-    send_spectral_calibration_data = QtCore.pyqtSignal(tuple)
-    sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices,grating_period,compress_carrier_wv,chirp_max,chirp_min,chirp_step,column_increment, column_width):
-        '''
-         Initializes the Spectral beam calibration measurement
-         input:
-             - devices: the devices dictionnary holding at least a spectrometer and a SLM
-             - grating_period: (int) the vertical period (in pixels) of the phase grating
-             - column_increment: (int) the step by which to shift the columns 
-             - column_width: (int) the width (in pixels) of the scanned column
-        ''' 
-        super(ChirpCalibrationMeasurement_, self).__init__()
-        self.spectrometer = devices['spectrometer']
-        self.SLM= devices['SLM']
-        self.spectra = []  # preallocate spec array
-        self.wls = self.spectrometer.get_wavelength()
-        self.terminate = False
-        self.acquire_measurement = True
-        self.columns=np.arange(0,self.SLM.get_width(),column_increment,dtype=int)
-        self.columns_out=[]
-        self.column_width=column_width
-        
-        #self.intensities= np.zeros((len(self.columns),len(self.wls)))# preallocate spec array
-        self.intensities=[]
-        self.spectral_calibration_data={
-            'columns' : self.columns,
-            'wavelengths' : self.wls,
-            'intensities' : self.intensities
-        }
-        # Configure single beam over which the columns will be scanned
-        
-        
-        
-        self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
-        self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
-        self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
-        self.monobeam.bm.set_pixelToWavelength(P(1e-9*np.array([500,1/6])))
-        self.monobeam.set_compressionCarrierWave(self.compress_carrier_wv*1e-9)
-        self.monobeam.set_gratingPeriod(grating_period)
-        self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
-
-    def run(self):
-        for chirp_val in enumerate(self.chirp):
-            if not self.terminate:  # check whether stopping measurement is called
-                #Take the data
-                self.monobeam.set_currentPhase(P([0,0,chirp_val]),mode='absolute')
-                image_output=self.monobeam.makeGrating()                
-                self.SLM.write_image(image_output)
-                self.take_spectrum()
-                if self.isDemo:
-                    fakeSpectrum=self.fakeSignal(self.wls,column,self.column_width)
-                    self.intensities.append(fakeSpectrum)
-                    self.sendSpectrum.emit(self.wls,fakeSpectrum)
-                else:
-                    self.intensities.append(self.spectra)
-                self.columns_out.append(column)
-                # Emit the data through signals 
-                self.sendProgress.emit(i/len(self.columns)*100) 
-                self.spectral_calibration_data={
-                    'columns' : np.array(self.columns_out),
-                    'wavelengths' : self.wls,
-                    'data' : np.array(self.intensities)
-                }
-                self.send_intensities.emit(np.array(self.columns_out),self.wls,np.array(self.intensities))
-        self.send_spectral_calibration_data.emit(('spectral_calibration_raw_data',self.spectral_calibration_data))
-        self.sendProgress.emit(100)
-        self.stop()
-        print('Spêctral Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
-
-    def take_spectrum(self):
-        self.spec = np.array(self.spectrometer.get_intensities())
-        if not self.isDemo:
-            self.sendSpectrum.emit(self.wls, self.spec)
-    def stop(self):
-        self.terminate = True
-        print(time.strftime('%H:%M:%S') + ' Request Stop')
-    def fakeSignal(self,wls,current_col,col_width):
-        wave_per_pix=0.1 #Arbitrary but reasonnable parameters to simulate data acq.
-        min_wave=600
-        fakeSpectrum=np.zeros(wls.shape)
-        for i,wave in enumerate(wls):
-            if wave-min_wave<=(current_col+col_width/2)*wave_per_pix and wave-min_wave>(current_col-col_width/2)*wave_per_pix:
-                fakeSpectrum[i]= 1000
-        fakeSpectrum=fakeSpectrum+10*np.random.rand(len(fakeSpectrum))
-        return fakeSpectrum
 
 class ChirpCalibrationMeasurement(QtCore.QThread):
     '''
@@ -220,6 +124,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         
         self.spectra = []  # preallocate spec array
         self.wls = self.spectrometer.get_wavelength()
+        self.spectra = []  # preallocate spec array
         self.terminate = False
         self.acquire_measurement = True
         self.Chirp=np.arange(chirp_min,chirp_max,chirp_step,dtype=int)
@@ -259,25 +164,28 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                     for a in range(len(self.Chirp_data)):
                         
                         self.Chirp_calibration_data={
-                            'Chirp' : np.array(self.Chirp_data[a]),
-                            'wavelengths' : self.wls[a],
-                            'data' : np.array(self.data[a])
+                            'Chirp' : np.array(self.Chirp_data),
+                            'wavelengths' : self.wls,
+                            'data' : np.array(self.data)
                             }
 
                         time.sleep(0.05)
                         self.sendProgress.emit(a/len(self.Chirp_data)*100)
                         self.send_chirp.emit(np.array(self.Chirp_data[:a]),self.wls[:a],np.array(self.data[:a]))
                 else:
+                     self.BEAM = self.SLM['beam'][self.beam_]
                      for a in range(len(self.chirp_)):
                             
                         self.monobeam.set_currentPhase(P([0,0,self.chirp_[a]]),mode='absolute')
                         image_output=self.monobeam.makeGrating()                
                         self.SLM.write_image(image_output)
+                        self.takespectrum()
+                        self.intensities.append(self.spectra)
                         self.sendProgress.emit(a/len(self.chirp_)*100)
                         self.Chirp_calibration_data={
-                            'Chirp' : np.array(self.chirp_[a]),
-                            'wavelengths' : self.wls[b],
-                            'data' : np.array(self.data)
+                            'Chirp' : np.array(self.chirp_),
+                            'wavelengths' : self.wls,
+                            'data' : np.array(self.intensities)
                             }
                         self.send_chirp.emit(np.array(self.Chirp_data[:a]),self.wls[:a],np.array(self.data[:a]))
         self.send_Chirp_calibration_data.emit(('spectral_calibration_raw_data',self.Chirp_calibration_data))
@@ -287,7 +195,10 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     def stop(self):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
-
+    def take_spectrum(self):
+        self.spec = np.array(self.spectrometer.get_intensities())
+        if not self.isDemo:
+            self.sendSpectrum.emit(self.wls, self.spec)
 
     
 class SpectralBeamCalibrationMeasurement(QtCore.QThread):
