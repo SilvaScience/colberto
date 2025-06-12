@@ -324,7 +324,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>5</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -335,6 +335,16 @@ p, li { white-space: pre-wrap; }
          <attribute name="title">
           <string>SLM View</string>
          </attribute>
+         <widget class="GraphicsLayoutWidget" name="slm_display" native="true">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>10</y>
+            <width>640</width>
+            <height>400</height>
+           </rect>
+          </property>
+         </widget>
         </widget>
         <widget class="QWidget" name="spatial_tab">
          <attribute name="title">
@@ -346,7 +356,7 @@ p, li { white-space: pre-wrap; }
             <x>20</x>
             <y>70</y>
             <width>731</width>
-            <height>271</height>
+            <height>311</height>
            </rect>
           </property>
           <property name="font">
@@ -515,7 +525,7 @@ p, li { white-space: pre-wrap; }
             <number>1</number>
            </property>
            <property name="value">
-            <number>5</number>
+            <number>25</number>
            </property>
           </widget>
          </widget>
@@ -561,7 +571,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="measure_spectral_calibration">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>120</y>
              <width>88</width>
              <height>27</height>
@@ -574,7 +584,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="assign_spectral_calibration_button">
            <property name="geometry">
             <rect>
-             <x>90</x>
+             <x>120</x>
              <y>300</y>
              <width>131</width>
              <height>27</height>
@@ -587,7 +597,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_spectral_calibration_box">
            <property name="geometry">
             <rect>
-             <x>10</x>
+             <x>40</x>
              <y>0</y>
              <width>231</width>
              <height>19</height>
@@ -605,7 +615,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="column_increment_label">
            <property name="geometry">
             <rect>
-             <x>10</x>
+             <x>40</x>
              <y>60</y>
              <width>171</width>
              <height>19</height>
@@ -618,7 +628,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="column_increment_spin_box">
            <property name="geometry">
             <rect>
-             <x>180</x>
+             <x>210</x>
              <y>54</y>
              <width>44</width>
              <height>28</height>
@@ -637,7 +647,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="column_width_label">
            <property name="geometry">
             <rect>
-             <x>10</x>
+             <x>40</x>
              <y>96</y>
              <width>171</width>
              <height>19</height>
@@ -650,7 +660,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="column_width_spin_box">
            <property name="geometry">
             <rect>
-             <x>180</x>
+             <x>210</x>
              <y>90</y>
              <width>44</width>
              <height>28</height>
@@ -682,7 +692,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_spectral_calibration_box_measurement">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>30</y>
              <width>231</width>
              <height>19</height>
@@ -703,7 +713,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_spectral_calibration_box_fitting">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>160</y>
              <width>231</width>
              <height>19</height>
@@ -722,7 +732,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="polynomial_order_label">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>260</y>
              <width>171</width>
              <height>19</height>
@@ -735,7 +745,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="shorter_fit_wave_label">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>200</y>
              <width>191</width>
              <height>19</height>
@@ -748,7 +758,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="shortest_fitting_wave_spin_box">
            <property name="geometry">
             <rect>
-             <x>203</x>
+             <x>233</x>
              <y>194</y>
              <width>61</width>
              <height>28</height>
@@ -770,7 +780,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="polynomial_order_spin_box">
            <property name="geometry">
             <rect>
-             <x>170</x>
+             <x>200</x>
              <y>254</y>
              <width>44</width>
              <height>28</height>
@@ -789,7 +799,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="fit_spectral_calibration_button">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>300</y>
              <width>88</width>
              <height>27</height>
@@ -841,7 +851,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="longer_fit_wave_label">
            <property name="geometry">
             <rect>
-             <x>0</x>
+             <x>30</x>
              <y>230</y>
              <width>191</width>
              <height>19</height>
@@ -854,7 +864,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="longest_fitting_wave_spin_box">
            <property name="geometry">
             <rect>
-             <x>203</x>
+             <x>233</x>
              <y>224</y>
              <width>61</width>
              <height>28</height>
@@ -903,7 +913,23 @@ p, li { white-space: pre-wrap; }
            <number>2</number>
           </property>
           <property name="value">
-           <number>5</number>
+           <number>50</number>
+          </property>
+         </widget>
+         <widget class="QCheckBox" name="spatial_calib_demo_mode_checkbox">
+          <property name="geometry">
+           <rect>
+            <x>240</x>
+            <y>30</y>
+            <width>151</width>
+            <height>25</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Demo mode</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </widget>
@@ -1106,29 +1132,11 @@ Start:Stepnumber:Stop  Start:Stepnum...
            </property>
           </widget>
          </widget>
-         <widget class="QLabel" name="label_vertical_calibration_box">
-          <property name="geometry">
-           <rect>
-            <x>20</x>
-            <y>290</y>
-            <width>231</width>
-            <height>19</height>
-           </rect>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>8</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>  Phase to Greyscale - LUT File Measurement</string>
-          </property>
-         </widget>
          <widget class="QGroupBox" name="LUT_calibration_groupbox">
           <property name="geometry">
            <rect>
-            <x>10</x>
-            <y>300</y>
+            <x>0</x>
+            <y>260</y>
             <width>851</width>
             <height>281</height>
            </rect>
@@ -1324,10 +1332,6 @@ Start:Stepnumber:Stop  Start:Stepnum...
            </property>
           </widget>
          </widget>
-         <zorder>groupBox_8</zorder>
-         <zorder>groupBox_6</zorder>
-         <zorder>LUT_calibration_groupbox</zorder>
-         <zorder>label_vertical_calibration_box</zorder>
         </widget>
        </widget>
       </item>
@@ -1340,7 +1344,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1217</width>
+     <width>1135</width>
      <height>24</height>
     </rect>
    </property>

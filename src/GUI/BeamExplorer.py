@@ -8,14 +8,15 @@ class BeamExplorer(QWidget):
     """
         Display the properties of the beams currently held in the provided DataHandler
     """
-    request_beams= QtCore.pyqtsignal()
-    beams_changed=QtCore.pyqtsignal()
+    request_beams= QtCore.pyqtSignal()
+    beams_changed=QtCore.pyqtSignal()
     
     def __init__(self):
         super().__init__()
         self.layout = QVBoxLayout()
-        self.label = QLabel("Beam explorer")
-        self.layout.addWidget(self.label)
+        self.setWindowTitle("Beam explorer")
+        self.beamwidget=BeamWidget()
+        self.layout.addWidget(self.beamwidget)
         self.setLayout(self.layout)
     
     def receive_beams(self,beamDict):
@@ -43,12 +44,12 @@ class BeamWidget(QWidget):
     """
         Instantiate the Widget displaying a single beam's properties. 
     """
-    beam_changed=QtCore.pyqtsignal()
+    beam_changed=QtCore.pyqtSignal()
 
     def __init__(self):
         """
             Loads the widget from a UI file.
         """
-        super(BeamWidget).__init__()
+        super(BeamWidget,self).__init__()
         project_folder=os.path.dirname(sys.modules['__main__'].__file__)
         uic.loadUi(Path(project_folder,r'GUI/beam_explorer.ui'), self)

@@ -20,6 +20,8 @@ from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
+from GUI.LUT_Calib_plot import LUT_Calib_plot
+from GUI.SLMDisplay import SLMDisplay
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLM import Slm
@@ -27,15 +29,15 @@ from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
+from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration
+from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
+from compute.beams import Beam
 from GUI.BeamExplorer import BeamExplorer
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
     ViewMeasurement
 import logging
 import datetime
-from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration
-from compute.beams import Beam
-
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 
 logger = logging.getLogger(__name__)
@@ -78,10 +80,9 @@ class MainInterface(QtWidgets.QMainWindow):
         # initialize SLM
         try:
             from samples.drivers.exemple_image_generation import beam_image_gen
+            #raise Exception('DEMO')
             self.SLM = Slm()
             self.devices['SLM'] = self.SLM
-            test_image=beam_image_gen()
-            self.SLM.write_image(test_image)
             logger.info('%s SLM connected' % datetime.datetime.now())
         except Exception as e:
             self.SLM = SLMDemo()
@@ -117,24 +118,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_file_indicator = self.findChild(QtWidgets.QLineEdit, 'bg_file_lineEdit')
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
-        self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
-        self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
-        self.SLM_tab = self.findChild(QtWidgets.QWidget, 'SLM_tab')
-        # LUT Calibration - Utilities
-        self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
-        self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
-        self.LUT_calib_spectra_avg_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_spectra_avg_spinBox')
-        self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
-        self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout')
-        self.measure_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'measure_LUT_calib')
-        self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
-        self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
-        self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
-        # Beam explorer relatet
-        self.show_beam_explorer_button= self.findChild(QtWidgets.QPushButton, 'show_beam_explorer_button')
         self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
         # Spatial calibration tab
         ## Vertical calibration tab
+        self.spatial_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
         self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
         self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
         self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
@@ -155,6 +142,20 @@ class MainInterface(QtWidgets.QMainWindow):
         self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
         self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
 
+        self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
+        self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
+        # LUT Calibration - Utilities
+        self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
+        self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
+        self.LUT_calib_spectra_avg_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_spectra_avg_spinBox')
+        self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
+        self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout')
+        self.measure_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'measure_LUT_calib')
+        self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
+        self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
+        self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+        #SLM Related
+        self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -174,13 +175,11 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox.addWidget(self.ParameterPlot)
         self.parameter_tab.setLayout(vbox)
 
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.SLM)
-        self.SLM_tab.setLayout(vbox)
-        self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
         self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
         self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
+        self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
+        self.slm_display_plot= SLMDisplay(self.slm_display)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -253,17 +252,6 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_check_box.stateChanged.connect(self.update_check_bg)
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
-        self.kinetic_lineEdit.editingFinished.connect(self.change_kinetic_interval)
-        self.kinetic_run_button.clicked.connect(self.kinetic_measurement)
-        # LUT Calibration Measurement Connect Events
-        self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
-        self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
-        self.generate_LUT_calib_button.clicked.connect(
-            self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
-        # Beam explorer related events
-        self.show_beam_explorer_button.clicked.connect(self.show_beam_explorer)
-        self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
-
         # Vertical calibration connect events
         self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
         self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
@@ -274,6 +262,17 @@ class MainInterface(QtWidgets.QMainWindow):
         self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
         self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
         self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
+        # LUT Calibration Measurement Connect Events
+        self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
+        self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
+        self.generate_LUT_calib_button.clicked.connect(
+            self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
+        # SLM display connections
+        self.SLM.slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
+        test_image=beam_image_gen()
+        self.SLM.write_image(test_image)
+        # Beam update connection
+        self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
         # run some functions once to define default values
         self.change_filename()
 
@@ -449,7 +448,7 @@ class MainInterface(QtWidgets.QMainWindow):
         if not self.measurement_busy:
             self.measurement_busy = True
             self.DataHandling.clear_data()
-            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value())
+            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value(),demo=self.spatial_calib_demo_mode_checkbox.isChecked())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_intensities.connect(self.VerticalCalibPlot.set_data)
@@ -510,7 +509,7 @@ class MainInterface(QtWidgets.QMainWindow):
         if not self.measurement_busy:
             self.measurement_busy = True
             self.DataHandling.clear_data()
-            self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value())
+            self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value(),demo=self.spatial_calib_demo_mode_checkbox.isChecked())
             self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
@@ -523,7 +522,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
     def update_spectra_calibration_boundaries(self):
         '''
@@ -550,7 +549,7 @@ class MainInterface(QtWidgets.QMainWindow):
             except AttributeError:
                 self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
         except KeyError:
-            print('Spectral calibration data has not been processed. Run a spectral beam calibration measurement first')
+            logger.warning('%s Spectral calibration data has not been processed. Run a spectral beam calibration measurement first'%datetime.datetime.now())
     
     def assign_spectral_calibration(self):
         '''
@@ -563,7 +562,6 @@ class MainInterface(QtWidgets.QMainWindow):
             beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
             beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
             self.DataHandling.set_beam((key,beam_dict[key]))
-
 
     def stop_measurement(self):
         # stop measurement
