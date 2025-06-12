@@ -28,18 +28,6 @@ def load_instruments():
     logger.warning('%s You are using a DEMO version of the cryostat'%datetime.datetime.now())
     cryostat = CryoDemo() # launch cryostat interface
     devices['cryostat'] = cryostat # store in global device dict.
-    try:
-        from drivers.OceanSpectrometer import OceanSpectrometer
-        spectrometer = OceanSpectrometer()
-        spectrometer.start()
-        spec_length = spectrometer.spec_length
-        devices['spectrometers'] = spectrometer
-        logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
-    except:
-        spectrometer = SpectrometerDemo()
-        spec_length = spectrometer.spec_length
-        devices['spectrometers'] = spectrometer
-        logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
 
     # initialize SLM
     try:
@@ -50,16 +38,16 @@ def load_instruments():
     except Exception as e:
         SLM = SLMDemo()
         devices['SLM'] = SLM
-        logger.error('%s SLM initialization failed at interface startup. Error type %s'%(datetime.datetime.now(),str(e)))
-        logger.info('%s SLMDemo connected'%datetime.datetime.now())
+        logger.error('%s SLM initialization failed at interface startup. Error type %s' % (datetime.datetime.now(),str(e)))
+        logger.info('%s SLMDemo connected' % datetime.datetime.now())
 
     # initialize MonochromDemo
     grating_params={
-        'focal_length_mm':150,
+        'focal_length_mm':163,
         'f':np.float64(330605663.74965495),
         'delta':np.float64(-0.20488367116307532),
         'gamma':np.float64(2.021864300924973),
-        'n0':np.float64(508.0),
+        'n0':np.float64(511.0), # Central pixel
         'offset_adjust':0,
         'd_grating':np.float64(6666.666666666667),
         'x_pixel':26000.0,
@@ -67,16 +55,31 @@ def load_instruments():
     }
     Monochrom = Shamrock(grating_params) 
     devices['Monochrom'] = Monochrom 
-    logger.info('%s Monochrom DEMO connected'%datetime.datetime.now())
+    logger.info('%s Monochrom DEMO connected' % datetime.datetime.now())
 
     # initialize StresingDemo
     stresing_params={
         'pixel_size_mm':24e-3,
         'num_pixels':1024,
+        'calibrated': False
     }
-    camera= StresingCamera(stresing_params)
-    camera.attach_to_monochromator(Monochrom)
-    devices['Stresing'] = camera
-    logger.info('%s Stresing connected'%datetime.datetime.now())
+    try: 
+        camera= StresingCamera(stresing_params)
+        camera.attach_to_monochromator(Monochrom)
+        devices['spectrometer'] = camera
+        logger.info('%s Stresing connected' % datetime.datetime.now())
+    except:
+        try:
+            from drivers.OceanSpectrometer import OceanSpectrometer
+            spectrometer = OceanSpectrometer()
+            spectrometer.start()
+            spec_length = spectrometer.spec_length
+            devices['spectrometer'] = spectrometer
+            logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
+        except:
+            spectrometer = SpectrometerDemo()
+            spec_length = spectrometer.spec_length
+            devices['spectrometer'] = spectrometer
+            logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
 
     return devices

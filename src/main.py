@@ -163,6 +163,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
 
         # start DataHandling
+        self.spec_length = 1024
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
@@ -210,9 +211,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.generate_LUT_calib_button.clicked.connect(
             self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
         # SLM display connections
-        self.SLM.slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
+        self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
-        self.SLM.write_image(test_image)
+        self.devices['SLM'].write_image(test_image)
         # run some functions once to define default values
         self.change_filename()
 
@@ -433,12 +434,12 @@ class MainInterface(QtWidgets.QMainWindow):
                 if 'ALL' in self.DataHandling.get_beams():
                     beam=self.DataHandling.get_beams()['ALL']
                 else:
-                    beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                    beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
                 beam.set_beamVerticalDelimiters([top_index,bottom_index])
                 beam.set_gratingAmplitude(self.grating_period_edit.value())
                 self.DataHandling.set_beam((label,beam))
             if not 'ALL' in self.DataHandling.get_beams():
-                beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
                 beam.set_gratingAmplitude(self.grating_period_edit.value())
                 self.DataHandling.set_beam(('ALL',beam))
 

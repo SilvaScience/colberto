@@ -175,7 +175,7 @@ def init_measure(self):
     # Initialize the measurement.
     status = self.dll.DLLInitMeasurement(self.settings)
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+       raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
 
 def measure(self, use_blocking_call):
 

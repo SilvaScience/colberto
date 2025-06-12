@@ -46,10 +46,10 @@ class StresingCamera(QtCore.QThread):
         # Path to the DLL file
         folder_path = Path(__file__).resolve().parent #add or remove parent based on the file location
 
-        path_dll = folder_path / "Stresing" / "ESLSCDLL.dll"
+        path_dll = folder_path / "stresing" / "ESLSCDLL.dll"
         path_dll = str(path_dll)
 
-        path_config = folder_path / "Stresing" / "config_UdeM.ini"
+        path_config = folder_path / "stresing" / "config_UdeM.ini"
         path_config = str(path_config)
 
         # Create a ConfigParser object
@@ -221,7 +221,7 @@ class StresingCamera(QtCore.QThread):
 
                 wl_center = self.center_wavelength
                 m_order = 1
-                px = self.px0
+                px = np.linspace(1,1024,1024)
 
                 # calibration from notebook
                 f=self.hardware_params['f']
@@ -241,7 +241,7 @@ class StresingCamera(QtCore.QThread):
                 psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
                 eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
-                wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+                self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
             else:
                 # Calculate linear dispersion (nm/mm)
                 dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
@@ -253,7 +253,10 @@ class StresingCamera(QtCore.QThread):
                 pixel_indices = np.arange(num_pixels)
 
                 # Wavelength at each pixel
-                self.wavelengths = self.center_wavelength_nm + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
+                self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
+
+                # New calibration for screw set at 0 and center wavelength at 650nm
+                self.wavelengths = 0.9402*self.wavelengths-30.864
         else:
             self.wavelengths= self.hardware_params['num_pixels']
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength'%datetime.datetime.now())

@@ -18,6 +18,9 @@ class Shamrock(QtCore.QThread):
     
     def __init__(self,hardware_params):
         super(Shamrock, self).__init__()
+        self.central_wave = 650.00
+        self.grating = 0
+
         # This is the hardware parameters dictionnary. It is provided by hardware-specific configurations and are not changed in operation
         self.hardware_params=hardware_params
         # set parameter dict
@@ -27,17 +30,18 @@ class Shamrock(QtCore.QThread):
         
         self.parameter_display_dict = defaultdict(dict)
         
-        self.parameter_dict['central_wave'] = 499.99
-        self.parameter_dict['grating'] = 0
+        self.parameter_dict['central_wave'] = 650.00
+        self.parameter_dict['grating'] = 1
         
-        self.parameter_display_dict['central_wave']['val'] = 000.00
+        self.parameter_display_dict['central_wave']['val'] = 650.00
         self.parameter_display_dict['central_wave']['unit'] = ' nm'
-        self.parameter_display_dict['central_wave']['max'] = 1000.00
+        self.parameter_display_dict['central_wave']['min'] = 200.00
+        self.parameter_display_dict['central_wave']['max'] = 1100.00
         self.parameter_display_dict['central_wave']['read'] = False
         
-        self.parameter_display_dict['grating']['val'] = 0
+        self.parameter_display_dict['grating']['val'] = 1
         self.parameter_display_dict['grating']['unit'] = ' grating choice'
-        self.parameter_display_dict['grating']['max'] = 0
+        self.parameter_display_dict['grating']['max'] = 1
         self.parameter_display_dict['grating']['read'] = False
 
         self.grating_dispersions={0:150}

@@ -33,7 +33,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
     send_vertical_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, grating_period,rows_multiple,demo=False):
+    def __init__(self, devices, grating_period,rows_multiple,demo=False):
         '''
          Initializes the Vertical beam calibration measurement
          input:
@@ -153,7 +153,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
                     self.intensities.append(fakeSpectrum)
                     self.sendSpectrum.emit(self.wls,fakeSpectrum)
                 else:
-                    self.intensities.append(self.spectra)
+                    self.intensities.append(self.spec)
                 self.columns_out.append(column)
                 # Emit the data through signals 
                 self.sendProgress.emit(i/len(self.columns)*100)
@@ -166,7 +166,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
         self.send_spectral_calibration_data.emit(('spectral_calibration_raw_data',self.spectral_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
-        logger.info('Spêctral Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
+        logger.info('Spectral Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
 
     def take_spectrum(self):
         self.spec = np.array(self.spectrometer.get_intensities())
@@ -224,7 +224,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.wavelength_array=wavelength_array
         self.data=data
         for spectrum in data:
-            wavelengths.append(wavelength_array[np.mean(np.argmax(spectrum),dtype=int)])
+            wavelengths.append(wavelength_array[np.mean(np.argmax(spectrum[13:-1]),dtype=int)])
         wavelengths=np.array(wavelengths)
         columns_out=column_array[np.logical_and(wavelengths>=boundaries[0],wavelengths<=boundaries[1])]
         wavelengths_out=wavelengths[np.logical_and(wavelengths>=boundaries[0],wavelengths<=boundaries[1])]
