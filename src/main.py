@@ -119,6 +119,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
         self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
+        self.show_beam_explorer_pushbutton=self.findChild(QtWidgets.QPushButton,'show_beam_explorer_button')
         # Spatial calibration tab
         ## Vertical calibration tab
         self.spatial_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
@@ -223,7 +224,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
 
         #start Beam explorer
-        self.beam_explorer= BeamExplorer()
+        self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
         self.show_beam_explorer()
 
         # start Updater to update device read parameters
@@ -612,6 +613,7 @@ class MainInterface(QtWidgets.QMainWindow):
         """
             Shows the beam explorer if it is not already shown
         """
+        logger.info('%s'%self.beam_explorer)
         self.beam_explorer.show()
 
 

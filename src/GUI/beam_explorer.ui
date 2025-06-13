@@ -6,28 +6,31 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>604</width>
-    <height>301</height>
+    <width>601</width>
+    <height>240</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>600</width>
-    <height>300</height>
+    <height>240</height>
    </size>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QTableWidget" name="opt_phase_table">
+  <widget class="QTableWidget" name="phase_coeff_table">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>40</y>
-     <width>571</width>
+     <x>10</x>
+     <y>30</y>
+     <width>401</width>
      <height>101</height>
     </rect>
    </property>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>75</number>
+   </attribute>
    <row>
     <property name="text">
      <string>Current</string>
@@ -80,10 +83,10 @@
   <widget class="QPushButton" name="apply_pushbutton">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>180</y>
+     <x>0</x>
+     <y>160</y>
      <width>161</width>
-     <height>111</height>
+     <height>61</height>
     </rect>
    </property>
    <property name="text">
@@ -96,8 +99,8 @@
    </property>
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>150</y>
+     <x>0</x>
+     <y>130</y>
      <width>92</width>
      <height>25</height>
     </rect>
@@ -109,11 +112,73 @@
   <widget class="PlotWidget" name="beam_plot" native="true">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>150</y>
+     <x>170</x>
+     <y>140</y>
      <width>391</width>
-     <height>141</height>
+     <height>81</height>
     </rect>
+   </property>
+  </widget>
+  <widget class="QTableWidget" name="delimiter_table_widget">
+   <property name="geometry">
+    <rect>
+     <x>420</x>
+     <y>30</y>
+     <width>181</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>50</number>
+   </attribute>
+   <row>
+    <property name="text">
+     <string>Vertical</string>
+    </property>
+   </row>
+   <row>
+    <property name="text">
+     <string>Horizontal</string>
+    </property>
+   </row>
+   <column>
+    <property name="text">
+     <string>Min</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Max</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QLabel" name="grating_period_label">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>10</y>
+     <width>131</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Grating period (px):</string>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="grating_period_value">
+   <property name="geometry">
+    <rect>
+     <x>280</x>
+     <y>0</y>
+     <width>44</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
+   <property name="maximum">
+    <number>3</number>
    </property>
   </widget>
  </widget>
