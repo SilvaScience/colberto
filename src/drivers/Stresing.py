@@ -44,13 +44,11 @@ class StresingCamera(QtCore.QThread):
         self.hardware_params=hardware_params
         self.monochromator=None#By default, no spectrometer is attached
         # Path to the DLL file
-        folder_path = Path(__file__).resolve().parent #add or remove parent based on the file location
-
-        path_dll = folder_path / "stresing" / "ESLSCDLL.dll"
+        folder_path_dll = Path(__file__).resolve().parent #add or remove parent based on the file location
+        path_dll = folder_path_dll / "stresing" / "ESLSCDLL.dll"
         path_dll = str(path_dll)
 
-        path_config = folder_path / "stresing" / "config_UdeM.ini"
-        path_config = str(path_config)
+        path_config = Path(r"C:\Program Files\Stresing\Escam\config.ini")
 
         # Create a ConfigParser object
         config = configparser.ConfigParser()
@@ -67,15 +65,19 @@ class StresingCamera(QtCore.QThread):
         # Parameters. Defines parameters that are required for by the interface
         self.sample = int(config.get("General","nos"))
         self.block = int(config.get("General","nob"))
-        self.adc_gain = int(config.get("Board0","adcGain"))
-        self.channel0 = int(config.get("Board0","dacCameraChannel0"))
-        self.channel1 = int(config.get("Board0","dacCameraChannel1"))
-        self.channel2 = int(config.get("Board0","dacCameraChannel2"))
-        self.channel3 = int(config.get("Board0","dacCameraChannel3"))
-        self.channel4 = int(config.get("Board0","dacCameraChannel4"))
-        self.channel5 = int(config.get("Board0","dacCameraChannel5"))
-        self.channel6 = int(config.get("Board0","dacCameraChannel6"))
-        self.channel7 = int(config.get("Board0","dacCameraChannel7"))
+        self.adc_gain = int(config.get("board0","adcGain"))
+        self.channel0 = int(config.get("board0","dacCameraChannel0"))
+        self.channel1 = int(config.get("board0","dacCameraChannel1"))
+        self.channel2 = int(config.get("board0","dacCameraChannel2"))
+        self.channel3 = int(config.get("board0","dacCameraChannel3"))
+        self.channel4 = int(config.get("board0","dacCameraChannel4"))
+        self.channel5 = int(config.get("board0","dacCameraChannel5"))
+        self.channel6 = int(config.get("board0","dacCameraChannel6"))
+        self.channel7 = int(config.get("board0","dacCameraChannel7"))
+        self.bti = int(config.get("board0","bti"))
+        self.sti = int(config.get("board0","sti"))
+        self.btimer = int(config.get("board0","btimer"))
+        self.stimer = int(config.get("board0","stimer"))
         self.new_spectrum = False
 
         # set parameter dict
@@ -83,61 +85,81 @@ class StresingCamera(QtCore.QThread):
         """ Set up the parameter dict. 
         Here, all properties of parameters to be handled by the parameter dict are defined."""
         self.parameter_display_dict = defaultdict(dict)
-        self.parameter_display_dict['sample']['val'] = self.sample
-        self.parameter_display_dict['sample']['unit'] = ' '
-        self.parameter_display_dict['sample']['max'] = 4294967295
-        self.parameter_display_dict['sample']['read'] = False
 
-        self.parameter_display_dict['block']['val'] = self.block
-        self.parameter_display_dict['block']['unit'] = ' '
-        self.parameter_display_dict['block']['max'] = 4294967295
-        self.parameter_display_dict['block']['read'] = False
+        self.parameter_display_dict['No_Sample']['val'] = self.sample
+        self.parameter_display_dict['No_Sample']['unit'] = ' '
+        self.parameter_display_dict['No_Sample']['max'] = 4294967295
+        self.parameter_display_dict['No_Sample']['read'] = False
 
-        self.parameter_display_dict['adc_gain']['val'] = self.adc_gain
-        self.parameter_display_dict['adc_gain']['unit'] = ' '
-        self.parameter_display_dict['adc_gain']['max'] = 12
-        self.parameter_display_dict['adc_gain']['read'] = False
+        self.parameter_display_dict['No_Block']['val'] = self.block
+        self.parameter_display_dict['No_Block']['unit'] = ' '
+        self.parameter_display_dict['No_Block']['max'] = 4294967295
+        self.parameter_display_dict['No_Block']['read'] = False
 
-        self.parameter_display_dict['DAC0']['val'] = self.channel0
-        self.parameter_display_dict['DAC0']['unit'] = ' '
-        self.parameter_display_dict['DAC0']['max'] = 65535
-        self.parameter_display_dict['DAC0']['read'] = False
+        self.parameter_display_dict['ADC_Gain']['val'] = self.adc_gain
+        self.parameter_display_dict['ADC_Gain']['unit'] = ' '
+        self.parameter_display_dict['ADC_Gain']['max'] = 12
+        self.parameter_display_dict['ADC_Gain']['read'] = False
 
-        self.parameter_display_dict['DAC1']['val'] = self.channel1
-        self.parameter_display_dict['DAC1']['unit'] = ' '
-        self.parameter_display_dict['DAC1']['max'] = 65535
-        self.parameter_display_dict['DAC1']['read'] = False
+        self.parameter_display_dict['DAC_0']['val'] = self.channel0
+        self.parameter_display_dict['DAC_0']['unit'] = ' '
+        self.parameter_display_dict['DAC_0']['max'] = 65535
+        self.parameter_display_dict['DAC_0']['read'] = False
 
-        self.parameter_display_dict['DAC2']['val'] = self.channel2
-        self.parameter_display_dict['DAC2']['unit'] = ' '
-        self.parameter_display_dict['DAC2']['max'] = 65535
-        self.parameter_display_dict['DAC2']['read'] = False
+        self.parameter_display_dict['DAC_1']['val'] = self.channel1
+        self.parameter_display_dict['DAC_1']['unit'] = ' '
+        self.parameter_display_dict['DAC_1']['max'] = 65535
+        self.parameter_display_dict['DAC_1']['read'] = False
 
-        self.parameter_display_dict['DAC3']['val'] = self.channel3
-        self.parameter_display_dict['DAC3']['unit'] = ' '
-        self.parameter_display_dict['DAC3']['max'] = 65535
-        self.parameter_display_dict['DAC3']['read'] = False
+        self.parameter_display_dict['DAC_2']['val'] = self.channel2
+        self.parameter_display_dict['DAC_2']['unit'] = ' '
+        self.parameter_display_dict['DAC_2']['max'] = 65535
+        self.parameter_display_dict['DAC_2']['read'] = False
 
-        self.parameter_display_dict['DAC4']['val'] = self.channel4
-        self.parameter_display_dict['DAC4']['unit'] = ' '
-        self.parameter_display_dict['DAC4']['max'] = 65535
-        self.parameter_display_dict['DAC4']['read'] = False
+        self.parameter_display_dict['DAC_3']['val'] = self.channel3
+        self.parameter_display_dict['DAC_3']['unit'] = ' '
+        self.parameter_display_dict['DAC_3']['max'] = 65535
+        self.parameter_display_dict['DAC_3']['read'] = False
 
-        self.parameter_display_dict['DAC5']['val'] = self.channel5
-        self.parameter_display_dict['DAC5']['unit'] = ' '
-        self.parameter_display_dict['DAC5']['max'] = 65535
-        self.parameter_display_dict['DAC5']['read'] = False
+        self.parameter_display_dict['DAC_4']['val'] = self.channel4
+        self.parameter_display_dict['DAC_4']['unit'] = ' '
+        self.parameter_display_dict['DAC_4']['max'] = 65535
+        self.parameter_display_dict['DAC_4']['read'] = False
 
-        self.parameter_display_dict['DAC6']['val'] = self.channel6
-        self.parameter_display_dict['DAC6']['unit'] = ' '
-        self.parameter_display_dict['DAC6']['max'] = 65535
-        self.parameter_display_dict['DAC6']['read'] = False
+        self.parameter_display_dict['DAC_5']['val'] = self.channel5
+        self.parameter_display_dict['DAC_5']['unit'] = ' '
+        self.parameter_display_dict['DAC_5']['max'] = 65535
+        self.parameter_display_dict['DAC_5']['read'] = False
 
-        self.parameter_display_dict['DAC7']['val'] = self.channel7
-        self.parameter_display_dict['DAC7']['unit'] = ' '
-        self.parameter_display_dict['DAC7']['max'] = 65535
-        self.parameter_display_dict['DAC7']['read'] = False
+        self.parameter_display_dict['DAC_6']['val'] = self.channel6
+        self.parameter_display_dict['DAC_6']['unit'] = ' '
+        self.parameter_display_dict['DAC_6']['max'] = 65535
+        self.parameter_display_dict['DAC_6']['read'] = False
 
+        self.parameter_display_dict['DAC_7']['val'] = self.channel7
+        self.parameter_display_dict['DAC_7']['unit'] = ' '
+        self.parameter_display_dict['DAC_7']['max'] = 65535
+        self.parameter_display_dict['DAC_7']['read'] = False
+
+        self.parameter_display_dict['Block_Trig']['val'] = self.bti
+        self.parameter_display_dict['Block_Trig']['unit'] = ' '
+        self.parameter_display_dict['Block_Trig']['max'] = 8
+        self.parameter_display_dict['Block_Trig']['read'] = False
+
+        self.parameter_display_dict['Scan_Trig']['val'] = self.sti
+        self.parameter_display_dict['Scan_Trig']['unit'] = ' '
+        self.parameter_display_dict['Scan_Trig']['max'] = 5
+        self.parameter_display_dict['Scan_Trig']['read'] = False
+
+        self.parameter_display_dict['Block_Timer']['val'] = self.btimer
+        self.parameter_display_dict['Block_Timer']['unit'] = ' '
+        self.parameter_display_dict['Block_Timer']['max'] = 1000000
+        self.parameter_display_dict['Block_Timer']['read'] = False
+
+        self.parameter_display_dict['Scan_Timer']['val'] = self.stimer
+        self.parameter_display_dict['Scan_Timer']['unit'] = ' '
+        self.parameter_display_dict['Scan_Timer']['max'] = 1000000
+        self.parameter_display_dict['Scan_Timer']['read'] = False
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
         for key in self.parameter_display_dict.keys():

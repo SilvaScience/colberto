@@ -99,12 +99,12 @@ def init_driver(self, path_dll, path_config):
     self.settings.board_sel = int(config.get("General","boardSel")) # Controls which boards are used for the measurement.
     self.settings.nos = int(config.get("General","nos")) # Number of samples (nos). One sample is one readout of the camera.
     self.settings.nob = int(config.get("General","nob")) # Number of blocks (nob). One block contains nos readouts.
-    self.settings.camera_settings[self.drvno].CAMCNT = int(config.get("Board0","camcnt")) # Number of cameras which are connected to one PCIe board.
-    self.settings.camera_settings[self.drvno].fft_mode = int(config.get("Board0","fftMode")) # Controls the operating mode for FFT sensors.
-    self.settings.camera_settings[self.drvno].FFT_LINES = int(config.get("Board0","fftLines")) # Count of vertical lines for FFT sensors (sensor S14290).
-    self.settings.camera_settings[self.drvno].VFREQ = int(config.get("Board0","vfreq")) # Controls the vertical clock frequency for FFT sensors (sensor S14290). 
-    self.settings.camera_settings[self.drvno].use_software_polling = int(config.get("Board0","useSoftwarePolling")) # Determines which method is used to copy data from DMA to user buffer.
-    self.settings.camera_settings[self.drvno].adc_gain = int(config.get("Board0","adcGain")) # Controlling the gain function of the ADC in 3030 high speed cameras (sensor S14290 use 5 or 6).
+    self.settings.camera_settings[self.drvno].CAMCNT = int(config.get("board0","camcnt")) # Number of cameras which are connected to one PCIe board.
+    self.settings.camera_settings[self.drvno].fft_mode = int(config.get("board0","fftMode")) # Controls the operating mode for FFT sensors.
+    self.settings.camera_settings[self.drvno].FFT_LINES = int(config.get("board0","fftLines")) # Count of vertical lines for FFT sensors (sensor S14290).
+    self.settings.camera_settings[self.drvno].VFREQ = int(config.get("board0","vfreq")) # Controls the vertical clock frequency for FFT sensors (sensor S14290). 
+    self.settings.camera_settings[self.drvno].use_software_polling = int(config.get("board0","useSoftwarePolling")) # Determines which method is used to copy data from DMA to user buffer.
+    self.settings.camera_settings[self.drvno].adc_gain = int(config.get("board0","adcGain")) # Controlling the gain function of the ADC in 3030 high speed cameras (sensor S14290 use 5 or 6).
 
     # Scan trigger input (sti) mode determines the signal on which one readout is started :
     #   0 - External trigger on input I of PCIe board 
@@ -113,9 +113,9 @@ def init_driver(self, path_dll, path_config):
     #   3 - External trigger by I but only when enabled by S2.
     #   4 - Trigger with internal timer. Select the time between two readouts with stime.
     #   5 - Automatic internal instant trigger at the end of the last readout.
-    self.settings.camera_settings[self.drvno].sti_mode = int(config.get("Board0","sti"))
+    self.settings.camera_settings[self.drvno].sti_mode = int(config.get("board0","sti"))
     if self.settings.camera_settings[self.drvno].sti_mode == 4:
-        self.settings.camera_settings[self.drvno].stime_in_microsec = int(config.get("Board0","stimer"))
+        self.settings.camera_settings[self.drvno].stime_in_microsec = int(config.get("board0","stimer"))
 
     # Block trigger input (bti) mode determines the signal on which one block of readouts is started :
     #   0 - External trigger on input I of PCIe board
@@ -126,32 +126,32 @@ def init_driver(self, path_dll, path_config):
     #   5 - S1 chopper
     #   6 - S2 chopper
     #   7 - S1&S2 chopper
-    self.settings.camera_settings[self.drvno].bti_mode = int(config.get("Board0","bti"))
+    self.settings.camera_settings[self.drvno].bti_mode = int(config.get("board0","bti"))
     if self.settings.camera_settings[self.drvno].bti_mode == 4:
-        self.settings.camera_settings[self.drvno].btime_in_microsec = int(config.get("Board0","btimer"))
+        self.settings.camera_settings[self.drvno].btime_in_microsec = int(config.get("board0","btimer"))
 
     # Sensor type should match the sensor type of your camera :
     #   4 - HSVIS - High speed sensor for visible light. (sensor S14290)
-    self.settings.camera_settings[self.drvno].SENSOR_TYPE = int(config.get("Board0","sensorType"))
+    self.settings.camera_settings[self.drvno].SENSOR_TYPE = int(config.get("board0","sensorType"))
 
     # Camera system should match the model number of your camera :
     #   2 - 3030 (sensor S14290)
-    self.settings.camera_settings[self.drvno].CAMERA_SYSTEM = int(config.get("Board0","cameraSystem"))
+    self.settings.camera_settings[self.drvno].CAMERA_SYSTEM = int(config.get("board0","cameraSystem"))
 
     # Number of pixels in one sensor :
     #   1088 - Low speed max 97 kHz
     #   1024 - High speed max 103 kHz
-    self.settings.camera_settings[self.drvno].PIXEL = int(config.get("Board0","pixelcnt")) 
+    self.settings.camera_settings[self.drvno].PIXEL = int(config.get("board0","pixelcnt")) 
 
     # Array for output levels of each digital to analog converter.
-    self.settings.camera_settings[self.drvno].dac_output[0][0] = int(config.get("Board0","dacCameraChannel0"))
-    self.settings.camera_settings[self.drvno].dac_output[0][1] = int(config.get("Board0","dacCameraChannel1"))
-    self.settings.camera_settings[self.drvno].dac_output[0][2] = int(config.get("Board0","dacCameraChannel2"))
-    self.settings.camera_settings[self.drvno].dac_output[0][3] = int(config.get("Board0","dacCameraChannel3"))
-    self.settings.camera_settings[self.drvno].dac_output[0][4] = int(config.get("Board0","dacCameraChannel4"))
-    self.settings.camera_settings[self.drvno].dac_output[0][5] = int(config.get("Board0","dacCameraChannel5"))
-    self.settings.camera_settings[self.drvno].dac_output[0][6] = int(config.get("Board0","dacCameraChannel6"))
-    self.settings.camera_settings[self.drvno].dac_output[0][7] = int(config.get("Board0","dacCameraChannel7"))
+    self.settings.camera_settings[self.drvno].dac_output[0][0] = int(config.get("board0","dacCameraChannel0"))
+    self.settings.camera_settings[self.drvno].dac_output[0][1] = int(config.get("board0","dacCameraChannel1"))
+    self.settings.camera_settings[self.drvno].dac_output[0][2] = int(config.get("board0","dacCameraChannel2"))
+    self.settings.camera_settings[self.drvno].dac_output[0][3] = int(config.get("board0","dacCameraChannel3"))
+    self.settings.camera_settings[self.drvno].dac_output[0][4] = int(config.get("board0","dacCameraChannel4"))
+    self.settings.camera_settings[self.drvno].dac_output[0][5] = int(config.get("board0","dacCameraChannel5"))
+    self.settings.camera_settings[self.drvno].dac_output[0][6] = int(config.get("board0","dacCameraChannel6"))
+    self.settings.camera_settings[self.drvno].dac_output[0][7] = int(config.get("board0","dacCameraChannel7"))
 
     # Create a variable of type uint8_t
     number_of_boards = ctypes.c_uint8(0)
@@ -175,7 +175,7 @@ def init_measure(self):
     # Initialize the measurement.
     status = self.dll.DLLInitMeasurement(self.settings)
     if(status != 0):
-       raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
 
 def measure(self, use_blocking_call):
 
