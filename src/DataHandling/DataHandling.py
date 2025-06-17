@@ -73,6 +73,12 @@ class DataHandling(QtCore.QThread):
         # initialize Calibration dict
         self.calibration = {}
 
+        # initialize BufferWorker
+        self.thread = QtCore.QThread()
+        self.BufferWorker = BufferWorker(self.temp_filename,self.data_dim)
+        self.BufferWorker.moveToThread(self.thread)
+        self.thread.start()
+        self.bufferSaveSignal.connect(self.BufferWorker.save_buffer)
         # initialize beams dict
         self.beams={}
 
@@ -98,6 +104,7 @@ class DataHandling(QtCore.QThread):
     def clear_data(self):
         """Each time a new measurement is started, DataHandling is reset."""
         self.starttime = time.time()
+
         if self.data_dim == 1: # clear data arrays depending on dimension
             self.spec = np.empty([self.speclength, 0])
         else:
@@ -147,6 +154,7 @@ class DataHandling(QtCore.QThread):
         If the file is created, some attributes such as yaxis and parameter keys are added."""
         t1 = time.time()
         self.bufferSaveSignal.emit(self.spec, self.wls, self.parameter_queue, self.parameter_measured)
+
         # clear arrays in memory
         if self.data_dim == 1:
             self.spec = np.empty([self.speclength, 0])
@@ -176,6 +184,11 @@ class DataHandling(QtCore.QThread):
         time.sleep(0.5) # allow for BufferWorker to create temp file
         with h5py.File(self.temp_filename, 'a') as hf:
             hf.attrs["comments"] = comments
+            if len(self.calibration) > 0 :
+                for k in self.calibration.keys():
+                    hf.attrs[k] = self.calibration[k]
+
+
         ty_res = time.localtime(time.time())
         timestamp = time.strftime("%H_%M_%S", ty_res)
         savename = filename + '_' + timestamp + '.h5'
@@ -244,7 +257,6 @@ class BufferWorker(QtCore.QObject):
         self.data_dim = data_dim
         self.firstbuffer = True
         self.terminate = False
-
         # check if folder for buffer exists
         temp_folder = os.path.dirname(temp_filename)
         if not os.path.isdir(temp_folder):

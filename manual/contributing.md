@@ -57,3 +57,11 @@ Examples:
 Thread safe logs are instantiated in each modules by importing the `logging` module and invoking `logger=logging.getLogger(__name__)` right after the module import block.
 
 The log file location is configured in `main.py` and points to a `main.log` file at the root of the project. This file is ignored in commits. The logging level is also configured there. You can check out [the python documentation on `logging`](https://docs.python.org/3/library/logging.html) to see how to use this module for informing, debugging and error handling.
+
+### SLM Calibration 
+
+The SLM Calibration is located in the utilities tab of the main interface.
+To calibrate the SLM for various wavelengths, one needs to create a Phase to Grayscale LUT file. 
+This is done in two steps:
+1. Measure_LUT_PhasetoGreyscale: Displays a pattern on the SLM where half of the SLM is set to a grayscale value of zero, and the other half of the SLM scans through the grayscale values (0-255). The spectrum of the beam is taken after each pattern. 
+2. Generate_LUT_PhasetoGreyscale: Analyzes the measured spectrum to determine the phase shift from the reference (where both sides of the SLM are at a greyscale value of zero). This is done by taking a Fourier transform of the spectrum and calculating the phase difference using the real and imaginary components. 
