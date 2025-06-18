@@ -57,7 +57,7 @@ class StresingCamera(QtCore.QThread):
 
         # Intitalize stresing camera 
         #self.CAM = stresing(path_config, path_dll, path_dll2)
-        self.driver= init_driver(self, path_dll, path_config) # type: ignore
+        self.driver = init_driver(self, path_dll, path_config) # type: ignore
 
         # preallocate arrays
         self.spectrum = np.ndarray([])
@@ -168,60 +168,76 @@ class StresingCamera(QtCore.QThread):
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
         In devices with workers, a pause of continuous acquisition might be required. """
-        if parameter == 'sample':
-            self.parameter_dict['sample'] = value
-            self.settings.nos = int(value)
+        if parameter == 'No_Sample':
+            self.parameter_dict['No_Sample'] = value
+            self.driver.settings.nos = int(value)
             self.sample = value
             self.new_spectrum = False
-        elif parameter == 'block':
-            self.parameter_dict['block'] = value
-            self.settings.nob = int(value)
+        elif parameter == 'No_Block':
+            self.parameter_dict['No_Block'] = value
+            self.driver.settings.nob = int(value)
             self.block = value
             self.new_spectrum = False
-        elif parameter == 'adc_gain':
-            self.parameter_dict['adc_gain'] = value
-            self.settings.camera_settings[self.drvno].adc_gain = int(value)
+        elif parameter == 'ADC_Gain':
+            self.parameter_dict['ADC_Gain'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].adc_gain = int(value)
             self.adc_gain = value
             self.new_spectrum = False
-        elif parameter == 'DAC0':
-            self.parameter_dict['DAC0'] = value
-            self.settings.camera_settings[0].dac_output[0][0] = int(value)
+        elif parameter == 'DAC_0':
+            self.parameter_dict['DAC_0'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][0] = int(value)
             self.channel0 = value
             self.new_spectrum = False
-        elif parameter == 'DAC1':
-            self.parameter_dict['DAC1'] = value
-            self.settings.camera_settings[0].dac_output[0][1] = int(value)
+        elif parameter == 'DAC_1':
+            self.parameter_dict['DAC_1'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][1] = int(value)
             self.channel1 = value
             self.new_spectrum = False
-        elif parameter == 'DAC2':
-            self.parameter_dict['DAC2'] = value
-            self.settings.camera_settings[0].dac_output[0][2] = int(value)
+        elif parameter == 'DAC_2':
+            self.parameter_dict['DAC_2'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][2] = int(value)
             self.channel2 = value
             self.new_spectrum = False
-        elif parameter == 'DAC3':
-            self.parameter_dict['DAC3'] = value
-            self.settings.camera_settings[0].dac_output[0][3] = int(value)
+        elif parameter == 'DAC_3':
+            self.parameter_dict['DAC_3'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][3] = int(value)
             self.channel3 = value
             self.new_spectrum = False
-        elif parameter == 'DAC4':
-            self.parameter_dict['DAC4'] = value
-            self.settings.camera_settings[0].dac_output[0][4] = int(value)
+        elif parameter == 'DAC_4':
+            self.parameter_dict['DAC_4'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][4] = int(value)
             self.channel4 = value
             self.new_spectrum = False
-        elif parameter == 'DAC5':
-            self.parameter_dict['DAC5'] = value
-            self.settings.camera_settings[0].dac_output[0][5] = int(value)
+        elif parameter == 'DAC_5':
+            self.parameter_dict['DAC_5'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][5] = int(value)
             self.channel5 = value
             self.new_spectrum = False
-        elif parameter == 'DAC6':
-            self.parameter_dict['DAC6'] = value
-            self.settings.camera_settings[0].dac_output[0][6] = int(value)
+        elif parameter == 'DAC_6':
+            self.parameter_dict['DAC_6'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][6] = int(value)
             self.channel6 = value
             self.new_spectrum = False
-        elif parameter == 'DAC7':
-            self.parameter_dict['DAC7'] = value
-            self.settings.camera_settings[0].dac_output[0][7] = int(value)
+        elif parameter == 'DAC_7':
+            self.parameter_dict['DAC_7'] = value
+            self.driver.settings.camera_settings[self.driver.drvno].dac_output[0][7] = int(value)
             self.channel7 = value
+            self.new_spectrum = False
+        elif parameter == 'Block_Trig':
+            self.driver.settings.camera_settings[self.driver.drvno].bti_mode = int(value)
+            self.bti = value
+            self.new_spectrum = False
+        elif parameter == 'Scan_Trig':
+            self.driver.settings.camera_settings[self.driver.drvno].sti_mode = int(value)
+            self.sti = value
+            self.new_spectrum = False
+        elif parameter == 'Block_Timer':
+            self.driver.settings.camera_settings[self.driver.drvno].btime_in_microsec = int(value)
+            self.btimer = value
+            self.new_spectrum = False
+        elif parameter == 'Scan_Timer':
+            self.driver.settings.camera_settings[self.driver.drvno].stime_in_microsec = int(value)
+            self.stimer = value
             self.new_spectrum = False
         init_measure(self) # type: ignore
 

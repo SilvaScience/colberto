@@ -198,15 +198,33 @@ def measure(self, use_blocking_call):
             print("sample: "+str(cur_sample.value)+" block: "+str(cur_block.value))
 
     # Create an c-style uint16 array of size pixel which is initialized to 0
-    frame_buffer = (ctypes.c_uint16 * self.settings.camera_settings[0].PIXEL)(0)
-    ptr_frame_buffer = ctypes.pointer(frame_buffer)
+    # frame_buffer = (ctypes.c_uint16 * self.settings.camera_settings[self.drvno].PIXEL)(0)
+    # ptr_frame_buffer = ctypes.pointer(frame_buffer)
     # Get the data of one frame. Sample 5, block 0, camera 0
-    status = self.dll.DLLCopyOneSample(self.drvno, 5, 0, 0, ptr_frame_buffer)
+    # status = self.dll.DLLCopyOneSample(self.drvno, 5, 0, 0, ptr_frame_buffer)
+    # if(status != 0):
+    #     raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+    
+    # This block is showing you how to get all data of one frame with one DLL call
+    # block_buffer = (c_uint16 * (settings.PIXEL * settings.nos * settings.CAMCNT))(0)
+    # ptr_block_buffer = pointer(block_buffer)
+    # status = dll.DLLCopyOneBlock(drvno, 0, ptr_block_buffer)
+    # if(status != 0):
+    # 	raise BaseException(dll.DLLConvertErrorCodeToMsg(status))
+
+    # This block is showing you how to get all data of the whole measurement with one DLL call
+    data_buffer = (ctypes.c_uint16 * (self.settings.camera_settings[self.drvno].PIXEL * self.settings.nos * self.settings.camera_settings[self.drvno].CAMCNT * self.settings.nob))(0)
+    ptr_data_buffer = ctypes.pointer(data_buffer)
+    status = self.dll.DLLCopyAllData(self.drvno, ptr_data_buffer)
     if(status != 0):
         raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+    
     # Convert the c-style array to a python list
-    list_frame_buffer = [frame_buffer[i] for i in range(self.settings.camera_settings[0].PIXEL)]
-    return list_frame_buffer
+    # list_frame_buffer = [data_buffer[i] for i in range(self.settings.camera_settings[self.drvno].PIXEL)]
+    list_frame_buffer = [data_buffer[i * self.settings.camera_settings[self.drvno].PIXEL:(i + 1) * self.settings.camera_settings[self.drvno].PIXEL] for i in range(self.settings.nos)]
+    summed_frame = [sum(pixel_values) for pixel_values in zip(*list_frame_buffer)]
+    averaged_frame = [value / self.settings.nos for value in summed_frame]
+    return averaged_frame
 
 def exit(self):
 
