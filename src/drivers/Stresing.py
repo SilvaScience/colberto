@@ -294,6 +294,13 @@ class StresingCamera(QtCore.QThread):
                 self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
 
                 # New calibration for screw set at 0 and center wavelength at 650nm
+                # Here you can find the data to retreive the linear fit parameters (nm)
+                # Theoretical   Measured
+                # 365.02        422.30
+                # 404.66        463.70
+                # 435.83        495.90
+                # 546.07        611.90
+                # 1013.98       1111.80
                 self.wavelengths = 0.9402*self.wavelengths-30.864
         else:
             self.wavelengths= self.hardware_params['num_pixels']
