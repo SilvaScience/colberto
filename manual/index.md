@@ -4,6 +4,11 @@ This page includes the documentation of the Colberto controll software. Let's ho
 # General Structure 
 The general structure is based on the layout presented in [pyqt-framework](https://wiki.silvascience.org/en/home/software/pyqt-framework). A minimal working framework is available in [github](https://github.com/SilvaScience/colberto) and will constantly grow. 
 
+## Hardware and drivers
+
+Colberto uses many devices to perform its duty. Below are pages dedicated to these pieces of hardware
+- [Spatial light Modulator](slm_meadowlark.md)
+
 # Contributing
 
 Before you start contributing, make sure you read through [our contribution guide](contributing.md)

@@ -1,0 +1,11 @@
+pyqtgraph
+numpy
+PyQt5
+matplotlib
+pip
+pillow
+requests
+pandas
+h5py
+scipy
+seabreeze

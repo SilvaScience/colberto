@@ -11,6 +11,9 @@ from scipy.signal import sawtooth
 from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Beam:
     def __init__(self,SLMWidth,SLMHeight):
@@ -31,9 +34,10 @@ class Beam:
         self.set_currentPhase(P([0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
+        self.indices=self.get_horizontalIndices()
         self.set_compressionCarrierWave(600)
         self.set_delayCarrierWave(600)
-        self.maskOn=False #Is the mask enabled in the output grating?
+        self.maskOn=True
         self.pixelToWavelength=P([600])
 
     def make_mask(self,horizontalDelimiters=None,verticalDelimiters=None):
@@ -43,7 +47,7 @@ class Beam:
                 - horizontalDelimiters (nd.array, Default None) Indices of the two horizontal limiting edges of the beam. Default uses internal delimiters
                 - verticalDelimiters (nd.array, Default None) Indices of the two vertical limiting edges of the beam. Default uses internal delimiters
         '''
-        self.mask=np.zeros((self.SLMWidth,self.SLMHeight))
+        self.mask=np.zeros((self.SLMHeight,self.SLMWidth))
         if horizontalDelimiters is None:
             horizontalDelimiters=self.get_beamHorizontalDelimiters()
         if verticalDelimiters is None:
@@ -234,7 +238,7 @@ class Beam:
         
         '''
         if indices is None:
-            indices=self.get_horizontalIndices()
+            indices=self.indices
         angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.currentPhasePolynomial(angFreq)
 
@@ -306,15 +310,13 @@ class Beam:
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
+        phaseGratingImage=np.zeros((self.SLMHeight,self.SLMWidth))
         if self.phaseGratingPeriod is None:
-            
-            return np.zeros((self.SLMWidth,self.SLMHeight))
-        phaseGratingImage=[]
+            return phaseGratingImage
         numberVerticalPixels=self.SLMHeight
         phaseProfile=self.get_sampledCurrentPhase()
-        for phase in phaseProfile:
-            row=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
-            phaseGratingImage.append(row)
+        for i,phase in enumerate(phaseProfile):
+            phaseGratingImage[:,i]=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
         phaseGratingImage=np.array(phaseGratingImage)
         if self.maskOn:
             phaseGratingImage=phaseGratingImage*self.mask
