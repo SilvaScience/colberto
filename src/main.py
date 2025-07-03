@@ -19,11 +19,12 @@ from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
+from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration,ChirpCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
@@ -90,6 +91,16 @@ class MainInterface(QtWidgets.QMainWindow):
 
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
+        ## Temp calibration tab
+        self.beam_spinbox=self.findChild(QtWidgets.QSpinBox,'Beam_spin_box')
+        self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit, 'Compression_carrier_wavelength')
+        self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
+        self.chirp_max_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_max')
+        self.chirp_min_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_min')
+        self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
+        self.chirp_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'Chirp_plot_layout')
+        
+        
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
         self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
@@ -124,6 +135,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
         self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
         self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
+        self.ChirpCalibrationPlot= ChirpCalibrationPlot(self.chirp_calibration_image_layout)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
@@ -209,7 +221,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
         self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
         self.generate_LUT_calib_button.clicked.connect(
-            self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
+        self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
+        # Chirp calibration connect events
+        self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
@@ -420,6 +434,21 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.VerticalCalibPlot.draw_regions(regions)
             except ValueError:
                 table.setItem(row_index,col_index,None)
+                
+    def chirpCalibrationMeasurement(self):
+            '''
+                 Sets up and starts a spectral Beam Calibration.
+            ''' 
+            if not self.measurement_busy:
+                self.measurement_busy = True
+                self.DataHandling.clear_data()         
+                self.measurement= ChirpCalibrationMeasurement(self.devices,self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()))
+                self.measurement.sendProgress.connect(self.set_progress)
+                self.measurement.send_Chirp_calibration_data.connect(self.DataHandling.add_calibration)
+                self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+                self.measurement.start()
+            else:
+                print('Measurement not started, devices are busy')
 
     def assign_vertical_beam_calibration(self):
         '''
