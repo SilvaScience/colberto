@@ -192,6 +192,17 @@ class Beam:
             phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial)
         self.optimalPhasePolynomial=phasePolynomial
 
+    def get_optimalPhase(self):
+        '''
+            Sets the beam's phase profile 
+            input:
+                - indices (nd.array of int) : Indices at which to sample the 
+                - mode (string): Specifies if the phase returned is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
+            output:
+                - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
+        '''
+        return self.optimalPhasePolynomial
+
     def set_currentPhase(self,phasePolynomial,mode='relative',unit='fs'):
         '''
             Sets the beam's phase profile 

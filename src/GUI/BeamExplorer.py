@@ -1,9 +1,11 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QTableWidget,QSpinBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QTableWidget,QSpinBox,QCheckBox, QTableWidgetItem
 from PyQt5 import QtCore,uic
 import sys
 import os
+import logging
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 class BeamExplorer(QWidget):
     """
         Display the properties of the beams currently held in the provided DataHandler
@@ -65,6 +67,7 @@ class BeamWidget(QWidget):
         self.grating_period=self.findChild(QSpinBox,'grating_period_value')
         self.delimiter_table=self.findChild(QTableWidget,'delimiter_table_widget')
         self.phase_coeff_table=self.findChild(QTableWidget,'phase_coeff_table')
+        self.relative_checkbox=self.findChild(QCheckBox,'relative_checkbox')
         self.import_beam(name,beam)
     
     def import_beam(self,name,beam):
@@ -81,9 +84,16 @@ class BeamWidget(QWidget):
         """
         self.beam_label.setText(self.name)
         self.grating_period.setValue(self.beam.get_gratingPeriod())
-        [self.delimiter_table_widget.item(0,i).setText(value) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
-        [self.delimiter_table_widget.item(1,i).setText(value) for i,value in enumerate(self.beam.get_beamHorizontalDelimiters())]
-
+        [self.delimiter_table_widget.setItem(0,i,QTableWidgetItem(value)) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
+        logger.info(self.beam.get_gratingPeriod())
+        #[self.delimiter_table_widget.setItem(0,i,QTableWidgetItem(value)) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
+        #[self.delimiter_table_widget.item(1,i).setText(value) for i,value in enumerate(self.beam.get_beamHorizontalDelimiters())]
+        #[self.phase_coeff_table.item(0,i).setText(coeff) for i,coeff in enumerate(self.beam.get_optimalPhase().coeff)]
+        if self.relative_checkbox.isChecked():
+            mode='relative'
+        else:
+            mode='absolute'
+        #[self.phase_coeff_table.item(1,i).setText(coeff) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coeff)]
     def plot_phase(self):
         '''
             Plots the current phase of the beam either relative to the compression or absolute

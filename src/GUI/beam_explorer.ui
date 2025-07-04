@@ -33,12 +33,12 @@
    </attribute>
    <row>
     <property name="text">
-     <string>Current</string>
+     <string>Optimal</string>
     </property>
    </row>
    <row>
     <property name="text">
-     <string>Optimal</string>
+     <string>Current</string>
     </property>
    </row>
    <column>
