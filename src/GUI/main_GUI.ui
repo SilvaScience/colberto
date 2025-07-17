@@ -991,7 +991,7 @@ p, li { white-space: pre-wrap; }
             </rect>
            </property>
            <property name="text">
-            <string>400</string>
+            <string>600</string>
            </property>
           </widget>
           <widget class="QLabel" name="grating_period_label_8">
