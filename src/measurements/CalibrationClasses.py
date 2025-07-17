@@ -266,11 +266,12 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             - send_spectral_calibration_data: tuple, first is label 'vertical_calibration_data' and second is row and intensities tuple
             - sendProgress :  float representing the progress of the measurement.
     '''
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     send_chirp= QtCore.pyqtSignal(np.ndarray,np.ndarray,np.ndarray)
     send_Chirp_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min):
+    def __init__(self,devices,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min):
         '''
          Initializes the Spectral beam calibration measurement
          input:
@@ -291,7 +292,6 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.terminate = False
         self.acquire_measurement = True
         self.Chirp=np.arange(chirp_min,chirp_max,chirp_step,dtype=int)
-        #self.intensities= np.zeros((len(self.columns),len(self.wls)))# preallocate spec array
         self.intensities=[]
         self.spectral_calibration_data={
             'Chirp' : self.Chirp,
@@ -300,20 +300,19 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         }
         # Configure single beam over which the columns will be scanned
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
-        self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
-        self.monobeam.set_beamHorizontalDelimiters([0, self.SLM.get_width()])
 
-        self.monobeam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength,1/6])))
-        self.monobeam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9)        
-        self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
+
+        self.monobeam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
+        self.monobeam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
+        self.monobeam.set_gratingPeriod(grating_period)
+        # self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
 
         self.chirp_ = np.linspace(chirp_max,chirp_min,num=int((chirp_max-chirp_min)/chirp_step))
-        # self.isDemo=False
+        self.isDemo=False
 
     def run(self):
-        if not self.terminate:  # check whether stopping measurement is called
-                if self.isDemo:
-                    a = np.loadtxt('..\src\Chirp_dataset.txt')
+        if self.isDemo:
+                    a = np.loadtxt('../src/Chirp_dataset.txt')
                     self.wls = a[-1]
                     self.Chirp_data= a[-2]
                     for h in range(len(self.Chirp_data)):
@@ -325,32 +324,31 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                 # Emit the data through signals
 
                     for a in range(len(self.Chirp_data)):
-                        
-                        self.Chirp_calibration_data={
-                            'Chirp' : np.array(self.Chirp_data),
-                            'wavelengths' : self.wls,
-                            'data' : np.array(self.data)
-                            }
-
-                        time.sleep(0.1)
-                        self.sendProgress.emit(a/len(self.Chirp_data)*100)
-                        self.send_chirp.emit(np.array(self.Chirp_data[:a]),self.wls[:a],np.array(self.data[:a]))
-                else:
-                     self.BEAM = self.SLM['beam'][self.beam_]
+                        if not self.terminate:
+                            self.Chirp_calibration_data={
+                                'Chirp' : np.array(self.Chirp_data),
+                                'wavelengths' : self.wls,
+                                'data' : np.array(self.data)
+                                }
+    
+                            self.sendProgress.emit(a/len(self.Chirp_data)*100)
+                            self.send_chirp.emit(np.array(self.Chirp_data[:a]),self.wls[:a],np.array(self.data[:a]))
+        else:
+                     # self.BEAM = self.SLM['beam'][self.beam_]
                      for a in range(len(self.chirp_)):
-                            
-                        self.monobeam.set_currentPhase(Polynomial([0,0,self.chirp_[a]]),mode='absolute')
-                        image_output=self.monobeam.makeGrating()                
-                        self.SLM.write_image(image_output)
-                        self.takespectrum()
-                        self.intensities.append(self.spectra)
-                        self.sendProgress.emit(a/len(self.chirp_)*100)
-                        self.Chirp_calibration_data={
-                            'Chirp' : np.array(self.chirp_),
-                            'wavelengths' : self.wls,
-                            'data' : np.array(self.intensities)
-                            }
-                        self.send_chirp.emit(np.array(self.Chirp_data[:a]),self.wls[:a],np.array(self.data[:a]))
+                        if not self.terminate:    
+                            self.monobeam.set_currentPhase(Polynomial([0,0,self.chirp_[a]]),mode='absolute')
+                            image_output=self.monobeam.makeGrating()                
+                            self.SLM.write_image(image_output)
+                            self.take_spectrum()
+                            self.intensities.append(self.spec)
+                            self.sendProgress.emit(a/len(self.chirp_)*100)
+                            self.Chirp_calibration_data={
+                                'Chirp' : self.chirp_,
+                                'wavelengths' : self.wls,
+                                'data' : np.array(self.intensities)
+                                }
+                            self.send_chirp.emit(self.chirp_,self.wls,np.array(self.intensities))
         self.send_Chirp_calibration_data.emit(('spectral_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
@@ -362,5 +360,6 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo:
             self.sendSpectrum.emit(self.wls, self.spec)
+
 
     
