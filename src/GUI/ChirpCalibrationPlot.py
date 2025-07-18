@@ -56,7 +56,6 @@ class ChirpCalibrationPlot(QtWidgets.QMainWindow):
                 - y_array: (np.ndarray) 1D array holding the scanned axis of the 2D data plot
                 - data: (np.ndarray) 2D array of scanned spectra
         '''
-        
         if np.shape(data)[0]>=2 and np.shape(data)[1]>=2: # Don't plot it if it is not a 2D array 
             
             deltax=x_array[1]-x_array[0]

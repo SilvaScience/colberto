@@ -350,7 +350,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                                 'wavelengths' : self.wls,
                                 'data' : np.array(self.intensities)
                                 }
-                            if a >0:
+                            if a >1:
                                 self.send_chirp.emit(self.chirp_[:a],self.wls[:a],np.array(self.intensities))
         self.send_Chirp_calibration_data.emit(('spectral_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
