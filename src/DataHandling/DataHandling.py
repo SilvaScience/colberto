@@ -82,13 +82,6 @@ class DataHandling(QtCore.QThread):
         # initialize beams dict
         self.beams={}
 
-        # initialize BufferWorker
-        self.thread = QtCore.QThread()
-        self.BufferWorker = BufferWorker(self.temp_filename,self.data_dim)
-        self.BufferWorker.moveToThread(self.thread)
-        self.thread.start()
-        self.bufferSaveSignal.connect(self.BufferWorker.save_buffer)
-
     # main update device parameter function
     def update_parameter(self, parameter):
         """ This is an important part of hardware parameter control. We use "deque" as efficient First-In-First-Out
