@@ -442,7 +442,7 @@ class MainInterface(QtWidgets.QMainWindow):
             if not self.measurement_busy:
                 self.measurement_busy = True
                 self.DataHandling.clear_data()         
-                self.measurement= ChirpCalibrationMeasurement(self.devices,self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()))
+                self.measurement= ChirpCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()))
                 self.measurement.sendProgress.connect(self.set_progress)
                 self.measurement.send_Chirp_calibration_data.connect(self.DataHandling.add_calibration)
                 self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
