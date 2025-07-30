@@ -313,7 +313,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     def run(self):
 
         if self.isDemo:
-                    a = np.loadtxt('../src/Chirp_dataset.txt')
+                    a = np.loadtxt(r'../src/Chirp_dataset.txt')
 
                     self.wls = a[-1]
                     self.Chirp_data= a[-2]
