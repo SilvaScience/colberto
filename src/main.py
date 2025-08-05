@@ -92,6 +92,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
         ## Temp calibration tab
+        self.chirp_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'Chirp_calib_demo_mode_checkbox')
         self.beam_spinbox=self.findChild(QtWidgets.QSpinBox,'Beam_spin_box')
         self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit, 'Compression_carrier_wavelength')
         self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
@@ -441,8 +442,12 @@ class MainInterface(QtWidgets.QMainWindow):
             ''' 
             if not self.measurement_busy:
                 self.measurement_busy = True
+                if 'ALL' in self.DataHandling.get_beams():
+                    beam_=self.DataHandling.get_beams()['ALL']
+                else:
+                    beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
                 self.DataHandling.clear_data()         
-                self.measurement= ChirpCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()))
+                self.measurement= ChirpCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()),demo=self.chirp_calib_demo_mode_checkbox.isChecked(),beam=beam_)
                 self.measurement.sendProgress.connect(self.set_progress)
                 self.measurement.send_Chirp_calibration_data.connect(self.DataHandling.add_calibration)
                 self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)

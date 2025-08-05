@@ -1130,6 +1130,22 @@ p, li { white-space: pre-wrap; }
             <number>1</number>
            </property>
           </widget>
+          <widget class="QCheckBox" name="Chirp_calib_demo_mode_checkbox">
+           <property name="geometry">
+            <rect>
+             <x>360</x>
+             <y>20</y>
+             <width>151</width>
+             <height>25</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Demo mode</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
          </widget>
         </widget>
         <widget class="QWidget" name="parameter_tab">

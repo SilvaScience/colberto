@@ -271,7 +271,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     send_Chirp_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min):
+    def __init__(self,devices,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min,beam,demo=False):
         '''
          Initializes the Spectral beam calibration measurement
          input:
@@ -299,48 +299,45 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             'intensities' : self.intensities
         }
         # Configure single beam over which the columns will be scanned
+
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
 
 
         self.monobeam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
         self.monobeam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
         self.monobeam.set_gratingPeriod(grating_period)
-        # self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
 
         self.chirp_ = np.linspace(chirp_max,chirp_min,num=int((chirp_max-chirp_min)/chirp_step))
-        self.isDemo=False
-
+        self.isDemo= demo
+        self.beam_ = beam
+        self.beam_.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
+        self.beam_.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
+        self.beam_.set_gratingPeriod(grating_period)
     def run(self):
 
         if self.isDemo:
-                    a = np.loadtxt(r'../src/Chirp_dataset.txt')
-
-                    self.wls = a[-1]
-                    self.Chirp_data= a[-2]
-                    for h in range(len(self.Chirp_data)):
-                        if self.Chirp_data[h]==0:
-                            f = h
-                            break
-                    self.Chirp_data = self.Chirp_data[:f]        
-                    self.data = a[:-3]
-                # Emit the data through signals
-
-                    for a in range(len(self.Chirp_data)):
-                        if not self.terminate:
-                            self.Chirp_calibration_data={
-                                'Chirp' : np.array(self.Chirp_data),
-                                'wavelengths' : self.wls,
-                                'data' : np.array(self.data)
-                                }
-    
-                            self.sendProgress.emit(a/len(self.Chirp_data)*100)
-                            self.send_chirp.emit(np.array(self.Chirp_data[:a]),self.wls[:a],np.array(self.data[:a]))
-        else:
-                     # self.BEAM = self.SLM['beam'][self.beam_]
+                     
                      for a in range(len(self.chirp_)):
                         if not self.terminate:    
                             self.monobeam.set_currentPhase(Polynomial([0,0,self.chirp_[a]]),mode='absolute')
                             image_output=self.monobeam.makeGrating()                
+                            self.SLM.write_image(image_output)
+                            self.take_spectrum()
+                            self.intensities.append(self.spec)
+                            self.sendProgress.emit(a/len(self.chirp_)*100)
+                            self.Chirp_calibration_data={
+                                'Chirp' : self.chirp_,
+                                'wavelengths' : self.wls,
+                                'data' : np.array(self.intensities)
+                                }
+                            if a >1:
+                                self.send_chirp.emit(self.chirp_[:a],self.wls[:a],np.array(self.intensities))
+        else:
+
+                     for a in range(len(self.chirp_)):
+                        if not self.terminate:    
+                            self.beam_.set_currentPhase(Polynomial([0,0,self.chirp_[a]]),mode='absolute')
+                            image_output=self.beam_.makeGrating()                
                             self.SLM.write_image(image_output)
                             self.take_spectrum()
                             self.intensities.append(self.spec)
