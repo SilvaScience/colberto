@@ -444,6 +444,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.DataHandling.clear_data()         
                 self.measurement= ChirpCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()))
                 self.measurement.sendProgress.connect(self.set_progress)
+                self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
                 self.measurement.send_Chirp_calibration_data.connect(self.DataHandling.add_calibration)
                 self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
                 self.measurement.start()
@@ -480,7 +481,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement_busy = True
             self.DataHandling.clear_data()
             self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value(),demo=self.spatial_calib_demo_mode_checkbox.isChecked())
-            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()],increment=self.column_increment_spinbox.value())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_intensities.connect(self.SpectralCalibDataPlot.set_data)

@@ -184,11 +184,11 @@
           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;User:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;Sample:&lt;br /&gt;Power:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;Wavelength:&lt;/span&gt;&lt;/p&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8.25pt;&quot;&gt;Freq: &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;User:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Sample:&lt;br /&gt;Power:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Wavelength:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Freq: &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
         </widget>
         <widget class="QLabel" name="label">
@@ -311,7 +311,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>3</number>
+         <number>2</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -512,7 +512,7 @@ p, li { white-space: pre-wrap; }
             <number>1</number>
            </property>
            <property name="value">
-            <number>25</number>
+            <number>10</number>
            </property>
           </widget>
          </widget>
@@ -628,7 +628,7 @@ p, li { white-space: pre-wrap; }
             <number>1</number>
            </property>
            <property name="value">
-            <number>5</number>
+            <number>10</number>
            </property>
           </widget>
           <widget class="QLabel" name="column_width_label">
@@ -660,7 +660,7 @@ p, li { white-space: pre-wrap; }
             <number>1</number>
            </property>
            <property name="value">
-            <number>5</number>
+            <number>10</number>
            </property>
           </widget>
           <widget class="PlotWidget" name="spectral_calib_fit_plot_layout" native="true">
@@ -739,7 +739,7 @@ p, li { white-space: pre-wrap; }
             </rect>
            </property>
            <property name="text">
-            <string>Shortest fitting wavelength</string>
+            <string>Shortest fitting index</string>
            </property>
           </widget>
           <widget class="QSpinBox" name="shortest_fitting_wave_spin_box">
@@ -761,7 +761,7 @@ p, li { white-space: pre-wrap; }
             <number>3000</number>
            </property>
            <property name="value">
-            <number>400</number>
+            <number>1</number>
            </property>
           </widget>
           <widget class="QSpinBox" name="polynomial_order_spin_box">
@@ -809,19 +809,6 @@ p, li { white-space: pre-wrap; }
             </rect>
            </property>
           </widget>
-          <widget class="QLabel" name="shorter_fit_wave_label_unit">
-           <property name="geometry">
-            <rect>
-             <x>270</x>
-             <y>200</y>
-             <width>51</width>
-             <height>19</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>nm</string>
-           </property>
-          </widget>
           <widget class="QLabel" name="longer_fit_wave_label_unit">
            <property name="geometry">
             <rect>
@@ -845,7 +832,7 @@ p, li { white-space: pre-wrap; }
             </rect>
            </property>
            <property name="text">
-            <string>Longest fitting wavelength</string>
+            <string>Longest fitting index</string>
            </property>
           </widget>
           <widget class="QSpinBox" name="longest_fitting_wave_spin_box">
@@ -867,7 +854,7 @@ p, li { white-space: pre-wrap; }
             <number>3000</number>
            </property>
            <property name="value">
-            <number>900</number>
+            <number>1920</number>
            </property>
           </widget>
          </widget>
@@ -900,7 +887,7 @@ p, li { white-space: pre-wrap; }
            <number>2</number>
           </property>
           <property name="value">
-           <number>50</number>
+           <number>35</number>
           </property>
          </widget>
          <widget class="QCheckBox" name="spatial_calib_demo_mode_checkbox">
@@ -1539,7 +1526,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
      <x>0</x>
      <y>0</y>
      <width>1135</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
