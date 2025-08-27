@@ -276,7 +276,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     send_Chirp_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min):
+    def __init__(self,devices,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min,beam,demo=False):
         '''
          Initializes the Spectral beam calibration measurement
          input:
@@ -304,17 +304,20 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             'intensities' : self.intensities
         }
         # Configure single beam over which the columns will be scanned
+
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
 
 
         self.monobeam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) 
         self.monobeam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
         self.monobeam.set_gratingPeriod(grating_period)
-        # self.isDemo= self.SLM.write_image([0])==42 #Checks if SLM IS DEMO
 
         self.chirp_ = np.linspace(chirp_max,chirp_min,num=int((chirp_max-chirp_min)/chirp_step))
-        self.isDemo=False
-
+        self.isDemo= demo
+        self.beam_ = beam
+        self.beam_.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
+        self.beam_.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
+        self.beam_.set_gratingPeriod(grating_period)
     def run(self):
 
         if self.isDemo:
