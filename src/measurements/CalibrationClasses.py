@@ -77,7 +77,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
                 self.sendProgress.emit(i/len(self.rows)*100)
                 self.vertical_calibration_data['intensities']=self.intensities
                 self.vertical_calibration_data['rows']=self.rows
-                if i>=2:
+                if i>=1:
                     self.send_intensities.emit(self.rows,self.intensities)
         self.vertical_calibration_data['intensities']=self.intensities
         self.vertical_calibration_data['rows']=self.rows
@@ -88,7 +88,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
 
     def take_spectrum(self,i):
         self.spec = np.array(self.spectrometer.get_intensities())
-        if not self.isDemo and i>=2:
+        if not self.isDemo and i>=1:
             self.sendSpectrum.emit(self.wls, self.spec)
 
     def stop(self):
@@ -164,7 +164,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
                     'wavelengths' : self.wls,
                     'data' : np.array(self.intensities)
                 }
-                if i>=2:
+                if i>=1:
                     self.send_intensities.emit(np.array(self.columns_out),self.wls,np.array(self.intensities))
         self.send_spectral_calibration_data.emit(('spectral_calibration_raw_data',self.spectral_calibration_data))
         self.sendProgress.emit(100)
@@ -173,7 +173,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
 
     def take_spectrum(self,i):
         self.spec = np.array(self.spectrometer.get_intensities())
-        if not self.isDemo and i>=2:
+        if not self.isDemo and i>=1:
             self.sendSpectrum.emit(self.wls, self.spec)
     def stop(self):
         self.terminate = True
@@ -355,16 +355,19 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                                 'wavelengths' : self.wls,
                                 'data' : np.array(self.intensities)
                                 }
-                            if i>=10:
+                            if i>=1:
                                 self.send_chirp.emit(self.chirp_[:i],self.wls,np.array(self.intensities))
         self.send_Chirp_calibration_data.emit(('spectral_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
         print('Spectral Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
+        np.savetxt('chirp.txt', self.chirp_)
+        np.savetxt('wls.txt', self.wls)
+        np.savetxt('intensities.txt', np.array(self.intensities))
     def stop(self):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
     def take_spectrum(self,i):
         self.spec = np.array(self.spectrometer.get_intensities())
-        if not self.isDemo and i>=2:
+        if not self.isDemo and i>=1:
             self.sendSpectrum.emit(self.wls, self.spec)

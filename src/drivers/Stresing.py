@@ -329,7 +329,9 @@ class StresingCamera(QtCore.QThread):
         while not self.new_spectrum:
             time.sleep(0.01)
             self.new_spectrum = False
-        return self.spectrum
+        self.spec = np.array(self.spectrum)
+        self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
+        return self.spec
 
 class StresingWorker(QtCore.QThread):
     """ This is a DemoWorker for the Stresing Camera.
