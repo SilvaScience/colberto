@@ -101,11 +101,11 @@ class Beam:
         self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
         self.make_mask()
 
-    def get_spectrumAtPixel(self,pixels,unit='wavelength'):
+    def get_spectrumAtPixel(self,pixels=None,unit='wavelength'):
         '''
         Gets the spectral position of light associated with a pixel on the SLM
         input:
-            - pixels: (nd.array) the horizontal pixel index on the SLM
+            - pixels: (nd.array) the horizontal pixel index on the SLM. By default, the phase is sampled at every column of the SLM 
             - unit: the unit in which to return the spectrum axis allows for
                 - 'wavelength' (default): Returns in units of wavelength (m)
                 - 'frequency' : Returns in units of frequency (Hz)
@@ -118,6 +118,8 @@ class Beam:
                             'frequency':co.waveToFreq,
                             'ang_frequency':co.waveToAngFreq,
                             'energy':co.waveToeV}
+        if pixels is None:
+            pixels=self.indices
         wavelength=self.pixelToWavelength(pixels)
         return conversionFunction[unit](wavelength)
 
@@ -238,7 +240,7 @@ class Beam:
         '''
         return np.arange(self.beamHorizontalDelimiters[0],self.beamHorizontalDelimiters[1])
 
-    def get_sampledCurrentPhase(self,indices=None):
+    def get_sampledCurrentPhase(self,indices=None,mode='absolute'):
         '''
             Returns the current phase at the horizontal pixel indices provided
             input:
@@ -251,7 +253,7 @@ class Beam:
         if indices is None:
             indices=self.indices
         angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
-        return self.currentPhasePolynomial(angFreq)
+        return self.get_currentPhase(mode=mode)(angFreq)
 
 
     def get_optimalPhase(self):
