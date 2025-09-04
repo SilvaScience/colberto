@@ -313,7 +313,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
                 if self.isDemo:
-                    a = np.loadtxt('..\src\Chirp_dataset.txt')
+                    a = np.loadtxt(r'..\src\Chirp_dataset.txt')
                     self.wls = a[-1]
                     self.Chirp_data= a[-2]
                     for h in range(len(self.Chirp_data)):
