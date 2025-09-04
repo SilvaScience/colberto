@@ -311,7 +311,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>3</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -584,7 +584,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_spectral_calibration_box">
            <property name="geometry">
             <rect>
-             <x>40</x>
+             <x>20</x>
              <y>0</y>
              <width>231</width>
              <height>19</height>
@@ -917,19 +917,19 @@ p, li { white-space: pre-wrap; }
           </property>
           <property name="geometry">
            <rect>
-            <x>200</x>
-            <y>390</y>
-            <width>371</width>
-            <height>281</height>
+            <x>520</x>
+            <y>20</y>
+            <width>261</width>
+            <height>301</height>
            </rect>
           </property>
          </widget>
          <widget class="QGroupBox" name="Chirp_scan_groupbox">
           <property name="geometry">
            <rect>
-            <x>120</x>
-            <y>50</y>
-            <width>521</width>
+            <x>20</x>
+            <y>20</y>
+            <width>491</width>
             <height>301</height>
            </rect>
           </property>
@@ -953,10 +953,10 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="label_vertical_calibration_box_3">
            <property name="geometry">
             <rect>
-             <x>190</x>
-             <y>10</y>
+             <x>10</x>
+             <y>0</y>
              <width>131</width>
-             <height>41</height>
+             <height>21</height>
             </rect>
            </property>
            <property name="font">
@@ -971,8 +971,8 @@ p, li { white-space: pre-wrap; }
           <widget class="QLineEdit" name="Compression_carrier_wavelength">
            <property name="geometry">
             <rect>
-             <x>350</x>
-             <y>110</y>
+             <x>220</x>
+             <y>90</y>
              <width>113</width>
              <height>22</height>
             </rect>
@@ -984,22 +984,22 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="grating_period_label_8">
            <property name="geometry">
             <rect>
-             <x>310</x>
-             <y>70</y>
-             <width>201</width>
-             <height>31</height>
+             <x>20</x>
+             <y>90</y>
+             <width>191</width>
+             <height>21</height>
             </rect>
            </property>
            <property name="text">
-            <string>Compresion Carrier Wavelength</string>
+            <string>Compresion Carrier Wavelength [nm]:</string>
            </property>
           </widget>
           <widget class="QLineEdit" name="Chirp_min">
            <property name="geometry">
             <rect>
-             <x>60</x>
-             <y>230</y>
-             <width>113</width>
+             <x>220</x>
+             <y>140</y>
+             <width>81</width>
              <height>22</height>
             </rect>
            </property>
@@ -1010,9 +1010,9 @@ p, li { white-space: pre-wrap; }
           <widget class="QLineEdit" name="Chirp_max">
            <property name="geometry">
             <rect>
-             <x>220</x>
-             <y>230</y>
-             <width>113</width>
+             <x>310</x>
+             <y>140</y>
+             <width>81</width>
              <height>22</height>
             </rect>
            </property>
@@ -1023,10 +1023,10 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="grating_period_label_9">
            <property name="geometry">
             <rect>
-             <x>410</x>
-             <y>190</y>
-             <width>41</width>
-             <height>31</height>
+             <x>430</x>
+             <y>120</y>
+             <width>21</width>
+             <height>16</height>
             </rect>
            </property>
            <property name="text">
@@ -1036,10 +1036,10 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="grating_period_label_10">
            <property name="geometry">
             <rect>
-             <x>260</x>
-             <y>190</y>
-             <width>31</width>
-             <height>31</height>
+             <x>340</x>
+             <y>120</y>
+             <width>21</width>
+             <height>16</height>
             </rect>
            </property>
            <property name="text">
@@ -1049,10 +1049,10 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="grating_period_label_11">
            <property name="geometry">
             <rect>
-             <x>100</x>
-             <y>190</y>
-             <width>31</width>
-             <height>31</height>
+             <x>250</x>
+             <y>120</y>
+             <width>21</width>
+             <height>16</height>
             </rect>
            </property>
            <property name="text">
@@ -1062,9 +1062,9 @@ p, li { white-space: pre-wrap; }
           <widget class="QLineEdit" name="Chirp_step">
            <property name="geometry">
             <rect>
-             <x>370</x>
-             <y>230</y>
-             <width>113</width>
+             <x>400</x>
+             <y>140</y>
+             <width>81</width>
              <height>22</height>
             </rect>
            </property>
@@ -1075,10 +1075,10 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="Acquire_data_temp_calibration">
            <property name="geometry">
             <rect>
-             <x>60</x>
-             <y>90</y>
-             <width>141</width>
-             <height>41</height>
+             <x>20</x>
+             <y>60</y>
+             <width>111</width>
+             <height>21</height>
             </rect>
            </property>
            <property name="text">
@@ -1088,23 +1088,23 @@ p, li { white-space: pre-wrap; }
           <widget class="QLabel" name="grating_period_label_12">
            <property name="geometry">
             <rect>
-             <x>250</x>
-             <y>130</y>
-             <width>51</width>
-             <height>19</height>
+             <x>350</x>
+             <y>90</y>
+             <width>71</width>
+             <height>16</height>
             </rect>
            </property>
            <property name="text">
-            <string>Beam</string>
+            <string>Beam number:</string>
            </property>
           </widget>
           <widget class="QSpinBox" name="Beam_spin_box">
            <property name="geometry">
             <rect>
-             <x>250</x>
-             <y>160</y>
+             <x>430</x>
+             <y>90</y>
              <width>44</width>
-             <height>28</height>
+             <height>21</height>
             </rect>
            </property>
            <property name="minimum">
@@ -1120,10 +1120,10 @@ p, li { white-space: pre-wrap; }
           <widget class="QCheckBox" name="Chirp_calib_demo_mode_checkbox">
            <property name="geometry">
             <rect>
-             <x>360</x>
-             <y>20</y>
+             <x>170</x>
+             <y>60</y>
              <width>151</width>
-             <height>25</height>
+             <height>16</height>
             </rect>
            </property>
            <property name="text">
@@ -1133,6 +1133,338 @@ p, li { white-space: pre-wrap; }
             <bool>true</bool>
            </property>
           </widget>
+          <widget class="QPushButton" name="fit_temporal_calibration_button">
+           <property name="geometry">
+            <rect>
+             <x>370</x>
+             <y>230</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Fit chirp scan</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="assign_temporal_calibration_button">
+           <property name="geometry">
+            <rect>
+             <x>370</x>
+             <y>260</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Assign calibration</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_13">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>140</y>
+             <width>181</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Chirp scan parameters [fs^2/rad^2] :</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="SNR_threshold">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>200</y>
+             <width>81</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>SNR threshold :</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_temporal_calibration_box_measurement">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>30</y>
+             <width>231</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+             <weight>50</weight>
+             <bold>false</bold>
+             <underline>true</underline>
+            </font>
+           </property>
+           <property name="text">
+            <string>Measurement</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_temporal_calibration_box_fitting">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>170</y>
+             <width>231</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>12</pointsize>
+             <underline>true</underline>
+            </font>
+           </property>
+           <property name="text">
+            <string>Fitting</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="SNR_threshold_2">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>230</y>
+             <width>141</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Wavelength bandwidth [nm]:</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="SNR_temporal_calibration_button">
+           <property name="geometry">
+            <rect>
+             <x>370</x>
+             <y>200</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Apply SNR threshold</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_14">
+           <property name="geometry">
+            <rect>
+             <x>200</x>
+             <y>210</y>
+             <width>21</width>
+             <height>16</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Min</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="grating_period_label_15">
+           <property name="geometry">
+            <rect>
+             <x>290</x>
+             <y>210</y>
+             <width>21</width>
+             <height>16</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Max</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="Fitted_coefficients">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>260</y>
+             <width>91</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Fitted coefficients:</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Coefficient1">
+           <property name="geometry">
+            <rect>
+             <x>120</x>
+             <y>260</y>
+             <width>41</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Coefficient2">
+           <property name="geometry">
+            <rect>
+             <x>170</x>
+             <y>260</y>
+             <width>41</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Coefficient3">
+           <property name="geometry">
+            <rect>
+             <x>220</x>
+             <y>260</y>
+             <width>41</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Coefficient4">
+           <property name="geometry">
+            <rect>
+             <x>270</x>
+             <y>260</y>
+             <width>41</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Coefficient5">
+           <property name="geometry">
+            <rect>
+             <x>320</x>
+             <y>260</y>
+             <width>41</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>0</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="Wavelength_minimum_value">
+           <property name="geometry">
+            <rect>
+             <x>170</x>
+             <y>230</y>
+             <width>81</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>3000</number>
+           </property>
+           <property name="value">
+            <number>350</number>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="Wavelength_maximum_value">
+           <property name="geometry">
+            <rect>
+             <x>260</x>
+             <y>230</y>
+             <width>81</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>3000</number>
+           </property>
+           <property name="value">
+            <number>450</number>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="SNR_threshold_value">
+           <property name="geometry">
+            <rect>
+             <x>100</x>
+             <y>200</y>
+             <width>51</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="inputMethodHints">
+            <set>Qt::ImhDigitsOnly|Qt::ImhFormattedNumbersOnly</set>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>3000</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+           <property name="displayIntegerBase">
+            <number>10</number>
+           </property>
+          </widget>
+         </widget>
+         <widget class="GraphicsLayoutWidget" name="Chirp_selection" native="true">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>340</y>
+            <width>371</width>
+            <height>371</height>
+           </rect>
+          </property>
+         </widget>
+         <widget class="PlotWidget" name="Chirp_fit" native="true">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
+          <property name="geometry">
+           <rect>
+            <x>410</x>
+            <y>340</y>
+            <width>371</width>
+            <height>371</height>
+           </rect>
+          </property>
          </widget>
         </widget>
         <widget class="QWidget" name="parameter_tab">

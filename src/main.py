@@ -18,13 +18,13 @@ import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
-from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
-from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot
+from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
+from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration,ChirpCalibrationMeasurement
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, ChirpCalibrationMeasurement, FitTemporalBeamCalibration
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
@@ -101,6 +101,19 @@ class MainInterface(QtWidgets.QMainWindow):
         self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
         self.chirp_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'Chirp_plot_layout')
         
+        self.chirp_SNR_threshold_value = self.findChild(QtWidgets.QSpinBox,'SNR_threshold_value')
+        self.chirp_apply_SNR_button = self.findChild(QtWidgets.QPushButton, 'SNR_temporal_calibration_button')
+        self.chirp_min_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_minimum_value')
+        self.chirp_max_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_maximum_value')
+        self.chirp_fit_calibration_button = self.findChild(QtWidgets.QPushButton, 'fit_temporal_calibration_button')
+        self.chirp_coeff1 = self.findChild(QtWidgets.QLineEdit, 'Coefficient1')
+        self.chirp_coeff2 = self.findChild(QtWidgets.QLineEdit, 'Coefficient2')
+        self.chirp_coeff3 = self.findChild(QtWidgets.QLineEdit, 'Coefficient3')
+        self.chirp_coeff4 = self.findChild(QtWidgets.QLineEdit, 'Coefficient4')
+        self.chirp_coeff5 = self.findChild(QtWidgets.QLineEdit, 'Coefficient5')
+        self.chirp_assign_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_temporal_calibration_button')
+        self.chirp_selection_layout = self.findChild(pg.GraphicsLayoutWidget, 'Chirp_selection')
+        self.chirp_fit_layout = self.findChild(pg.PlotWidget, 'Chirp_fit')
         
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
@@ -137,6 +150,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
         self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
         self.ChirpCalibrationPlot= ChirpCalibrationPlot(self.chirp_calibration_image_layout)
+        self.ChirpSelectionPlot = ChirpSelectionPlot(self.chirp_selection_layout)
+        self.ChirpFitplot = ChirpFitPlot(self.chirp_fit_layout)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
@@ -225,6 +240,12 @@ class MainInterface(QtWidgets.QMainWindow):
         self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
         # Chirp calibration connect events
         self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
+        self.chirp_SNR_threshold_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
+        self.chirp_min_wavelength_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
+        self.chirp_max_wavelength_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
+        self.chirp_apply_SNR_button.clicked.connect(self.applySNRthreshold)
+        self.chirp_fit_calibration_button.clicked.connect(self.fitChirpMeasurement)
+        self.chirp_assign_calibration_button.clicked.connect(self.assignTemporalCalibration)
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
@@ -437,24 +458,69 @@ class MainInterface(QtWidgets.QMainWindow):
                 table.setItem(row_index,col_index,None)
                 
     def chirpCalibrationMeasurement(self):
-            '''
-                 Sets up and starts a spectral Beam Calibration.
-            ''' 
-            if not self.measurement_busy:
-                self.measurement_busy = True
-                if 'ALL' in self.DataHandling.get_beams():
-                    beam_=self.DataHandling.get_beams()['ALL']
-                else:
-                    beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
-                self.DataHandling.clear_data()         
-                self.measurement= ChirpCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.beam_spinbox.value(),float(self.compression_carrier_wavelength_Qline.text()),float(self.chirp_step_Qline.text()),float(self.chirp_max_Qline.text()),float(self.chirp_min_Qline.text()),demo=self.chirp_calib_demo_mode_checkbox.isChecked(),beam=beam_)
-                self.measurement.sendProgress.connect(self.set_progress)
-                self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-                self.measurement.send_Chirp_calibration_data.connect(self.DataHandling.add_calibration)
-                self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
-                self.measurement.start()
+        '''
+            Sets up and starts a temporal Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            if 'ALL' in self.DataHandling.get_beams():
+                beam_= self.DataHandling.get_beams()['ALL']
             else:
-                print('Measurement not started, devices are busy')
+                beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+            self.DataHandling.clear_data()         
+            self.measurement = ChirpCalibrationMeasurement(self.devices, self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
+            self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+            #self.measurement.send_chirp.connect(self.temporalfitting.set_SNR)
+            self.temporalfitting.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
+            self.temporalfitting.send_chirp_region.connect(self.ChirpSelectionPlot.set_data)
+            self.temporalfitting.send_chirp_fit.connect(self.ChirpFitplot.set_data)
+            self.temporalfitting.send_polynomial.connect(self.ChirpFitplot.set_fit)
+            self.temporalfitting.send_chirp_calibration_fit.connect(self.DataHandling.add_calibration)
+            self.measurement.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def applySNRthreshold(self):
+        '''
+            Apply the SNR on the chirp scan and show the desired wavelength bandwidth.
+        '''
+        if hasattr(self, 'temporalfitting'):
+            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
+            self.temporalfitting.set_SNR(temporal_calib_dict['wavelengths'], temporal_calib_dict['Chirp'], temporal_calib_dict['data'], self.chirp_SNR_threshold_value.value())
+    
+    def update_temporal_calibration_boundaries(self):
+        '''
+            Updates the boundaries to consider when processing temporal calibration data
+        ''' 
+        if hasattr(self, 'temporalfitting'):
+            try: 
+                self.temporalfitting.set_boundaries([self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value())
+            except KeyError:
+                print('Unexpected error. There should be a temporal_calibration_raw_data key in the calibration dict in Datahandling')
+
+    def fitChirpMeasurement(self):
+        '''
+            Fit the chirp scan to a polynomial function up to the fifth order.
+        ''' 
+        if hasattr(self, 'temporalfitting'):
+            temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
+            coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'])
+            self.chirp_coeff1.setText(str(int(coeffs[1])))
+            self.chirp_coeff2.setText(str(int(coeffs[2])))
+            self.chirp_coeff3.setText(str(int(coeffs[3])))
+            self.chirp_coeff4.setText(str(int(coeffs[4])))
+            self.chirp_coeff5.setText(str(int(coeffs[5])))
+
+    def assignTemporalCalibration(self):
+        '''
+            Assign the polynomial calibration to the beam.
+            TO BE DONE LATER
+        ''' 
+        return
 
     def assign_vertical_beam_calibration(self):
         '''
