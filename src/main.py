@@ -105,6 +105,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.chirp_apply_SNR_button = self.findChild(QtWidgets.QPushButton, 'SNR_temporal_calibration_button')
         self.chirp_min_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_minimum_value')
         self.chirp_max_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_maximum_value')
+        self.chirp_polynomial_order_value = self.findChild(QtWidgets.QSpinBox, 'Polynomial_order_value')
         self.chirp_fit_calibration_button = self.findChild(QtWidgets.QPushButton, 'fit_temporal_calibration_button')
         self.chirp_coeff1 = self.findChild(QtWidgets.QLineEdit, 'Coefficient1')
         self.chirp_coeff2 = self.findChild(QtWidgets.QLineEdit, 'Coefficient2')
@@ -508,12 +509,12 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
-            coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'])
-            self.chirp_coeff1.setText(str(int(coeffs[1])))
-            self.chirp_coeff2.setText(str(int(coeffs[2])))
-            self.chirp_coeff3.setText(str(int(coeffs[3])))
-            self.chirp_coeff4.setText(str(int(coeffs[4])))
-            self.chirp_coeff5.setText(str(int(coeffs[5])))
+            coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value())
+            print(len(coeffs))
+            line_edits = [self.chirp_coeff1, self.chirp_coeff2, self.chirp_coeff3, self.chirp_coeff4, self.chirp_coeff5]
+            coeffs = list(coeffs)[:6] + [0] * (6 - len(coeffs)) # ensure coeffs has exactly 5 elements, padding with zeros if needed
+            for i in range(1, 6):
+                line_edits[i - 1].setText(str(int(coeffs[i])))
 
     def assignTemporalCalibration(self):
         '''
