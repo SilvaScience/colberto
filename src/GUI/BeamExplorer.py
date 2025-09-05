@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QTableWidget,QSpinBox,QCheckBox, QTableWidgetItem
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QTableWidget,QSpinBox,QCheckBox, QTableWidgetItem, QLineEdit
 from PyQt5 import QtCore,uic
 import sys
 import os
@@ -72,6 +72,9 @@ class BeamWidget(QWidget):
         self.apply_pushbutton=self.findChild(QPushButton,'apply_pushbutton')
         self.beam_label=self.findChild(QLabel,'beam_label')
         self.grating_period=self.findChild(QSpinBox,'grating_period_value')
+        self.lambda_comp=self.findChild(QLineEdit,'lambda_comp_box')
+        self.lambda_delay=self.findChild(QLineEdit,'lambda_delay_box')
+        self.grating_amplitude=self.findChild(QLineEdit,'grating_amplitude_lineedit')
         self.delimiter_table=self.findChild(QTableWidget,'delimiter_table_widget')
         self.phase_coeff_table=self.findChild(QTableWidget,'phase_coeff_table')
         self.relative_checkbox=self.findChild(QCheckBox,'relative_checkbox')
@@ -97,6 +100,9 @@ class BeamWidget(QWidget):
         """
         self.beam_label.setText(self.name)
         self.grating_period.setValue(self.beam.get_gratingPeriod())
+        self.grating_amplitude.setValue(str(self.beam.get_gratingAmplitude()))
+        self.lambda_comp.setValue(str(self.beam.get_compressionCarrier(unit='wavelength')))
+        self.lambda_delay.setValue(str(self.beam.get_delayCarrier(unit='wavelength')))
         if self.relative_checkbox.isChecked():
             mode='relative'
         else:
@@ -117,12 +123,39 @@ class BeamWidget(QWidget):
             mode='absolute'
         self.graphlayout.clear()
         self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
-        
+
+    def toggle_beam_to_slm(self):
+        '''
+           Toggle wether the current settings of the beam are sent to the SLM. 
+        '''
+
     def update_beam(self):
         '''
             Signifies the BeamExplorer that the beam has changed
         '''
+        self.beam.set_gratingPeriod(self.grating_period.getValue())
+        self.beam.set_gratingAmplitude(self.grating_amplitude.getValue())
+        self.beam.set_compressionCarrierWave(self.lambda_comp.getValue())
+        self.beam.set_delayCarrierWave(self.lambda_delay.getValue())
+        if self.relative_checkbox.isChecked():
+            mode='relative'
+        else:
+            mode='absolute'
+        self.beam.set_beamVerticalDelimiters([self.delimiter_table.item(0,0).int(),self.delimiter_table.item(0,1).int()])
+        self.beam.set_beamHorizontalDelimiters([self.delimiter_table.item(1,0).int(),self.delimiter_table.item(1,1).int()])
+        [self.phase_coeff_table.setItem(0,i,QTableWidgetItem(str(coeff))) for i,coeff in enumerate(self.beam.get_optimalPhase().coef)]
+        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem(str(coeff))) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coef)]
+        # grab all displayed parameters
+        ## grab grating period
+        self.beam.
+        ## grab horizontal delimiters 
+        ## grab vertical delimiters 
+        ## grab optimal phase coeff 
+        ## grab current phase coeff 
+        ## grab applied 
+
         self.beam_changed.emit((self.name,self.beam))
+        
 
     @QtCore.pyqtSlot()
     def stop(self):

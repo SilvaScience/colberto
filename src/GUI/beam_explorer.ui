@@ -112,9 +112,9 @@
   <widget class="PlotWidget" name="beam_plot" native="true">
    <property name="geometry">
     <rect>
-     <x>170</x>
+     <x>310</x>
      <y>140</y>
-     <width>391</width>
+     <width>281</width>
      <height>81</height>
     </rect>
    </property>
@@ -179,6 +179,81 @@
    </property>
    <property name="maximum">
     <number>999</number>
+   </property>
+  </widget>
+  <widget class="QLabel" name="grating_amplitude_label">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>10</y>
+     <width>161</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Grating amplitude (2 pi)</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="grating_amplitude_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>510</x>
+     <y>0</y>
+     <width>41</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lambda_comp_box">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>130</y>
+     <width>41</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lambda_comp_label">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>140</y>
+     <width>51</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>λ comp.</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lambda_delay_label">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>170</y>
+     <width>51</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>λ delay</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lambda_delay_box">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>160</y>
+     <width>41</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
    </property>
   </widget>
  </widget>

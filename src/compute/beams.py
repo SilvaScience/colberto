@@ -30,8 +30,8 @@ class Beam:
         self.beamHorizontalDelimiters=[0,SLMWidth]
         self.beamVerticalDelimiters=[0,SLMHeight]
         self.make_mask()
-        self.set_optimalPhase(P([0]))
-        self.set_currentPhase(P([0]))
+        self.set_optimalPhase(P([0,0,0]))
+        self.set_currentPhase(P([0,0,0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
         self.indices=self.get_horizontalIndices()
