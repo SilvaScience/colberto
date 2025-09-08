@@ -7,13 +7,13 @@
     <x>0</x>
     <y>0</y>
     <width>601</width>
-    <height>240</height>
+    <height>220</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
     <width>600</width>
-    <height>240</height>
+    <height>220</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -24,8 +24,8 @@
     <rect>
      <x>10</x>
      <y>30</y>
-     <width>401</width>
-     <height>101</height>
+     <width>461</width>
+     <height>91</height>
     </rect>
    </property>
    <attribute name="horizontalHeaderDefaultSectionSize">
@@ -76,21 +76,13 @@
      <height>19</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Beam NAME</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="apply_pushbutton">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>160</y>
-     <width>161</width>
-     <height>61</height>
-    </rect>
+   <property name="font">
+    <font>
+     <pointsize>20</pointsize>
+    </font>
    </property>
    <property name="text">
-    <string>APPLY</string>
+    <string>NAME</string>
    </property>
   </widget>
   <widget class="QCheckBox" name="relative_checkbox">
@@ -108,23 +100,26 @@
    <property name="text">
     <string>Relative</string>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
   </widget>
   <widget class="PlotWidget" name="beam_plot" native="true">
    <property name="geometry">
     <rect>
-     <x>310</x>
-     <y>140</y>
-     <width>281</width>
-     <height>81</height>
+     <x>280</x>
+     <y>120</y>
+     <width>311</width>
+     <height>101</height>
     </rect>
    </property>
   </widget>
   <widget class="QTableWidget" name="delimiter_table_widget">
    <property name="geometry">
     <rect>
-     <x>420</x>
+     <x>480</x>
      <y>30</y>
-     <width>181</width>
+     <width>121</width>
      <height>91</height>
     </rect>
    </property>
@@ -133,12 +128,12 @@
    </attribute>
    <row>
     <property name="text">
-     <string>Vertical</string>
+     <string>V</string>
     </property>
    </row>
    <row>
     <property name="text">
-     <string>Horizontal</string>
+     <string>H</string>
     </property>
    </row>
    <column>
@@ -254,6 +249,19 @@
    </property>
    <property name="text">
     <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="mask_pushbutton">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>160</y>
+     <width>161</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>MASK OFF</string>
    </property>
   </widget>
  </widget>

@@ -324,7 +324,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>5</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -1332,6 +1332,19 @@ Start:Stepnumber:Stop  Start:Stepnum...
            </property>
           </widget>
          </widget>
+         <widget class="QPushButton" name="send_test_beams">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>560</y>
+            <width>201</width>
+            <height>27</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Send test beams</string>
+          </property>
+         </widget>
         </widget>
        </widget>
       </item>
@@ -1344,7 +1357,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1135</width>
+     <width>1217</width>
      <height>24</height>
     </rect>
    </property>

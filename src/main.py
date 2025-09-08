@@ -11,6 +11,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
+from numpy.polynomial import Polynomial as P
 from PyQt5 import QtCore, QtWidgets, uic
 import pyqtgraph as pg
 from functools import partial
@@ -157,6 +158,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
+        
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -225,6 +227,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
         #start Beam explorer
         self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
+        
         self.show_beam_explorer()
 
         # start Updater to update device read parameters
@@ -274,6 +277,12 @@ class MainInterface(QtWidgets.QMainWindow):
         self.SLM.write_image(test_image)
         # Beam update connection
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
+        #Beam Explorer related
+        self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
+        self.beam_explorer.phase_image.connect(self.SLM.write_image)
+            #only for testing the beam explorer
+        self.assign_demo_beams_button= self.findChild(QtWidgets.QPushButton, 'send_test_beams')
+        self.assign_demo_beams_button.clicked.connect(self.assign_demo_beams)
         # run some functions once to define default values
         self.change_filename()
 
@@ -608,6 +617,20 @@ class MainInterface(QtWidgets.QMainWindow):
         """
         logger.info('%s'%self.beam_explorer)
         self.beam_explorer.show()
+    
+    def assign_demo_beams(self):
+        """
+            Assigns some beams to the DataHandling to test the BeamExplorer
+        """
+        labels=['LO','A','B','C']
+        demo_beam_dict={}
+        for i,label in enumerate(labels):
+            demo_beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+            demo_beam.set_optimalPhase(P([0,100,2000,3000,-400]))
+            demo_beam.set_gratingPeriod(25)
+            demo_beam.set_beamVerticalDelimiters([i*300,(i+1)*300-1])
+            demo_beam_dict[label]=demo_beam
+        [self.DataHandling.set_beam((beamname,beam)) for beamname,beam in demo_beam_dict.items()]
 
 
 

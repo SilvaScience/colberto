@@ -162,6 +162,7 @@ class Slm(QtCore.QThread):
                 image: (2d.array of float) The image 
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
         """
+        logger.info('Just received an image of %d by %d'%image.shape)
         self.slm_worker.change_image(image,imagetype=imagetype)
 
 
