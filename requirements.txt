@@ -7,3 +7,4 @@ pillow
 requests
 pandas
 h5py
+scipy
