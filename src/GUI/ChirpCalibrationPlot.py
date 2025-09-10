@@ -155,7 +155,7 @@ class ChirpFitPlot(QtWidgets.QMainWindow):
         self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         self.graphWidget.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
         self.graphWidget.setLabel('left', 'Chirp at max intensity [fs²/rad²]', **self.styles)
-        self.graphWidget.setLabel('bottom', 'Frequency relative to max intensity [THz]', **self.styles)
+        self.graphWidget.setLabel('bottom', 'Frequency relative [THz]', **self.styles)
         self.graphWidget.showGrid(True, True)
         # Clear data to show plot
         self.clear_plot()
