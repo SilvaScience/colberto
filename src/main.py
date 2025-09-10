@@ -11,33 +11,41 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
-import pyqtgraph as pg
 from PyQt5 import QtCore, QtWidgets, uic
+import pyqtgraph as pg
 from functools import partial
+import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
+from GUI.VerticalCalibPlot import VerticalCalibPlot
+from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
+from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
+from GUI.SLMDisplay import SLMDisplay
 from drivers.CryoDemo import CryoDemo
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
+from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
-
-from drivers.Slm_Meadowlark_optics import SLM
-from drivers.Slm_Meadowlark_optics import ImageGen
-
 from drivers.StresingDemo import StresingDemo
 from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
-from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, \
-    ViewMeasurement, KineticMeasurement
+from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration,ChirpCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
+from compute.beams import Beam
+import logging
+import datetime
 
+logger = logging.getLogger(__name__)
 
 class MainInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainInterface, self).__init__()
         project_folder = Path(__file__).parent.resolve()
-        uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
+        uic.loadUi(Path(project_folder, r'GUI/main_GUI.ui'), self)
+        logging.basicConfig(filename='main.log', level=logging.INFO)
+        logger.info('%s Started log' % datetime.datetime.now())
 
         # fancy name
         self.setWindowTitle('COLBERTo')
@@ -50,39 +58,47 @@ class MainInterface(QtWidgets.QMainWindow):
         Illustrates use of parameters"""
         # always try to include communication on important events.
         # This is extremely useful for debugging and troubleshooting.
-        print('WARNING you are using a DEMO version of the cryostat')
-        self.cryostat = CryoDemo() # launch cryostat interface
-        self.devices['cryostat'] = self.cryostat # store in global device dict.
+        logger.warning('%s You are using a DEMO version of the cryostat' % datetime.datetime.now())
+        self.cryostat = CryoDemo()  # launch cryostat interface
+        self.devices['cryostat'] = self.cryostat  # store in global device dict.
 
         # initialize Spectrometer
-        self.spectrometer = SpectrometerDemo()
-        self.spec_length = self.spectrometer.spec_length
-        self.devices['spectrometer'] = self.spectrometer
-        print('Spectrometer connection failed, use DEMO')
+        try:
+            from drivers.OceanSpectrometer import OceanSpectrometer
+            self.spectrometer = OceanSpectrometer()
+            self.spectrometer.start()
+            self.spec_length = self.spectrometer.spec_length
+            self.devices['spectrometer'] = self.spectrometer
+            logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
+        except:
+            self.spectrometer = SpectrometerDemo()
+            self.spec_length = self.spectrometer.spec_length
+            self.devices['spectrometer'] = self.spectrometer
+            logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
 
-        # initialize SLMDemo
-        self.SLM = SLMDemo()
-        self.devices['SLM'] = self.SLM
-        print('SLMDemo connected')
-
-        # initialize ImageGen
-        folder_path = Path(__file__).resolve().parent.parent
-        path_image_gen = folder_path / "src" / "drivers" / "SDK" / "ImageGen.dll"  # Path to the DLL file
-        path_image_gen = str(path_image_gen)
-
-        self.ImageGen = ImageGen(path_image_gen)
-        self.devices['ImageGen'] = self.ImageGen
-        print('ImageGen connected')
+        # initialize SLM
+        try:
+            from samples.drivers.exemple_image_generation import beam_image_gen
+            # raise Exception('DEMO')
+            self.SLM = Slm()
+            self.devices['SLM'] = self.SLM
+            logger.info('%s SLM connected' % datetime.datetime.now())
+        except Exception as e:
+            self.SLM = SLMDemo()
+            self.devices['SLM'] = self.SLM
+            logger.error('%s SLM initialization failed at interface startup. Error type %s' % (
+            datetime.datetime.now(), str(e)))
+            logger.info('%s SLMDemo connected' % datetime.datetime.now())
 
         # initialize StresingDemo
         self.Stresing = StresingDemo()
         self.devices['Stresing'] = self.Stresing
-        print('Stresing connected')
+        logger.info('%s Stresing connected'%datetime.datetime.now())
 
         # initialize MonochromDemo
         self.Monochrom = MonochromDemo() 
         self.devices['Monochrom'] = self.Monochrom 
-        print('Monochrom DEMO connected')
+        logger.info('%s Monochrom DEMO connected'%datetime.datetime.now())
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -102,20 +118,57 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_file_indicator = self.findChild(QtWidgets.QLineEdit, 'bg_file_lineEdit')
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
+        self.grating_period_edit = self.findChild(QtWidgets.QSpinBox, 'grating_period_spin_box')
+        # Spatial calibration tab
+        ## Vertical calibration tab
+        self.spatial_calib_demo_mode_checkbox = self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
+        self.spatial_calibration_tab = self.findChild(QtWidgets.QWidget, 'spatial_tab')
+        self.vertical_calibration_box = self.findChild(QtWidgets.QGroupBox, 'vertical_calibration_groupbox')
+        self.vertical_calibration_plot_layout = self.findChild(pg.PlotWidget, 'vertical_calib_plot_layout')
+        self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
+        self.assign_beams_vertical_delimiters_button = self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
+        self.beam_vertical_delimiters_table = self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
+        self.row_increment = self.findChild(QtWidgets.QSpinBox, 'row_increment_spin_box')
+        ## Spectral calibration tab
+        self.column_increment_spinbox = self.findChild(QtWidgets.QSpinBox, 'column_increment_spin_box')
+        self.column_width_spinbox = self.findChild(QtWidgets.QSpinBox, 'column_width_spin_box')
+        self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
+        self.spectral_calibration_image_layout = self.findChild(pg.GraphicsLayoutWidget, 'spectral_calib_plot_layout')
+        self.shortest_fitting_wave_spin_box = self.findChild(QtWidgets.QSpinBox, 'shortest_fitting_wave_spin_box')
+        self.longest_fitting_wave_spin_box = self.findChild(QtWidgets.QSpinBox, 'longest_fitting_wave_spin_box')
+        self.spectral_fit_polynomial_order_spinbox = self.findChild(QtWidgets.QSpinBox, 'polynomial_order_spin_box')
+        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton,
+                                                                 'fit_spectral_calibration_button')
+        self.spectral_calibration_fit_plot_layout = self.findChild(pg.PlotWidget, 'spectral_calib_fit_plot_layout')
+        self.spectral_calibration_fit_residual_plot_layout = self.findChild(pg.PlotWidget,
+                                                                            'spectral_calib_fit_residual_plot_layout')
+        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton,
+                                                                 'assign_spectral_calibration_button')
+
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
-        self.SLM_tab = self.findChild(QtWidgets.QWidget, 'SLM_tab')
+        ## Temp calibration tab
+        self.beam_spinbox = self.findChild(QtWidgets.QSpinBox, 'Beam_spin_box')
+        self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit,
+                                                                   'Compression_carrier_wavelength')
+        self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
+        self.chirp_max_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_max')
+        self.chirp_min_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_min')
+        self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
+        self.chirp_calibration_image_layout = self.findChild(pg.GraphicsLayoutWidget, 'Chirp_plot_layout')
 
-        #LUT Calibration - Utilities
+        # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
         self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
         self.LUT_calib_spectra_avg_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_spectra_avg_spinBox')
         self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
-        self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget,'LUT_calib_plot_layout')
+        self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout')
         self.measure_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'measure_LUT_calib')
         self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
         self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
         self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+        # SLM Related
+        self.slm_display = self.findChild(pg.GraphicsLayoutWidget, 'slm_display')
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -135,10 +188,13 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox.addWidget(self.ParameterPlot)
         self.parameter_tab.setLayout(vbox)
 
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.SLM)
-        self.SLM_tab.setLayout(vbox)
-        self.LUT_Calib_plot= LUT_Calib_plot(self.LUT_calib_plot_layout)
+        self.VerticalCalibPlot = VerticalCalibPlot(self.vertical_calibration_plot_layout)
+        self.SpectralCalibDataPlot = SpectralCalibDataPlot(self.spectral_calibration_image_layout)
+        self.SpectralCalibrationFitPlot = SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,
+                                                               self.spectral_calibration_fit_residual_plot_layout)
+        self.ChirpCalibrationPlot = ChirpCalibrationPlot(self.chirp_calibration_image_layout)
+        self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
+        self.slm_display_plot = SLMDisplay(self.slm_display)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
