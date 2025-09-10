@@ -107,11 +107,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.chirp_max_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_maximum_value')
         self.chirp_polynomial_order_value = self.findChild(QtWidgets.QSpinBox, 'Polynomial_order_value')
         self.chirp_fit_calibration_button = self.findChild(QtWidgets.QPushButton, 'fit_temporal_calibration_button')
-        self.chirp_coeff1 = self.findChild(QtWidgets.QLineEdit, 'Coefficient1')
-        self.chirp_coeff2 = self.findChild(QtWidgets.QLineEdit, 'Coefficient2')
-        self.chirp_coeff3 = self.findChild(QtWidgets.QLineEdit, 'Coefficient3')
-        self.chirp_coeff4 = self.findChild(QtWidgets.QLineEdit, 'Coefficient4')
-        self.chirp_coeff5 = self.findChild(QtWidgets.QLineEdit, 'Coefficient5')
+        self.chirp_coeff = self.findChild(QtWidgets.QTextEdit, 'Chirp_fitted_coefficients')
         self.chirp_assign_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_temporal_calibration_button')
         self.chirp_selection_layout = self.findChild(pg.GraphicsLayoutWidget, 'Chirp_selection')
         self.chirp_fit_layout = self.findChild(pg.PlotWidget, 'Chirp_fit')
@@ -509,12 +505,10 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
-            coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value())
-            print(len(coeffs))
-            line_edits = [self.chirp_coeff1, self.chirp_coeff2, self.chirp_coeff3, self.chirp_coeff4, self.chirp_coeff5]
-            coeffs = list(coeffs)[:6] + [0] * (6 - len(coeffs)) # ensure coeffs has exactly 5 elements, padding with zeros if needed
-            for i in range(1, 6):
-                line_edits[i - 1].setText(str(int(coeffs[i])))
+            coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
+            poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x^{i}" for i in range(len(coeffs)))
+            lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2f} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs)]
+            self.chirp_coeff.setText('\n'.join(lines))
 
     def assignTemporalCalibration(self):
         '''

@@ -437,7 +437,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         self.SNR_threshold = SNR_threshold
         self.set_SNR(self.wavelength_array, self.chirp_array, self.data, self.SNR_threshold)
 
-    def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg):
+    def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg, carrier_wavelength):
         '''
             Fit the polynomial 
                 - columns: (nd.array) array of SLM columns indices
@@ -468,14 +468,16 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         # Convert wavelengts to frequency [Hz]
         c = 3e8 # speed of light in m/s
         freqs_values = c / (np.array(wavelength_values) * 1e-9) # Hz
-        freq_at_max_iintensity = c / (wavelength_at_max_intensity * 1e-9) # Hz
+        #freq_at_max_iintensity = c / (wavelength_at_max_intensity * 1e-9) # Hz
+        carrier_freq_SHG = c / (carrier_wavelength/2 * 1e-9) # Hz
 
-        # Shift frequencies so max intensity freq is at zero
-        freqs_shifted = freqs_values-freq_at_max_iintensity
+        # Shift frequencies so carrier frequency is at zero
+        #freqs_shifted = freqs_values-freq_at_max_iintensity
+        freqs_shifted = freqs_values-carrier_freq_SHG
         freqs_shifted_THz = freqs_shifted * 1e-12 # THz
 
-        # Fit a 5th order polynimial
-        self.fit_polynomial=Polynomial.fit(freqs_shifted_THz, max_chirp_values, deg)
+        # Fit a nth order polynimial
+        self.fit_polynomial = Polynomial.fit(freqs_shifted_THz, max_chirp_values, deg)
         self.send_chirp_fit.emit(freqs_shifted_THz, max_chirp_values)
         self.send_polynomial.emit(self.fit_polynomial)
         self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
