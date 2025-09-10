@@ -1,4 +1,4 @@
-class SLM:
+class SLM2:
     """
     Bogus SLM class until we have a real one 
     """
