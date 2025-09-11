@@ -24,7 +24,7 @@ from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, ChirpCalibrationMeasurement, FitTemporalBeamCalibration
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, ChirpAcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
@@ -98,6 +98,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
         self.chirp_max_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_max')
         self.chirp_min_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_min')
+        self.background_chirp_data_runbutton = self.findChild(QtWidgets.QPushButton, 'Background_data_temp_calibration')
         self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
         self.chirp_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'Chirp_plot_layout')
         
@@ -236,6 +237,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.generate_LUT_calib_button.clicked.connect(
         self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
         # Chirp calibration connect events
+        self.background_chirp_data_runbutton.clicked.connect(self.chirpBackgroundMeasurement)
         self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
         self.chirp_SNR_threshold_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
         self.chirp_min_wavelength_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
@@ -454,6 +456,15 @@ class MainInterface(QtWidgets.QMainWindow):
             except ValueError:
                 table.setItem(row_index,col_index,None)
                 
+    def chirpBackgroundMeasurement(self):
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.background = ChirpAcquireBackground(self.devices)
+            self.background.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.background.send_background.connect(self.DataHandling.add_calibration)
+            self.background.sendProgress.connect(self.set_progress)
+            self.background.start()
+    
     def chirpCalibrationMeasurement(self):
         '''
             Sets up and starts a temporal Beam Calibration.
@@ -464,8 +475,9 @@ class MainInterface(QtWidgets.QMainWindow):
                 beam_= self.DataHandling.get_beams()['ALL']
             else:
                 beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
-            self.DataHandling.clear_data()         
-            self.measurement = ChirpCalibrationMeasurement(self.devices, self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
+            self.DataHandling.clear_data() 
+            background = self.DataHandling.calibration['chirp_background_data']  
+            self.measurement = ChirpCalibrationMeasurement(self.devices, background['spec'], self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
             self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
@@ -487,7 +499,7 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
-            self.temporalfitting.set_SNR(temporal_calib_dict['wavelengths'], temporal_calib_dict['Chirp'], temporal_calib_dict['data'], self.chirp_SNR_threshold_value.value())
+            self.temporalfitting.set_SNR(temporal_calib_dict['wavelengths'], temporal_calib_dict['Chirp'], temporal_calib_dict['data'], self.chirp_SNR_threshold_value.value()/10)
     
     def update_temporal_calibration_boundaries(self):
         '''
@@ -495,7 +507,7 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         if hasattr(self, 'temporalfitting'):
             try: 
-                self.temporalfitting.set_boundaries([self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value())
+                self.temporalfitting.set_boundaries([self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value()/10)
             except KeyError:
                 print('Unexpected error. There should be a temporal_calibration_raw_data key in the calibration dict in Datahandling')
 

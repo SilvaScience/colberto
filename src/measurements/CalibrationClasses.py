@@ -263,6 +263,37 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.send_polynomial.emit(self.fit_polynomial)
         self.send_spectral_calibration_fit.emit(('spectral_calibration_fit',self.fit_polynomial))
         
+class ChirpAcquireBackground(QtCore.QThread):
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendProgress = QtCore.pyqtSignal(float)
+    send_background = QtCore.pyqtSignal(tuple)
+
+    def __init__(self, devices):
+        
+        super(ChirpAcquireBackground, self).__init__()
+        self.terminate = False
+        self.acquire_measurement = True
+        self.spectrometer = devices['spectrometer']
+        self.background = []
+
+    def run(self):
+        self.wls = self.spectrometer.get_wavelength()
+        self.background = np.array(self.spectrometer.get_intensities())
+        self.sendProgress.emit(50)
+        self.background = np.array(self.spectrometer.get_intensities())
+        self.background_data = {
+                                'spec' : self.background,
+                                'wavelengths' : self.wls,
+                                }
+        self.send_background.emit(('chirp_background_data', self.background_data))
+        self.sendSpectrum.emit(self.wls, self.background)
+        logger.info(time.strftime('%H:%M:%S') + ' Finished')
+        self.sendProgress.emit(100)
+        self.stop()
+
+    def stop(self):
+        self.terminate = True
+        print(time.strftime('%H:%M:%S') + ' Request Stop')
 
 class ChirpCalibrationMeasurement(QtCore.QThread):
     '''
@@ -278,7 +309,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     send_chirp_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min,beam,demo=False):
+    def __init__(self,devices, background,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min,beam,demo=False):
         '''
          Initializes the semporal beam calibration measurement
          input:
@@ -293,8 +324,8 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         
         ### i dont know what to do with beam_ position
         
-        self.spectra = []  # preallocate spec array
         self.wls = self.spectrometer.get_wavelength()
+        self.background = background
         self.spectra = []  # preallocate spec array
         self.terminate = False
         self.acquire_measurement = True
@@ -374,9 +405,12 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
     def take_spectrum(self,i):
+        if i == 0: 
+            self.spec = np.array(self.spectrometer.get_intensities())
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
-            self.sendSpectrum.emit(self.wls, self.spec)
+            self.background_subtraction = self.spec-self.background
+            self.sendSpectrum.emit(self.wls, self.background_subtraction)
 
 class FitTemporalBeamCalibration(QtCore.QThread):
     '''
@@ -414,10 +448,10 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         SNR = self.data/noise_level
         data_filtered = np.where(SNR >= SNR_threshold, self.data, 0) # Replace data with SNR below threshold with 0. 
 
-        chirp_array_region = chirp_array[1:-1]
+        chirp_array_region = chirp_array[5:-5]
         mask = np.logical_and(wavelength_array >= boundaries[0], wavelength_array <= boundaries[1])
         wavelength_array_region = wavelength_array[mask]
-        data_filtered_region = data_filtered[1:-1, mask]
+        data_filtered_region = data_filtered[5:-5, mask]
 
         self.send_chirp_region.emit(chirp_array_region, wavelength_array_region, data_filtered_region)
         self.temporal_calibration_processed_data={

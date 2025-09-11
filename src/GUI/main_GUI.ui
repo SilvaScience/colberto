@@ -887,7 +887,7 @@ p, li { white-space: pre-wrap; }
            <number>2</number>
           </property>
           <property name="value">
-           <number>35</number>
+           <number>50</number>
           </property>
          </widget>
          <widget class="QCheckBox" name="spatial_calib_demo_mode_checkbox">
@@ -1075,7 +1075,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QPushButton" name="Acquire_data_temp_calibration">
            <property name="geometry">
             <rect>
-             <x>20</x>
+             <x>140</x>
              <y>60</y>
              <width>111</width>
              <height>21</height>
@@ -1120,9 +1120,9 @@ p, li { white-space: pre-wrap; }
           <widget class="QCheckBox" name="Chirp_calib_demo_mode_checkbox">
            <property name="geometry">
             <rect>
-             <x>160</x>
+             <x>280</x>
              <y>60</y>
-             <width>151</width>
+             <width>81</width>
              <height>16</height>
             </rect>
            </property>
@@ -1177,12 +1177,12 @@ p, li { white-space: pre-wrap; }
             <rect>
              <x>20</x>
              <y>200</y>
-             <width>81</width>
+             <width>101</width>
              <height>21</height>
             </rect>
            </property>
            <property name="text">
-            <string>SNR threshold :</string>
+            <string>SNR threshold  [/10]:</string>
            </property>
           </widget>
           <widget class="QLabel" name="label_temporal_calibration_box_measurement">
@@ -1324,7 +1324,7 @@ p, li { white-space: pre-wrap; }
           <widget class="QSpinBox" name="SNR_threshold_value">
            <property name="geometry">
             <rect>
-             <x>100</x>
+             <x>130</x>
              <y>200</y>
              <width>51</width>
              <height>21</height>
@@ -1405,6 +1405,19 @@ p, li { white-space: pre-wrap; }
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Equation:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="Background_data_temp_calibration">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>60</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Background</string>
            </property>
           </widget>
          </widget>
