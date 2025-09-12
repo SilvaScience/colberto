@@ -21,7 +21,8 @@ import time
 
 class SpectrometerDemo(QtCore.QThread):
 
-    name = 'Spectrometer'
+    name = 'DemoSpectrometer_simple'
+    type = 'Spectrometer'
     
     def __init__(self):
         super(SpectrometerDemo, self).__init__()

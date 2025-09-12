@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
 
 class SLMDemo(QtCore.QThread):
     """ Interface to the SLM worker thread."""
-    name = 'SLM'
+    name = 'DemoSLM'
+    type= 'SLM'
 
     def __init__(self):
         super(SLMDemo, self).__init__()

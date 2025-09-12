@@ -14,7 +14,8 @@ import time
 
 class MonochromatorDemo(QtCore.QThread):
 
-    name = 'Monochromator'
+    name = 'DemoMonochromator'
+    type = 'Monochromator'
 
     def __init__(self):
         super(MonochromatorDemo, self).__init__()

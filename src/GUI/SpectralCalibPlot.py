@@ -47,8 +47,8 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
 #        self.graphLayoutWidget.clear()
     
 
-    @QtCore.pyqtSlot(np.ndarray, np.ndarray,np.ndarray)
-    def set_data(self, x_array, y_array,data):
+    @QtCore.pyqtSlot(np.ndarray, np.ndarray, np.ndarray)
+    def set_data(self, x_array, y_array, data):
         '''
             Sets up the 2D image plot and updates the display
             input:
@@ -56,6 +56,7 @@ class SpectralCalibDataPlot(QtWidgets.QMainWindow):
                 - y_array: (np.ndarray) 1D array holding the scanned axis of the 2D data plot
                 - data: (np.ndarray) 2D array of scanned spectra
         '''
+
         if np.shape(data)[0]>=2 and np.shape(data)[1]>=2: # Don't plot it if it is not a 2D array 
             deltax=x_array[1]-x_array[0]
             self.deltax=deltax
@@ -95,9 +96,6 @@ class SpectralCalibFitPlot(QtWidgets.QMainWindow):
         self.ydata=None
         self.xdata=None
         self.poly=None
-
-        # plot data: x, y values
-        self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
 
         # plot data: x, y values
         self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)

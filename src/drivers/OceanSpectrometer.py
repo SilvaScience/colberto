@@ -33,7 +33,8 @@ from seabreeze.spectrometers import list_devices, Spectrometer
 
 class OceanSpectrometer(QtCore.QThread):
 
-    name = 'Spectrometer'
+    name = 'OceanSpectrometer'
+    type = 'Spectrometer'
     
     def __init__(self):
         super(OceanSpectrometer, self).__init__()
