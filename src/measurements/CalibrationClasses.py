@@ -264,6 +264,12 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.send_spectral_calibration_fit.emit(('spectral_calibration_fit',self.fit_polynomial))
         
 class ChirpAcquireBackground(QtCore.QThread):
+    """
+        Class implementing the background acquisition for chirp scans.
+        Signals are:
+        - sendSpectrum : wavelength and intensity detected by the spectrometer
+        - sendProgress: float representing the progress of the measurement.
+    """
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendProgress = QtCore.pyqtSignal(float)
     send_background = QtCore.pyqtSignal(tuple)
