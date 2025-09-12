@@ -459,11 +459,11 @@ class MainInterface(QtWidgets.QMainWindow):
     def chirpBackgroundMeasurement(self):
         if not self.measurement_busy:
             self.measurement_busy = True
-            self.background = ChirpAcquireBackground(self.devices)
-            self.background.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            self.background.send_background.connect(self.DataHandling.add_calibration)
-            self.background.sendProgress.connect(self.set_progress)
-            self.background.start()
+            self.chirpbackground = ChirpAcquireBackground(self.devices)
+            self.chirpbackground.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.chirpbackground.send_background.connect(self.DataHandling.add_calibration)
+            self.chirpbackground.sendProgress.connect(self.set_progress)
+            self.chirpbackground.start()
     
     def chirpCalibrationMeasurement(self):
         '''
@@ -476,13 +476,16 @@ class MainInterface(QtWidgets.QMainWindow):
             else:
                 beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
             self.DataHandling.clear_data() 
-            background = self.DataHandling.calibration['chirp_background_data']  
-            self.measurement = ChirpCalibrationMeasurement(self.devices, background['spec'], self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
+            if hasattr(self, 'chirpbackground'):
+                chirpbackground = self.DataHandling.calibration['chirp_background_data']
+                background = chirpbackground['spec']
+            else:
+                background = 0
+            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
             self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
-            #self.measurement.send_chirp.connect(self.temporalfitting.set_SNR)
             self.temporalfitting.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
             self.temporalfitting.send_chirp_region.connect(self.ChirpSelectionPlot.set_data)
             self.temporalfitting.send_chirp_fit.connect(self.ChirpFitplot.set_data)
@@ -499,15 +502,16 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
-            self.temporalfitting.set_SNR(temporal_calib_dict['wavelengths'], temporal_calib_dict['Chirp'], temporal_calib_dict['data'], self.chirp_SNR_threshold_value.value()/10)
+            self.temporalfitting.set_SNR(temporal_calib_dict, self.chirp_SNR_threshold_value.value()/10)
     
     def update_temporal_calibration_boundaries(self):
         '''
             Updates the boundaries to consider when processing temporal calibration data
         ''' 
         if hasattr(self, 'temporalfitting'):
+            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
             try: 
-                self.temporalfitting.set_boundaries([self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value()/10)
+                self.temporalfitting.set_boundaries(temporal_calib_dict, [self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value()/10)
             except KeyError:
                 print('Unexpected error. There should be a temporal_calibration_raw_data key in the calibration dict in Datahandling')
 

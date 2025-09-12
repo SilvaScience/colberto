@@ -309,7 +309,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     send_chirp_calibration_data = QtCore.pyqtSignal(tuple)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, background,grating_period,beam_,compression_carrier_wavelength,chirp_step,chirp_max,chirp_min,beam,demo=False):
+    def __init__(self,devices, background, grating_period, beam_, compression_carrier_wavelength, chirp_step, chirp_max, chirp_min,beam, demo=False):
         '''
          Initializes the semporal beam calibration measurement
          input:
@@ -424,33 +424,34 @@ class FitTemporalBeamCalibration(QtCore.QThread):
     send_chirp_calibration_data = QtCore.pyqtSignal(tuple)
     send_chirp_calibration_fit = QtCore.pyqtSignal(tuple)
 
-    def __init__(self,boundaries,temporal_calibration_data=None):
+    def __init__(self, boundaries, temporal_calibration_data=None):
         '''
          Initializes the spectral beam calibration fitting
          input:
              - boundaries: (np.ndarray) Shortest and longest wavelengths to consider when manipulating the spectra calibration data.
         ''' 
         self.boundaries = boundaries
+
         super(FitTemporalBeamCalibration, self).__init__()
 
-    def set_SNR(self, wavelength_array, chirp_array, data, SNR_threshold):
+    def set_SNR(self, chirpdata, SNR_threshold):
         '''
             Method to remove data below a given SNR:
                 - SNR: (int) Minimal signal to noise ratio.
         '''
         self.SNR = SNR_threshold
         boundaries = self.boundaries
-        self.chirp_array = chirp_array
-        self.wavelength_array = wavelength_array
-        self.data = data
+        self.chirp_array = chirpdata['Chirp']
+        self.wavelength_array = chirpdata['wavelengths']
+        self.data = chirpdata['data']
 
         noise_level = np.std(self.data)
         SNR = self.data/noise_level
         data_filtered = np.where(SNR >= SNR_threshold, self.data, 0) # Replace data with SNR below threshold with 0. 
 
-        chirp_array_region = chirp_array[5:-5]
-        mask = np.logical_and(wavelength_array >= boundaries[0], wavelength_array <= boundaries[1])
-        wavelength_array_region = wavelength_array[mask]
+        chirp_array_region = self.chirp_array[5:-5]
+        mask = np.logical_and(self.wavelength_array >= boundaries[0], self.wavelength_array <= boundaries[1])
+        wavelength_array_region = self.wavelength_array[mask]
         data_filtered_region = data_filtered[5:-5, mask]
 
         self.send_chirp_region.emit(chirp_array_region, wavelength_array_region, data_filtered_region)
@@ -461,7 +462,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         }
         self.send_chirp_calibration_data.emit(('temporal_calibration_processed_data', self.temporal_calibration_processed_data))
 
-    def set_boundaries(self, boundaries, SNR_threshold):
+    def set_boundaries(self, chirpdata, boundaries, SNR_threshold):
         '''
             Method to change the temporal beam fitting algorithm wavelength boundaries and update the results
             input:
@@ -469,7 +470,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         '''
         self.boundaries = boundaries
         self.SNR_threshold = SNR_threshold
-        self.set_SNR(self.wavelength_array, self.chirp_array, self.data, self.SNR_threshold)
+        self.set_SNR(chirpdata, self.SNR_threshold)
 
     def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg, carrier_wavelength):
         '''
