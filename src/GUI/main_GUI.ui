@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1135</width>
+    <width>1411</width>
     <height>1002</height>
    </rect>
   </property>
@@ -311,7 +311,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>3</number>
+         <number>5</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -1645,8 +1645,8 @@ Start:Stepnumber:Stop  Start:Stepnum...
          <widget class="QGroupBox" name="LUT_calibration_groupbox">
           <property name="geometry">
            <rect>
-            <x>0</x>
-            <y>260</y>
+            <x>10</x>
+            <y>300</y>
             <width>851</width>
             <height>281</height>
            </rect>
@@ -1842,6 +1842,24 @@ Start:Stepnumber:Stop  Start:Stepnum...
            </property>
           </widget>
          </widget>
+         <widget class="QLabel" name="label_vertical_calibration_box_2">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>290</y>
+            <width>221</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>8</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>  Phase to Greyscale - LUT File Measurement</string>
+          </property>
+         </widget>
         </widget>
        </widget>
       </item>
@@ -1854,7 +1872,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1135</width>
+     <width>1411</width>
      <height>21</height>
     </rect>
    </property>
