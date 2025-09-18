@@ -306,6 +306,19 @@ p, li { white-space: pre-wrap; }
          </property>
          <layout class="QHBoxLayout" name="set_power_layout"/>
         </widget>
+        <widget class="QPushButton" name="show_beam_explorer_button">
+         <property name="geometry">
+          <rect>
+           <x>330</x>
+           <y>20</y>
+           <width>171</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Show Beam Explorer</string>
+         </property>
+        </widget>
        </widget>
       </item>
       <item>
@@ -1858,6 +1871,19 @@ Start:Stepnumber:Stop  Start:Stepnum...
           </property>
           <property name="text">
            <string>  Phase to Greyscale - LUT File Measurement</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="send_test_beams">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>560</y>
+            <width>201</width>
+            <height>27</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Send test beams</string>
           </property>
          </widget>
         </widget>

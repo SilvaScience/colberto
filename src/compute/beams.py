@@ -26,19 +26,21 @@ class Beam:
         """
         self.SLMWidth=SLMWidth
         self.SLMHeight=SLMHeight
+        self.beamOn=True
+        self.current_phase_mode='relative'
         # initilization of parameters to default benign values
-        self.beamHorizontalDelimiters=[0,SLMWidth]
-        self.beamVerticalDelimiters=[0,SLMHeight]
+        self.set_beamHorizontalDelimiters([0,SLMWidth])
+        self.set_beamVerticalDelimiters([0,SLMHeight])
         self.make_mask()
-        self.set_optimalPhase(P([0]))
-        self.set_currentPhase(P([0]))
+        self.set_optimalPhase(P([0,0,0]))
+        self.set_currentPhase(P([0,0,0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
         self.indices=self.get_horizontalIndices()
-        self.set_compressionCarrierWave(600)
-        self.set_delayCarrierWave(600)
+        self.set_compressionCarrierWave(600e-9)
+        self.set_delayCarrierWave(600e-9)
         self.maskOn=True
-        self.pixelToWavelength=P([600])
+        self.pixelToWavelength=P(1e-9*np.array([600,0.05]))
 
     def make_mask(self,horizontalDelimiters=None,verticalDelimiters=None):
         '''
@@ -52,7 +54,8 @@ class Beam:
             horizontalDelimiters=self.get_beamHorizontalDelimiters()
         if verticalDelimiters is None:
             verticalDelimiters=self.get_beamVerticalDelimiters()
-        self.mask[verticalDelimiters[0]:verticalDelimiters[1],horizontalDelimiters[0]:horizontalDelimiters[1]]=1
+        if self.beamOn:
+            self.mask[verticalDelimiters[0]:verticalDelimiters[1],horizontalDelimiters[0]:horizontalDelimiters[1]]=1
 
     def get_mask(self):
         ''' 
@@ -72,7 +75,6 @@ class Beam:
                 - delimiters (nd.array): A 1d 2 element array specifying the vertical beginning and end pixels of the beam (0 indexed) [beginning, end]
         '''
         self.beamVerticalDelimiters=delimiters
-        self.make_mask()
 
     def get_beamVerticalDelimiters(self):
         '''
@@ -99,13 +101,12 @@ class Beam:
         '''
         self.beamHorizontalDelimiters=delimiters
         self.phaseGratingAmplitudeMask=np.ones(self.beamHorizontalDelimiters[1])
-        self.make_mask()
 
-    def get_spectrumAtPixel(self,pixels,unit='wavelength'):
+    def get_spectrumAtPixel(self,pixels=None,unit='wavelength'):
         '''
         Gets the spectral position of light associated with a pixel on the SLM
         input:
-            - pixels: (nd.array) the horizontal pixel index on the SLM
+            - pixels: (nd.array) the horizontal pixel index on the SLM. By default, the phase is sampled at every column of the SLM 
             - unit: the unit in which to return the spectrum axis allows for
                 - 'wavelength' (default): Returns in units of wavelength (m)
                 - 'frequency' : Returns in units of frequency (Hz)
@@ -118,6 +119,8 @@ class Beam:
                             'frequency':co.waveToFreq,
                             'ang_frequency':co.waveToAngFreq,
                             'energy':co.waveToeV}
+        if pixels is None:
+            pixels=self.indices
         wavelength=self.pixelToWavelength(pixels)
         return conversionFunction[unit](wavelength)
 
@@ -135,7 +138,7 @@ class Beam:
         input:
             wavelength: Compression carrier wavelength in m
         """
-        self.compressionCarrierFreq=co.waveToAngFreq(compCarrierWave)
+        self.delayCarrierFreq=co.waveToAngFreq(compCarrierWave)
 
     def get_delayCarrier(self,unit='ang_frequency'):
         """
@@ -188,37 +191,79 @@ class Beam:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
                 - unit (str, default 'fs'): The units in which the phase coefficients are provided. 
         '''
-        if unit=='fs':
-            phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial)
-        self.optimalPhasePolynomial=phasePolynomial
+        self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
 
-    def set_currentPhase(self,phasePolynomial,mode='relative',unit='fs'):
+    def get_optimalPhase(self,units_to_return='s'):
+        '''
+            Sets the beam's phase profile 
+            input:
+                - indices (nd.array of int) : Indices at which to sample the 
+                - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of seconds
+                    Specifying 'fs' converts the internal units to be displayed in fs.
+            output:
+                - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
+        '''
+        return self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units=units_to_return)
+    
+    def set_current_phase_mode(self,mode):
+        """
+            Sets the current phase to be stored relatively (mode='relative') to the optimal phase coefficient or not (mode='absolute')
+            input:
+                - mode (str): 'relative' for the phase to be stored relatively to optimal phase or 'absolute' otherwise
+        """
+        if mode=='relative' or mode=='absolute':
+            self.current_phase_mode=mode
+        else:
+            raise ValueError('Current phase mode must be a str (\'relative\' or \'absolute\')') 
+    
+    def get_current_phase_mode(self):
+        """
+            Returns the current phase reference mode
+            output:
+                - mode (str): 'relative' for the phase to be stored relatively to optimal phase or 'absolute' otherwise
+        """
+        return self.current_phase_mode
+    
+    def set_currentPhase_optimal(self):
+        """
+            Sets the current phase to match to optimal phase
+        """
+        self.set_currentPhase(self.optimalPhasePolynomial,mode='absolute',unit='s')
+
+    def set_currentPhase(self,phasePolynomial,mode=None,unit='fs'):
         '''
             Sets the beam's phase profile 
             input:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
                 - mode (string): Specifies if the phase is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
         '''
-        if unit=='fs':
-            phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial)
+        if mode is None:
+            mode=self.current_phase_mode
+        phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
         if mode=='relative':
             self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
-    def get_currentPhase(self,mode='absolute'):
+    def get_currentPhase(self,mode=None,units_to_return='s'):
         '''
             Sets the beam's phase profile 
             input:
                 - indices (nd.array of int) : Indices at which to sample the 
                 - mode (string): Specifies if the phase returned is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
+                - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of seconds
+                    Specifying 'fs' converts the internal units to be displayed in fs.
+                - for_display (bool): Specifies if the phase polynomial coeff are to be used for display only. In this case, the value of the optimal phase polynomial is not subtracted.
             output:
                 - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
         '''
+        if mode is None:
+            mode=self.current_phase_mode
         if mode=='relative':
-            return self.currentPhasePolynomial-self.optimalPhasePolynomial
+            returnPolynomial=self.currentPhasePolynomial-self.optimalPhasePolynomial
         elif mode=='absolute':
-            return self.currentPhasePolynomial
+            returnPolynomial=self.currentPhasePolynomial
+        return self.convertPhaseCoeffUnits(returnPolynomial,input_units='s',output_units=units_to_return)
     def get_horizontalIndices(self):
         '''
             Returns an array with indices from the active part of the SLM
@@ -227,29 +272,29 @@ class Beam:
         '''
         return np.arange(self.beamHorizontalDelimiters[0],self.beamHorizontalDelimiters[1])
 
-    def get_sampledCurrentPhase(self,indices=None):
+    def get_sampledCurrentPhase(self,indices=None,mode='absolute'):
         '''
             Returns the current phase at the horizontal pixel indices provided
             input:
                 - indices (nd.array of int): (default none) the pixel indices at which to sample the optimal phase profile
                     By default, the phase is sampled at every column of the SLM
+                - mode (string): Specifies if the phase returned is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
             output:
                 -  nd.array of float: the current phase at the provided pixel column indices (in rad)
         
         '''
         if indices is None:
             indices=self.indices
-        angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
-        return self.currentPhasePolynomial(angFreq)
-
-
-    def get_optimalPhase(self):
-        '''
-            Gets the optimal phase for the beam (spectral phase profile to apply to get best compression and synchronization with the LO)
-            output:
-                - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
-        '''
-        return self.optimalPhasePolynomial
+        phase_polynomial=self.get_currentPhase(mode=mode)
+        compression_polynomial=phase_polynomial.copy()
+        if len(phase_polynomial.coef)>1:
+            delay_polynomial=P([0,phase_polynomial.coef[1]])
+            compression_polynomial.coef[1]=0
+        else:
+            delay_polynomial=P([0,0])
+        angFreq_compression=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
+        angFreq_delay=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_delayCarrier()
+        return delay_polynomial(angFreq_delay)+compression_polynomial(angFreq_compression)
 
     def get_sampledOptimalPhase(self,indices):
         '''
@@ -263,6 +308,22 @@ class Beam:
         angFreq=self.calibration.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         return self.optimalPhasePolynomial(angFreq)
     
+    def get_beamStatus(self):
+        '''
+            Returns wether the beam is on or not.
+            output:
+                - beamOn (bool): Beam is ON (non-zero phase grating) when set to True 
+        '''
+        return self.beamOn
+
+    def set_beamStatus(self,beamOn):
+        '''
+            Sets wether the beam should be on or not.
+            input:
+                - beamOn (bool): Beam is ON (non-zero phase grating) when set to True 
+        '''
+        self.beamOn=beamOn
+
     def set_maskStatus(self,maskOn):
         '''
             Sets wether the mask should be applied or not.
@@ -270,7 +331,6 @@ class Beam:
                 - maskOn (bool): Mask is applied to the phase grating when set to True and not applied when set to False
         '''
         self.maskOn=maskOn
-
 
     def set_gratingAmplitude(self,amplitude):
         '''
@@ -310,6 +370,7 @@ class Beam:
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
+        self.make_mask()
         phaseGratingImage=np.zeros((self.SLMHeight,self.SLMWidth))
         if self.phaseGratingPeriod is None:
             return phaseGratingImage
@@ -321,7 +382,7 @@ class Beam:
         if self.maskOn:
             phaseGratingImage=phaseGratingImage*self.mask
         return phaseGratingImage 
-
+    
     @staticmethod 
     def generate_1Dgrating(amplitude,period,phase,num):
         '''
@@ -337,17 +398,21 @@ class Beam:
         y=amplitude*sawtooth(2*pi*(indices-offset)/period,width=0) % 2*pi
         return y
     @staticmethod
-    def convertPhaseCoeffUnits(phasePolynomial,unit='fs'):
+    def convertPhaseCoeffUnits(phasePolynomial,input_units='fs',output_units='s'):
         '''
             Converts phase profile coefficient units from powers of selected unit to powers of s
             input:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
-                - unit (str, default is 'fs'): The unit in which the coefficient
+                - input_unit (str, default is 'fs'): The unit in which the coefficient are input
+                - output_unit (str, default is 's'): The unit in which the output coefficients are desired
             '''
-        if unit=='fs':
-            unitConversionCoeff=[1e-15**n for n in range(len(phasePolynomial.coef))]
-            phasePolynomial.coef=phasePolynomial.coef*unitConversionCoeff
-        return phasePolynomial
+        new_phasePolynomial=phasePolynomial.copy()
+        multiplier_in={'fs':1e-15,
+                    's':1}
+        multiplier_out={'fs':1e15,
+                    's':1}
+        new_phasePolynomial.coef=[coeff*(multiplier_in[input_units]*multiplier_out[output_units])**n for n,coeff in enumerate(phasePolynomial.coef)]
+        return new_phasePolynomial
 
 
 
