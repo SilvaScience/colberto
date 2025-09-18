@@ -64,6 +64,10 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
         self.maxvalue_label.setParentItem(self.graphWidget.getPlotItem())
         self.maxvalue_label.anchor(itemPos=(1,0), parentPos=(1,0), offset=(-50,35))
 
+        # empty array
+        self.y ={}
+        self.wls = []
+
         # connect events
         self.clear_button.clicked.connect(self.clear_plot)
 
@@ -78,6 +82,7 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(np.ndarray, np.ndarray)
     def set_data(self, wls, spec):
+        self.wls = wls
         #color = list(np.random.choice(range(256), size=3))
         self.graphWidget.plot(wls, spec, pen=QtGui.QColor.fromRgbF(plt.cm.prism(self.plotcounter)[0],plt.cm.prism(self.plotcounter)[1],
                                                                    plt.cm.prism(self.plotcounter)[2],plt.cm.prism(self.plotcounter)[3]))
@@ -101,7 +106,12 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
             mousePoint = self.graphWidget.getPlotItem().vb.mapSceneToView(pos)
             self.crosshair_v.setPos(mousePoint.x())
             self.crosshair_h.setPos(mousePoint.y())
-        self.value_label.setText(f"Cursor: {mousePoint.x():.1f} nm {mousePoint.y():.1f} cts")
+        calibration_mode = False
+        if calibration_mode:
+            pixel = np.argmin(abs(self.wls - mousePoint.x()))
+            self.value_label.setText(f"Cursor: {mousePoint.x():.1f} nm {mousePoint.y():.1f} cts {pixel:.0f} pixel")
+        else:
+            self.value_label.setText(f"Cursor: {mousePoint.x():.1f} nm {mousePoint.y():.1f} cts")
 
     @QtCore.pyqtSlot(np.ndarray)
     def update_datareader(self,max):

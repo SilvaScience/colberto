@@ -18,7 +18,8 @@ from collections import defaultdict
 
 class CryoDemo(QtCore.QThread):
 
-    name = 'cryostat'
+    name = 'CryoDemo'
+    type = 'Cryostat'
     
     def __init__(self):
         super(CryoDemo, self).__init__()
