@@ -687,7 +687,7 @@ class MainInterface(QtWidgets.QMainWindow):
         labels=['LO','A','B','C']
         demo_beam_dict={}
         for i,label in enumerate(labels):
-            demo_beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+            demo_beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
             demo_beam.set_optimalPhase(P([0,100,2000,3000,-400]))
             demo_beam.set_gratingPeriod(25)
             demo_beam.set_beamVerticalDelimiters([i*300,(i+1)*300-1])
