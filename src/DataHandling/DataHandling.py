@@ -200,8 +200,20 @@ class DataHandling(QtCore.QThread):
             input:
                 - tuple: (name,Beam) First argument of tuple is beam name and second is Beam object to set
         '''
-        beam_name, beam = name_and_beam
-        self.beams[beam_name] = beam
+        beam_name,beam=name_and_beam
+        self.beams[beam_name]=beam
+        self.get_beams() # Emits the beams as soon as they are changed
+
+    def set_multiple_beams(self,beamDict):
+        """
+            Updates multiple beams at once using a dictionnary of beams
+            input:
+                - beamDict: Dictionnary of Beam objects
+        """
+        for items in beamDict.items():
+            beam_name,beam=items
+            self.beams[beam_name]=beam
+        self.get_beams() # Emits the beams as soon as they are changed
 
     def get_beams(self):
         '''

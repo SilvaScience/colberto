@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>601</width>
+    <height>220</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>600</width>
+    <height>220</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="QTableWidget" name="phase_coeff_table">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>30</y>
+     <width>461</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>75</number>
+   </attribute>
+   <row>
+    <property name="text">
+     <string>Optimal</string>
+    </property>
+   </row>
+   <row>
+    <property name="text">
+     <string>Current</string>
+    </property>
+   </row>
+   <column>
+    <property name="text">
+     <string>Phase</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Delay (fs)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>GDD (fs^2)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>O(3) (fs^3)</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>O(4) (fs^4)</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QLabel" name="beam_label">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>10</y>
+     <width>131</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>20</pointsize>
+    </font>
+   </property>
+   <property name="text">
+    <string>NAME</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="relative_checkbox">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>130</y>
+     <width>92</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Relative</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="PlotWidget" name="beam_plot" native="true">
+   <property name="geometry">
+    <rect>
+     <x>280</x>
+     <y>120</y>
+     <width>311</width>
+     <height>101</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QTableWidget" name="delimiter_table_widget">
+   <property name="geometry">
+    <rect>
+     <x>480</x>
+     <y>30</y>
+     <width>121</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>50</number>
+   </attribute>
+   <row>
+    <property name="text">
+     <string>V</string>
+    </property>
+   </row>
+   <row>
+    <property name="text">
+     <string>H</string>
+    </property>
+   </row>
+   <column>
+    <property name="text">
+     <string>Min</string>
+    </property>
+   </column>
+   <column>
+    <property name="text">
+     <string>Max</string>
+    </property>
+   </column>
+  </widget>
+  <widget class="QLabel" name="grating_period_label">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>10</y>
+     <width>131</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Grating period (px):</string>
+   </property>
+  </widget>
+  <widget class="QSpinBox" name="grating_period_value">
+   <property name="geometry">
+    <rect>
+     <x>280</x>
+     <y>0</y>
+     <width>44</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="minimum">
+    <number>1</number>
+   </property>
+   <property name="maximum">
+    <number>999</number>
+   </property>
+  </widget>
+  <widget class="QLabel" name="grating_amplitude_label">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>10</y>
+     <width>161</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Grating amplitude (2 pi)</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="grating_amplitude_lineedit">
+   <property name="geometry">
+    <rect>
+     <x>510</x>
+     <y>0</y>
+     <width>41</width>
+     <height>27</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lambda_comp_box">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>130</y>
+     <width>41</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lambda_comp_label">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>140</y>
+     <width>51</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>λ comp.</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="lambda_delay_label">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>170</y>
+     <width>51</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>λ delay</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="lambda_delay_box">
+   <property name="geometry">
+    <rect>
+     <x>230</x>
+     <y>160</y>
+     <width>41</width>
+     <height>27</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string/>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="mask_pushbutton">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>160</y>
+     <width>161</width>
+     <height>61</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>MASK OFF</string>
+   </property>
+  </widget>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QWidget</extends>
+   <header>pyqtgraph</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

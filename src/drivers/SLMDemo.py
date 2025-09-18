@@ -85,7 +85,6 @@ class SLMDemo(QtCore.QThread):
         self.parameter_display_dict['greyscale_val']['unit'] = ' '
         self.parameter_display_dict['greyscale_val']['max'] = 255
         self.parameter_display_dict['greyscale_val']['read'] = False
-
         # set parameters
         self.amplitude = 5
         self.amplitude = 5

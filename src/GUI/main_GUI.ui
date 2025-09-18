@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1411</width>
+    <width>1217</width>
     <height>1002</height>
    </rect>
   </property>
@@ -305,6 +305,19 @@ p, li { white-space: pre-wrap; }
           </rect>
          </property>
          <layout class="QHBoxLayout" name="set_power_layout"/>
+        </widget>
+        <widget class="QPushButton" name="show_beam_explorer_button">
+         <property name="geometry">
+          <rect>
+           <x>330</x>
+           <y>20</y>
+           <width>171</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Show Beam Explorer</string>
+         </property>
         </widget>
        </widget>
       </item>
@@ -1842,22 +1855,17 @@ Start:Stepnumber:Stop  Start:Stepnum...
            </property>
           </widget>
          </widget>
-         <widget class="QLabel" name="label_vertical_calibration_box_2">
+         <widget class="QPushButton" name="send_test_beams">
           <property name="geometry">
            <rect>
             <x>20</x>
-            <y>290</y>
-            <width>221</width>
-            <height>19</height>
+            <y>560</y>
+            <width>201</width>
+            <height>27</height>
            </rect>
           </property>
-          <property name="font">
-           <font>
-            <pointsize>8</pointsize>
-           </font>
-          </property>
           <property name="text">
-           <string>  Phase to Greyscale - LUT File Measurement</string>
+           <string>Send test beams</string>
           </property>
          </widget>
         </widget>
@@ -1872,8 +1880,8 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1411</width>
-     <height>21</height>
+     <width>1217</width>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
