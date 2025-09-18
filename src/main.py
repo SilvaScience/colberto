@@ -627,10 +627,11 @@ class MainInterface(QtWidgets.QMainWindow):
         for i,label in enumerate(labels):
             demo_beam=Beam(self.SLM.get_width(),self.SLM.get_height())
             demo_beam.set_optimalPhase(P([0,100,2000,3000,-400]))
+            demo_beam.set_currentPhase_optimal()
             demo_beam.set_gratingPeriod(25)
             demo_beam.set_beamVerticalDelimiters([i*300,(i+1)*300-1])
             demo_beam_dict[label]=demo_beam
-        [self.DataHandling.set_beam((beamname,beam)) for beamname,beam in demo_beam_dict.items()]
+        self.DataHandling.set_multiple_beams(demo_beam_dict)
 
 
 

@@ -14,12 +14,13 @@ import numpy as np
 import os.path
 from collections import deque
 import shutil
+import logging
 """TO DOs: 
 - check if more specific functions for dataset creation are needed. 
 - think of a more clever way to store hardware parameters. Do we want it on command, a life-long storage, etc... 
 """
 
-
+logger = logging.getLogger(__name__)
 class DataHandling(QtCore.QThread):
 
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)

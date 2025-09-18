@@ -57,7 +57,6 @@ class BeamExplorer(QWidget):
                 image=beam.makeGrating()
             #else:
             #    image=image+beam.makeGrating()
-            logger.info(np.max(image))
         self.phase_image.emit(image)
         
 
@@ -97,11 +96,10 @@ class BeamWidget(QWidget):
         self.graphlayout.setLabel('bottom', 'Wavelength (nm)', **self.styles)
         self.graphlayout.setLabel('left', 'Phase (pi)', **self.styles)
         # connect events
-        self.relative_checkbox.stateChanged.connect(self.update_display_from_beam)
-        self.mask_pushbutton.clicked.connect(self.flip_mask)
+        self.mask_pushbutton.clicked.connect(self.toggle_beam_on_off_display)
         self.import_beam(name,beam)
 
-    def flip_mask(self):
+    def toggle_beam_on_off_display(self):
         """
             Flips the status of the Mask PushButton when triggered
         """
@@ -131,26 +129,22 @@ class BeamWidget(QWidget):
             self.mask_pushbutton.setText('BEAM ON')
         else:
             self.mask_pushbutton.setText('BEAM OFF')
-        if self.relative_checkbox.isChecked():
-            mode='relative'
+        if self.beam.get_current_phase_mode()=='relative':
+            self.relative_checkbox.setChecked(True)
         else:
-            mode='absolute'
+            self.relative_checkbox.setChecked(False)
         [self.delimiter_table.setItem(0,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
         [self.delimiter_table.setItem(1,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamHorizontalDelimiters())]
-        [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase().coef)]
-        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coef)]
+        [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef)]
+        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(units_to_return='fs',for_display=True).coef)]
         self.plot_phase()
         #[self.phase_coeff_table.item(1,i).setText(coeff) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coeff)]
     def plot_phase(self):
         '''
             Plots the current phase of the beam either relative to the compression or absolute
         '''
-        if self.relative_checkbox.isChecked():
-            mode='relative'
-        else:
-            mode='absolute'
         self.graphlayout.clear()
-        self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
+        self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=self.beam.get_current_phase_mode()))
 
     def toggle_beam_to_slm(self):
         '''
@@ -173,13 +167,13 @@ class BeamWidget(QWidget):
         else:
             self.beam.set_beamStatus(True)
         if self.relative_checkbox.isChecked():
-            mode='relative'
+            self.beam.set_current_phase_mode('relative')
         else:
-            mode='absolute'
+            self.beam.set_current_phase_mode('absolute')
         self.beam.set_beamVerticalDelimiters([int(self.delimiter_table.item(0,0).text()),int(self.delimiter_table.item(0,1).text())])
         self.beam.set_beamHorizontalDelimiters([int(self.delimiter_table.item(1,0).text()),int(self.delimiter_table.item(1,1).text())])
-        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount())]))
-        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount())]),mode=mode)
+        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]))
+        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
 
         return self.name,self.beam
 
