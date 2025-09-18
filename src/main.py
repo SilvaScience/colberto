@@ -562,7 +562,7 @@ class MainInterface(QtWidgets.QMainWindow):
             bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
             label=table.item(row,0).text() if table.item(row,0).text() is not None else None
             if all([label is not None, bottom_index is not None, top_index is not None]):
-                beam=Beam(self.SLM.get_width(),self.SLM.get_height())
+                beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
                 beam.set_beamVerticalDelimiters([top_index,bottom_index])
                 beam.set_gratingPeriod(self.grating_period_edit.value())
                 self.DataHandling.set_beam((label,beam))
@@ -622,7 +622,7 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
         beam_dict=self.DataHandling.get_beams()
         if beam_dict=={}:
-            beam_dict={'ALL':Beam(self.SLM.get_width(),self.SLM.get_height())}
+            beam_dict={'ALL':Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())}
         for key in beam_dict:
             beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
             beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
