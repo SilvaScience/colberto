@@ -259,12 +259,12 @@ class MainInterface(QtWidgets.QMainWindow):
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
-        self.SLM.write_image(test_image)
+        self.devices['SLM'].write_image(test_image)
         # Beam update connection
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
         #Beam Explorer related
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
-        self.beam_explorer.phase_image.connect(self.SLM.write_image)
+        self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
             #only for testing the beam explorer
         self.assign_demo_beams_button= self.findChild(QtWidgets.QPushButton, 'send_test_beams')
         self.assign_demo_beams_button.clicked.connect(self.assign_demo_beams)
