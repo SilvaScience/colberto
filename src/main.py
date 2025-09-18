@@ -630,6 +630,10 @@ class MainInterface(QtWidgets.QMainWindow):
             demo_beam.set_currentPhase_optimal()
             demo_beam.set_gratingPeriod(25)
             demo_beam.set_beamVerticalDelimiters([i*300,(i+1)*300-1])
+            if i//2==0:
+                demo_beam.set_beamStatus(True)
+            else:
+                demo_beam.set_beamStatus(False)
             demo_beam_dict[label]=demo_beam
         self.DataHandling.set_multiple_beams(demo_beam_dict)
 

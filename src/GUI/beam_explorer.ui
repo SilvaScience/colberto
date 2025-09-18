@@ -264,6 +264,25 @@
     <string>MASK OFF</string>
    </property>
   </widget>
+  <widget class="QCheckBox" name="plot_relative_checkbox">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>161</x>
+     <y>190</y>
+     <width>111</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Plot Relative</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
  </widget>
  <customwidgets>
   <customwidget>

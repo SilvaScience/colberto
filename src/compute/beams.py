@@ -37,10 +37,10 @@ class Beam:
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
         self.indices=self.get_horizontalIndices()
-        self.set_compressionCarrierWave(600)
-        self.set_delayCarrierWave(600)
+        self.set_compressionCarrierWave(600e-9)
+        self.set_delayCarrierWave(600e-9)
         self.maskOn=True
-        self.pixelToWavelength=P([600,0.05])
+        self.pixelToWavelength=P(1e-9*np.array([600,0.05]))
 
     def make_mask(self,horizontalDelimiters=None,verticalDelimiters=None):
         '''
@@ -245,7 +245,7 @@ class Beam:
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
-    def get_currentPhase(self,mode=None,units_to_return='s',for_display=False):
+    def get_currentPhase(self,mode=None,units_to_return='s'):
         '''
             Sets the beam's phase profile 
             input:
@@ -278,14 +278,23 @@ class Beam:
             input:
                 - indices (nd.array of int): (default none) the pixel indices at which to sample the optimal phase profile
                     By default, the phase is sampled at every column of the SLM
+                - mode (string): Specifies if the phase returned is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
             output:
                 -  nd.array of float: the current phase at the provided pixel column indices (in rad)
         
         '''
         if indices is None:
             indices=self.indices
-        angFreq=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
-        return self.get_currentPhase()(angFreq)
+        phase_polynomial=self.get_currentPhase(mode=mode)
+        compression_polynomial=phase_polynomial.copy()
+        if len(phase_polynomial.coef)>1:
+            delay_polynomial=P([0,phase_polynomial.coef[1]])
+            compression_polynomial.coef[1]=0
+        else:
+            delay_polynomial=P([0,0])
+        angFreq_compression=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
+        angFreq_delay=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_delayCarrier()
+        return delay_polynomial(angFreq_delay)+compression_polynomial(angFreq_compression)
 
     def get_sampledOptimalPhase(self,indices):
         '''

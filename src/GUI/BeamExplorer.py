@@ -55,8 +55,8 @@ class BeamExplorer(QWidget):
         for beam in self.beamDict.values():
             if image is None:
                 image=beam.makeGrating()
-            #else:
-            #    image=image+beam.makeGrating()
+            else:
+                image=image+beam.makeGrating()
         self.phase_image.emit(image)
         
 
@@ -91,11 +91,13 @@ class BeamWidget(QWidget):
         self.delimiter_table=self.findChild(QTableWidget,'delimiter_table_widget')
         self.phase_coeff_table=self.findChild(QTableWidget,'phase_coeff_table')
         self.relative_checkbox=self.findChild(QCheckBox,'relative_checkbox')
+        self.plot_relative_checkbox=self.findChild(QCheckBox,'plot_relative_checkbox')
         self.graphlayout=self.findChild(pg.PlotWidget,'beam_plot')
         self.styles = {'color':'#c8c8c8', 'font-size':'10px'}
         self.graphlayout.setLabel('bottom', 'Wavelength (nm)', **self.styles)
         self.graphlayout.setLabel('left', 'Phase (pi)', **self.styles)
         # connect events
+        self.plot_relative_checkbox.clicked.connect(self.plot_phase)
         self.mask_pushbutton.clicked.connect(self.toggle_beam_on_off_display)
         self.import_beam(name,beam)
 
@@ -123,8 +125,8 @@ class BeamWidget(QWidget):
         self.beam_label.setText(self.name)
         self.grating_period.setValue(self.beam.get_gratingPeriod())
         self.grating_amplitude.setText(str(self.beam.get_gratingAmplitude()))
-        self.lambda_comp.setText(str(self.beam.get_compressionCarrier(unit='wavelength')))
-        self.lambda_delay.setText(str(self.beam.get_delayCarrier(unit='wavelength')))
+        self.lambda_comp.setText('%.2f'%(1e9*self.beam.get_compressionCarrier(unit='wavelength')))
+        self.lambda_delay.setText('%.2f'%(1e9*self.beam.get_delayCarrier(unit='wavelength')))
         if self.beam.get_beamStatus():
             self.mask_pushbutton.setText('BEAM ON')
         else:
@@ -136,7 +138,7 @@ class BeamWidget(QWidget):
         [self.delimiter_table.setItem(0,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
         [self.delimiter_table.setItem(1,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamHorizontalDelimiters())]
         [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef)]
-        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(units_to_return='fs',for_display=True).coef)]
+        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(units_to_return='fs').coef)]
         self.plot_phase()
         #[self.phase_coeff_table.item(1,i).setText(coeff) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coeff)]
     def plot_phase(self):
@@ -144,7 +146,11 @@ class BeamWidget(QWidget):
             Plots the current phase of the beam either relative to the compression or absolute
         '''
         self.graphlayout.clear()
-        self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=self.beam.get_current_phase_mode()))
+        if self.plot_relative_checkbox.isChecked():
+            mode='relative'
+        else:
+            mode='absolute'
+        self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
 
     def toggle_beam_to_slm(self):
         '''
@@ -160,8 +166,8 @@ class BeamWidget(QWidget):
         '''
         self.beam.set_gratingPeriod(self.grating_period.value())
         self.beam.set_gratingAmplitude(float(self.grating_amplitude.text()))
-        self.beam.set_compressionCarrierWave(float(self.lambda_comp.text()))
-        self.beam.set_delayCarrierWave(float(self.lambda_delay.text()))
+        self.beam.set_compressionCarrierWave(1e-9*float(self.lambda_comp.text()))
+        self.beam.set_delayCarrierWave(1e-9*float(self.lambda_delay.text()))
         if self.mask_pushbutton.text()=='BEAM OFF':
             self.beam.set_beamStatus(False)
         else:
