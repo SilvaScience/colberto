@@ -11,11 +11,13 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
+import pyvisa
 from PyQt5 import QtCore, QtWidgets, uic
 from functools import partial
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
 from drivers.CryoDemo import CryoDemo
+from drivers.CryoPasqal import CryoPasqal
 from drivers.SpectrometerDemo_advanced import SpectrometerDemo
 from drivers.SLMDemo import SLMDemo
 from drivers.StresingDemo import StresingDemo
@@ -44,18 +46,30 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices = defaultdict(dict)
 
         # initialize cryostat
-        """ This is a demo devices that has read and write parameters. 
-        Illustrates use of parameters"""
-        # always try to include communication on important events.
-        # This is extremely useful for debugging and troubleshooting.
         try:
-            self.cryostat = CryoDemo() # launch cryostat interface
-            print('Connected to Montana CryoCore')
+            try:
+                # rm = pyvisa.ResourceManager()
+                # Opti = rm.open_resource('ASRL9::INSTR',baud_rate=115200,
+                #                         data_bits=8,
+                #                         parity=pyvisa.constants.Parity.none,
+                #                         stop_bits=pyvisa.constants.StopBits.one,
+                #                         read_termination = '\n',
+                #                         write_termination = '\n',
+                #                         timeout=1000)
+                # time.sleep(3)
+                # Opti.write('*IDN?')
+                # time.sleep(3)
+                # print(f'Connected to {Opti.read()}')
+                print('Connected to the Pasqal cryo')
+                self.cryostat = CryoPasqal()
+            except:
+                self.cryostat = Cryocore()
+                print('Connected to Montana CryoCore')
         except:
             self.cryostat = CryoDemo()
             print('WARNING you are using a DEMO version of the cryostat')
         self.devices['cryostat'] = self.cryostat
-
+            
         # initialize Spectrometer
         try:
             self.spectrometer = Pixis()
@@ -77,19 +91,19 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['powermeter'] = self.powermeter
 
         # initialize SLMDemo
-        #self.SLM = SLMDemo()
-        #self.devices['SLM'] = self.SLM
-        #print('SLMDemo connected')
+        self.SLM = SLMDemo()
+        self.devices['SLM'] = self.SLM
+        print('SLMDemo connected')
 
         # initialize StresingDemo
-        #self.Stresing = StresingDemo()
-        #self.devices['Stresing'] = self.Stresing
-        #print('Stresing connected')
+        self.Stresing = StresingDemo()
+        self.devices['Stresing'] = self.Stresing
+        print('Stresing connected')
 
         # initialize MonochromDemo
-        #self.Monochrom = MonochromDemo()
-        #self.devices['Monochrom'] = self.Monochrom
-        #print('Monochrom DEMO connected')
+        self.Monochrom = MonochromDemo()
+        self.devices['Monochrom'] = self.Monochrom
+        print('Monochrom DEMO connected')
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
