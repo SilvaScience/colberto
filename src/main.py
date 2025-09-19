@@ -82,28 +82,28 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['spectrometer'] = self.spectrometer
 
         # initialize Powermeter
-        try:
-            self.powermeter = ThorlabsPM100D()
-            print('Thorlabs powermeter connected')
-        except:
-            self.powermeter = ThorlabsPM100DDemo()
-            print('WARNING you are using a DEMO version of the powermeter')
-        self.devices['powermeter'] = self.powermeter
+        # try:
+        #     self.powermeter = ThorlabsPM100D()
+        #     print('Thorlabs powermeter connected')
+        # except:
+        #     self.powermeter = ThorlabsPM100DDemo()
+        #     print('WARNING you are using a DEMO version of the powermeter')
+        # self.devices['powermeter'] = self.powermeter
 
         # initialize SLMDemo
-        self.SLM = SLMDemo()
-        self.devices['SLM'] = self.SLM
-        print('SLMDemo connected')
+        #self.SLM = SLMDemo()
+        #self.devices['SLM'] = self.SLM
+        #print('SLMDemo connected')
 
         # initialize StresingDemo
-        self.Stresing = StresingDemo()
-        self.devices['Stresing'] = self.Stresing
-        print('Stresing connected')
+        #self.Stresing = StresingDemo()
+        #self.devices['Stresing'] = self.Stresing
+        #print('Stresing connected')
 
         # initialize MonochromDemo
-        self.Monochrom = MonochromDemo()
-        self.devices['Monochrom'] = self.Monochrom
-        print('Monochrom DEMO connected')
+        #self.Monochrom = MonochromDemo()
+        #self.devices['Monochrom'] = self.Monochrom
+        #print('Monochrom DEMO connected')
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')

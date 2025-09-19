@@ -19,6 +19,8 @@ class CryoPasqal(QtCore.QThread):
         
         # setting up variables, open array
         self.Set_T = []
+        self.OnOff_Comp = []
+        self.OnOff_Loop = []
         self.ChannelA_T = []
         self.ChannelB_T = []
         self.ChannelC_T = []
@@ -33,6 +35,14 @@ class CryoPasqal(QtCore.QThread):
         self.parameter_display_dict['Set_T']['unit'] = ' K'
         self.parameter_display_dict['Set_T']['max'] = 1000
         self.parameter_display_dict['Set_T']['read'] = False
+        self.parameter_display_dict['OnOff_comp']['val'] = 0
+        self.parameter_display_dict['OnOff_comp']['unit'] = ' '
+        self.parameter_display_dict['OnOff_comp']['max'] = 1
+        self.parameter_display_dict['OnOff_comp']['read'] = False
+        self.parameter_display_dict['OnOff_Loop']['val'] = 0
+        self.parameter_display_dict['OnOff_Loop']['unit'] = ' '
+        self.parameter_display_dict['OnOff_Loop']['max'] = 1
+        self.parameter_display_dict['OnOff_Loop']['read'] = False
         self.parameter_display_dict['ChannelA_T']['val'] = 300
         self.parameter_display_dict['ChannelA_T']['unit'] = ' K'
         self.parameter_display_dict['ChannelA_T']['max'] = 1000
@@ -83,10 +93,37 @@ class CryoPasqal(QtCore.QThread):
         if parameter == 'Set_T':
             self.update_Set_T(value)
             self.UpdateWorker.target = value
+        elif parameter == 'OnOff_comp':
+            if value == 0:
+                print('Warming up')
+                # Opti.write('control:compressor:state?')
+                # if Opti.read() == 0
+                #     Opti.write('control:compressor:state ON')
+            elif value == 1:
+                # Opti.write('control:compressor:state?')
+                # if Opti.read() == 1
+                #     Opti.write('control:compressor:state OFF')
+                print('Cooling down')
+        elif parameter == 'OnOff_Loop':
+            if value == 0:
+                # Opti.write('SOURce:HEATer:STATe (@1)?')
+                # if Opti.read() == 0:
+                    # Opti.write('source:heater:state (@1),OFF')
+                    print('Loop stoped')
+                # else:
+                    # print('Loop already stoped')
+            elif value == 1:
+                # Opti.write('SOURce:HEATer:STATe (@1)?')
+                # if Opti.read() == 0:
+                    # Opti.write('source:heater:state (@1),OFF')
+                    print('Starting loop to reach Set_T')
+                #else:
+                #    print('Loop already started')
+
 
     def update_Set_T(self, Set_temperature):
         #set temperature to some degree K
-        # Opti.write(f'source:temperature:spoint (@1),{5}')
+        # Opti.write(f'source:temperature:spoint (@1),{Set_temperature}')
         print(f'Temperature set to {Set_temperature}')
               
     def start_cool(self):
@@ -116,7 +153,6 @@ class UpdateWorker(QtCore.QThread):
 
     def __init__(self):
         super(UpdateWorker, self).__init__()
-        self.currentT = []
         self.stop = False
         self.waitTime = 0.1
         self.target = 300
@@ -131,7 +167,7 @@ class UpdateWorker(QtCore.QThread):
             self.new_Temps.emit(self.readtemp)
 
     def read_T(self):
-        #read the current platform target temperature
+        #read the current temperatures
         temps = [self.target + np.random.rand(1), self.target + np.random.rand(1), 
                  self.target + np.random.rand(1), self.target + np.random.rand(1),
                  self.target + np.random.rand(1), self.target + np.random.rand(1),
