@@ -263,9 +263,6 @@ class MainInterface(QtWidgets.QMainWindow):
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
         self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
-            #only for testing the beam explorer
-        self.assign_demo_beams_button= self.findChild(QtWidgets.QPushButton, 'send_test_beams')
-        self.assign_demo_beams_button.clicked.connect(self.assign_demo_beams)
         self.devices['SLM'].write_image(test_image)
         # run some functions once to define default values
         self.change_filename()
@@ -679,26 +676,6 @@ class MainInterface(QtWidgets.QMainWindow):
         self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
         self.beam_explorer.show()
     
-    def assign_demo_beams(self):
-        """
-            Assigns some beams to the DataHandling to test the BeamExplorer
-        """
-        labels=['LO','A','B','C']
-        demo_beam_dict={}
-        for i,label in enumerate(labels):
-            demo_beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
-            demo_beam.set_optimalPhase(P([0,100,2000,3000,-400]))
-            demo_beam.set_currentPhase_optimal()
-            demo_beam.set_gratingPeriod(25)
-            demo_beam.set_beamVerticalDelimiters([i*300,(i+1)*300-1])
-            if i//2==0:
-                demo_beam.set_beamStatus(True)
-            else:
-                demo_beam.set_beamStatus(False)
-            demo_beam_dict[label]=demo_beam
-        self.DataHandling.set_multiple_beams(demo_beam_dict)
-
-
 
 class UpdateWorker(QtCore.QThread):
 
