@@ -202,8 +202,6 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
 
         #start Beam explorer
-        self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
-        
         self.show_beam_explorer()
 
         # start Updater to update device read parameters
@@ -264,6 +262,7 @@ class MainInterface(QtWidgets.QMainWindow):
         #Beam Explorer related
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
+        self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
             #only for testing the beam explorer
         self.assign_demo_beams_button= self.findChild(QtWidgets.QPushButton, 'send_test_beams')
         self.assign_demo_beams_button.clicked.connect(self.assign_demo_beams)
@@ -677,7 +676,7 @@ class MainInterface(QtWidgets.QMainWindow):
         """
             Shows the beam explorer if it is not already shown
         """
-        logger.info('%s'%self.beam_explorer)
+        self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
         self.beam_explorer.show()
     
     def assign_demo_beams(self):
