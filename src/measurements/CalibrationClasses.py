@@ -371,7 +371,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                             break
                     self.Chirp_data = self.Chirp_data[:f]        
                     self.data = a[:-3]
-                # Emit the data through signals
+                    # Emit the data through signals
 
                     for i in range(len(self.Chirp_data)):
                         if not self.terminate:
@@ -383,7 +383,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     
                             self.sendProgress.emit(i/len(self.Chirp_data)*100)
                             self.send_chirp.emit(np.array(self.Chirp_data[:i]), np.array(self.wls), np.array(self.data[:i]))
-        else:
+                else:
                     # self.BEAM = self.SLM['beam'][self.beam_]
                     for i in range(len(self.chirp_)):
                         if not self.terminate:    

@@ -11,12 +11,14 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
+from numpy.polynomial import Polynomial as P
 from PyQt5 import QtCore, QtWidgets, uic
 import pyqtgraph as pg
 from functools import partial
 import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
+from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
 from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
@@ -29,8 +31,10 @@ from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Genera
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
 from drivers.Instruments import load_instruments
+from GUI.BeamExplorer import BeamExplorer
 import logging
 import datetime
+from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 
 logger = logging.getLogger(__name__)
 class MainInterface(QtWidgets.QMainWindow):
@@ -66,6 +70,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
         self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
+        self.show_beam_explorer_pushbutton=self.findChild(QtWidgets.QPushButton,'show_beam_explorer_button')
         # Spatial calibration tab
         ## Vertical calibration tab
         self.spatial_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
@@ -125,6 +130,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
+        
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -195,6 +201,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
 
+        #start Beam explorer
+        self.show_beam_explorer()
+
         # start Updater to update device read parameters
         self.Updater = UpdateWorker(self.devices, self.readonly_parameter)
         self.Updater.new_parameter.connect(self.update_read_parameter)
@@ -248,6 +257,12 @@ class MainInterface(QtWidgets.QMainWindow):
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
+        # Beam update connection
+        self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
+        #Beam Explorer related
+        self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
+        self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
+        self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
         self.devices['SLM'].write_image(test_image)
         # run some functions once to define default values
         self.change_filename()
@@ -543,17 +558,10 @@ class MainInterface(QtWidgets.QMainWindow):
             bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
             label=table.item(row,0).text() if table.item(row,0).text() is not None else None
             if all([label is not None, bottom_index is not None, top_index is not None]):
-                if 'ALL' in self.DataHandling.get_beams():
-                    beam=self.DataHandling.get_beams()['ALL']
-                else:
-                    beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
-                beam.set_beamVerticalDelimiters([top_index,bottom_index])
-                beam.set_gratingAmplitude(self.grating_period_edit.value())
-                self.DataHandling.set_beam((label,beam))
-            if not 'ALL' in self.DataHandling.get_beams():
                 beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
-                beam.set_gratingAmplitude(self.grating_period_edit.value())
-                self.DataHandling.set_beam(('ALL',beam))
+                beam.set_beamVerticalDelimiters([top_index,bottom_index])
+                beam.set_gratingPeriod(self.grating_period_edit.value())
+                self.DataHandling.set_beam((label,beam))
 
     def spectralBeamCalibrationMeasurement(self):
         '''
@@ -610,7 +618,7 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
         beam_dict=self.DataHandling.get_beams()
         if beam_dict=={}:
-            beam_dict={'ALL':Beam(self.SLM.get_width(),self.SLM.get_height())}
+            beam_dict={'ALL':Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())}
         for key in beam_dict:
             beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
             beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
@@ -661,7 +669,13 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
             #print('Measurement not started, devices are busy')
-
+    def show_beam_explorer(self):
+        """
+            Shows the beam explorer if it is not already shown
+        """
+        self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
+        self.beam_explorer.show()
+    
 
 class UpdateWorker(QtCore.QThread):
 
