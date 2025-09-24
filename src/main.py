@@ -98,7 +98,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
         ## Temp calibration tab
         self.chirp_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'Chirp_calib_demo_mode_checkbox')
-        self.beam_spinbox=self.findChild(QtWidgets.QSpinBox,'Beam_spin_box')
+        self.beam_name_box = self.findChild(QtWidgets.QComboBox,'Beam_name_box')
         self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit, 'Compression_carrier_wavelength')
         self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
         self.chirp_max_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_max')
@@ -262,6 +262,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.devices['SLM'].write_image(test_image)
         # Beam update connection
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
+        self.DataHandling.sendBeams.connect(self.update_beam_name_list)
         #Beam Explorer related
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
@@ -475,6 +476,10 @@ class MainInterface(QtWidgets.QMainWindow):
             except ValueError:
                 table.setItem(row_index,col_index,None)
                 
+    def update_beam_name_list(self, beamDict):
+        self.beam_name_box.clear()
+        self.beam_name_box.addItems(beamDict)
+    
     def chirpBackgroundMeasurement(self):
         if not self.measurement_busy:
             self.measurement_busy = True
@@ -500,7 +505,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 background = chirpbackground['spec']
             else:
                 background = 0
-            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
+            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), self.beam_name_box.currentText(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
             self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
