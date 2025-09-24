@@ -137,6 +137,21 @@ class BeamWidget(QWidget):
             mode='absolute'
         [self.delimiter_table.setItem(0,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
         [self.delimiter_table.setItem(1,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamHorizontalDelimiters())]
+        
+        # Change the number of column depending of the number of coef
+        coefs = self.beam.get_optimalPhase().coef
+        ncols = len(coefs)
+        self.phase_coeff_table.setColumnCount(ncols)
+        headers = ["Phase", "Delay"]  # first two fixed
+
+        # Higher-order terms
+        for order in range(2, ncols):
+            if order == 2:
+                headers.append("GDD (fs²)")
+            else:
+                headers.append(f"O({order}) (fs^{order})")
+        self.phase_coeff_table.setHorizontalHeaderLabels(headers)
+
         [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase().coef)]
         [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coef)]
         self.plot_phase()

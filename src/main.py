@@ -549,13 +549,19 @@ class MainInterface(QtWidgets.QMainWindow):
             poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x^{i}" for i in range(len(coeffs)))
             lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2f} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs)]
             self.chirp_coeff.setText('\n'.join(lines))
+            self.coef = np.array(np.concatenate(([0, 0], coeffs)))
+            self.coeffs = np.array(np.concatenate(([0, 0], coeffs)))
 
     def assignTemporalCalibration(self):
         '''
             Assign the polynomial calibration to the beam.
             TO BE DONE LATER
         ''' 
-        return
+        beams = self.DataHandling.get_beams()
+        beam = beams[self.beam_name_box.currentText()]
+        beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()))
+        beam.set_optimalPhase(P(self.coeffs))
+        self.DataHandling.set_beam((self.beam_name_box.currentText(),beam))
 
     def assign_vertical_beam_calibration(self):
         '''
@@ -567,7 +573,7 @@ class MainInterface(QtWidgets.QMainWindow):
             bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
             label=table.item(row,0).text() if table.item(row,0).text() is not None else None
             if all([label is not None, bottom_index is not None, top_index is not None]):
-                beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+                beam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
                 beam.set_beamVerticalDelimiters([top_index,bottom_index])
                 beam.set_gratingPeriod(self.grating_period_edit.value())
                 self.DataHandling.set_beam((label,beam))
