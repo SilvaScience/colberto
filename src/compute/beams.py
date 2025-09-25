@@ -191,7 +191,11 @@ class Beam:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
                 - unit (str, default 'fs'): The units in which the phase coefficients are provided. 
         '''
-        self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
+        if hasattr(self, 'optimalPhasePolynomial'):
+            self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units='fs')
+            self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial+phasePolynomial,input_units=unit,output_units='s')
+        else:
+            self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
         self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')
 
     def get_optimalPhase(self,units_to_return='s'):
