@@ -55,9 +55,8 @@ class BeamExplorer(QWidget):
         for beam in self.beamDict.values():
             if image is None:
                 image=beam.makeGrating()
-            #else:
-            #    image=image+beam.makeGrating()
-            logger.info(np.max(image))
+            else:
+                image=image+beam.makeGrating()
         self.phase_image.emit(image)
         
 
@@ -92,16 +91,17 @@ class BeamWidget(QWidget):
         self.delimiter_table=self.findChild(QTableWidget,'delimiter_table_widget')
         self.phase_coeff_table=self.findChild(QTableWidget,'phase_coeff_table')
         self.relative_checkbox=self.findChild(QCheckBox,'relative_checkbox')
+        self.plot_relative_checkbox=self.findChild(QCheckBox,'plot_relative_checkbox')
         self.graphlayout=self.findChild(pg.PlotWidget,'beam_plot')
         self.styles = {'color':'#c8c8c8', 'font-size':'10px'}
         self.graphlayout.setLabel('bottom', 'Wavelength (nm)', **self.styles)
         self.graphlayout.setLabel('left', 'Phase (pi)', **self.styles)
         # connect events
-        self.relative_checkbox.stateChanged.connect(self.update_display_from_beam)
-        self.mask_pushbutton.clicked.connect(self.flip_mask)
+        self.plot_relative_checkbox.clicked.connect(self.plot_phase)
+        self.mask_pushbutton.clicked.connect(self.toggle_beam_on_off_display)
         self.import_beam(name,beam)
 
-    def flip_mask(self):
+    def toggle_beam_on_off_display(self):
         """
             Flips the status of the Mask PushButton when triggered
         """
@@ -125,16 +125,16 @@ class BeamWidget(QWidget):
         self.beam_label.setText(self.name)
         self.grating_period.setValue(self.beam.get_gratingPeriod())
         self.grating_amplitude.setText(str(self.beam.get_gratingAmplitude()))
-        self.lambda_comp.setText(str(self.beam.get_compressionCarrier(unit='wavelength')))
-        self.lambda_delay.setText(str(self.beam.get_delayCarrier(unit='wavelength')))
+        self.lambda_comp.setText('%.2f'%(1e9*self.beam.get_compressionCarrier(unit='wavelength')))
+        self.lambda_delay.setText('%.2f'%(1e9*self.beam.get_delayCarrier(unit='wavelength')))
         if self.beam.get_beamStatus():
             self.mask_pushbutton.setText('BEAM ON')
         else:
             self.mask_pushbutton.setText('BEAM OFF')
-        if self.relative_checkbox.isChecked():
-            mode='relative'
+        if self.beam.get_current_phase_mode()=='relative':
+            self.relative_checkbox.setChecked(True)
         else:
-            mode='absolute'
+            self.relative_checkbox.setChecked(False)
         [self.delimiter_table.setItem(0,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
         [self.delimiter_table.setItem(1,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamHorizontalDelimiters())]
         
@@ -160,11 +160,11 @@ class BeamWidget(QWidget):
         '''
             Plots the current phase of the beam either relative to the compression or absolute
         '''
-        if self.relative_checkbox.isChecked():
+        self.graphlayout.clear()
+        if self.plot_relative_checkbox.isChecked():
             mode='relative'
         else:
             mode='absolute'
-        self.graphlayout.clear()
         self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
 
     def toggle_beam_to_slm(self):
@@ -181,20 +181,20 @@ class BeamWidget(QWidget):
         '''
         self.beam.set_gratingPeriod(self.grating_period.value())
         self.beam.set_gratingAmplitude(float(self.grating_amplitude.text()))
-        self.beam.set_compressionCarrierWave(float(self.lambda_comp.text()))
-        self.beam.set_delayCarrierWave(float(self.lambda_delay.text()))
+        self.beam.set_compressionCarrierWave(1e-9*float(self.lambda_comp.text()))
+        self.beam.set_delayCarrierWave(1e-9*float(self.lambda_delay.text()))
         if self.mask_pushbutton.text()=='BEAM OFF':
             self.beam.set_beamStatus(False)
         else:
             self.beam.set_beamStatus(True)
         if self.relative_checkbox.isChecked():
-            mode='relative'
+            self.beam.set_current_phase_mode('relative')
         else:
-            mode='absolute'
+            self.beam.set_current_phase_mode('absolute')
         self.beam.set_beamVerticalDelimiters([int(self.delimiter_table.item(0,0).text()),int(self.delimiter_table.item(0,1).text())])
         self.beam.set_beamHorizontalDelimiters([int(self.delimiter_table.item(1,0).text()),int(self.delimiter_table.item(1,1).text())])
-        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount())]))
-        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount())]),mode=mode)
+        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]))
+        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
 
         return self.name,self.beam
 

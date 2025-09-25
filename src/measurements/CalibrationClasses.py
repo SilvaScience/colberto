@@ -365,7 +365,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                             break
                     self.Chirp_data = self.Chirp_data[:f]        
                     self.data = a[:-3]
-                # Emit the data through signals
+                    # Emit the data through signals
 
                     for i in range(len(self.Chirp_data)):
                         if not self.terminate:

@@ -27,7 +27,7 @@ bm.set_currentPhase(P([0,10,-500,-500]),mode='relative')
 bm.set_beamVerticalDelimiters([100,250])
 
 print('Optimal phase is now:')
-print(bm.get_optimalPhase())
+print(bm.get_optimalPhase(units_to_return='fs'))
 plt.figure()
 plt.title('Example of phase profile vs Column index')
 plt.plot(bm.get_horizontalIndices(),bm.get_sampledCurrentPhase())
