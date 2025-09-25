@@ -192,6 +192,7 @@ class Beam:
                 - unit (str, default 'fs'): The units in which the phase coefficients are provided. 
         '''
         self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
+        self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')
 
     def get_optimalPhase(self,units_to_return='s'):
         '''

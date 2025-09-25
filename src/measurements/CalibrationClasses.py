@@ -381,7 +381,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                     for i in range(len(self.chirp)):
                         if not self.terminate:
                             self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
-                            self.beam.set_currentPhase(P(self.coeffs), mode='absolute')
+                            self.beam.set_currentPhase(P(self.coeffs), mode='relative')
                             self.send_beam.emit((self.beam_name, self.beam))
                             image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)

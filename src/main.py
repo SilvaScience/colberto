@@ -258,16 +258,14 @@ class MainInterface(QtWidgets.QMainWindow):
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
-        self.devices['SLM'].write_image(test_image)
         # Beam update connection
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
         self.DataHandling.sendBeams.connect(self.update_beam_name_list)
         #Beam Explorer related
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
-            #only for testing the beam explorer
-        self.assign_demo_beams_button= self.findChild(QtWidgets.QPushButton, 'send_test_beams')
-        self.assign_demo_beams_button.clicked.connect(self.assign_demo_beams)
+        self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
+        self.devices['SLM'].write_image(test_image)
         # run some functions once to define default values
         self.change_filename()
 
@@ -476,9 +474,12 @@ class MainInterface(QtWidgets.QMainWindow):
                 table.setItem(row_index,col_index,None)
                 
     def update_beam_name_list(self, beamDict):
+        old = self.beam_name_box.currentText()
         self.beam_name_box.clear()
         self.beam_name_box.addItems(beamDict)
-    
+        if old in beamDict:
+            self.beam_name_box.setCurrentText(old)
+
     def chirpBackgroundMeasurement(self):
         if not self.measurement_busy:
             self.measurement_busy = True
@@ -556,10 +557,8 @@ class MainInterface(QtWidgets.QMainWindow):
             Assign the polynomial calibration to the beam.
             TO BE DONE LATER
         ''' 
-        print(self.beam_name_box.currentText())
         beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
-        print(self.beam_name_box.currentText())
-        beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()))
+        beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
         beam.set_optimalPhase(P(self.coeffs))
         self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 

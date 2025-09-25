@@ -152,8 +152,8 @@ class BeamWidget(QWidget):
                 headers.append(f"O({order}) (fs^{order})")
         self.phase_coeff_table.setHorizontalHeaderLabels(headers)
 
-        [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase().coef)]
-        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coef)]
+        [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef)]
+        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(mode='absolute', units_to_return='fs').coef)]
         self.plot_phase()
         #[self.phase_coeff_table.item(1,i).setText(coeff) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coeff)]
     def plot_phase(self):
