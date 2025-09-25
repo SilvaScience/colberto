@@ -192,8 +192,11 @@ class Beam:
                 - unit (str, default 'fs'): The units in which the phase coefficients are provided. 
         '''
         if hasattr(self, 'optimalPhasePolynomial'):
-            self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units='fs')
-            self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial+phasePolynomial,input_units=unit,output_units='s')
+            if all(coef == 0 for coef in phasePolynomial):
+                self.optimalPhasePolynomial = P(np.zeros(len(phasePolynomial)))
+            else:
+                self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units='fs')
+                self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial+phasePolynomial,input_units=unit,output_units='s')
         else:
             self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
         self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')

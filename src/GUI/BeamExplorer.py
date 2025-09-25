@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QTableWidget,QSpinBox,QCheckBox, QTableWidgetItem, QLineEdit
 from PyQt5 import QtCore,uic
+from PyQt5.QtCore import Qt
 import sys
 import os
 import logging
@@ -83,6 +84,7 @@ class BeamWidget(QWidget):
         uic.loadUi(Path(project_folder,r'GUI/beam_explorer.ui'), self)
         # Load components
         self.mask_pushbutton=self.findChild(QPushButton,'mask_pushbutton')
+        self.clear_optimal_pushbutton=self.findChild(QPushButton,'clear_optimal_pushbutton')
         self.beam_label=self.findChild(QLabel,'beam_label')
         self.grating_period=self.findChild(QSpinBox,'grating_period_value')
         self.lambda_comp=self.findChild(QLineEdit,'lambda_comp_box')
@@ -99,6 +101,7 @@ class BeamWidget(QWidget):
         # connect events
         self.plot_relative_checkbox.clicked.connect(self.plot_phase)
         self.mask_pushbutton.clicked.connect(self.toggle_beam_on_off_display)
+        self.clear_optimal_pushbutton.clicked.connect(self.clear_optimal)
         self.import_beam(name,beam)
 
     def toggle_beam_on_off_display(self):
@@ -109,7 +112,7 @@ class BeamWidget(QWidget):
             self.mask_pushbutton.setText('BEAM ON')
         elif self.mask_pushbutton.text()=='BEAM ON':
             self.mask_pushbutton.setText('BEAM OFF')
-
+        
     def import_beam(self,name,beam):
         '''
             Updates the beam into the widget
@@ -166,6 +169,11 @@ class BeamWidget(QWidget):
         else:
             mode='absolute'
         self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
+
+    def clear_optimal(self):
+        self.beam.set_optimalPhase(P([0,0,0]))
+        print(self.beam.get_optimalPhase().coef)
+        self.update_display_from_beam()
 
     def toggle_beam_to_slm(self):
         '''
