@@ -8,6 +8,7 @@ import time
 from PyQt5 import QtCore
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
+from numpy.polynomial import Polynomial as P
 from pathlib import Path
 from scipy import special
 import sys
@@ -311,11 +312,12 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             - sendProgress: float representing the progress of the measurement.
     '''
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    send_chirp= QtCore.pyqtSignal(np.ndarray,np.ndarray,np.ndarray)
+    send_chirp = QtCore.pyqtSignal(np.ndarray,np.ndarray,np.ndarray)
     send_chirp_calibration_data = QtCore.pyqtSignal(tuple)
+    send_beam = QtCore.pyqtSignal(object)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, background, grating_period, beam_, compression_carrier_wavelength, chirp_step, chirp_max, chirp_min,beam, demo=False):
+    def __init__(self,devices, background, grating_period, compression_carrier_wavelength, chirp_step, chirp_max, chirp_min, beam_name, beam, demo=False):
         '''
          Initializes the semporal beam calibration measurement
          input:
@@ -327,8 +329,6 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         super(ChirpCalibrationMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
         self.SLM= devices['SLM']
-        
-        ### i dont know what to do with beam_ position
         
         self.wls = self.spectrometer.get_wavelength()
         self.background = background
@@ -342,20 +342,14 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             'wavelengths' : self.wls,
             'intensities' : self.intensities
         }
-        # Configure single beam over which the columns will be scanned
 
-        self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
-
-        self.monobeam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) 
-        self.monobeam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
-        self.monobeam.set_gratingPeriod(grating_period)
-
-        self.chirp_ = np.linspace(chirp_max,chirp_min,num=int((chirp_max-chirp_min)/chirp_step))
+        self.chirp = np.linspace(chirp_max,chirp_min,num=int((chirp_max-chirp_min)/chirp_step))
         self.isDemo= demo
-        self.beam_ = beam
-        self.beam_.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
-        self.beam_.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
-        self.beam_.set_gratingPeriod(grating_period)
+        self.beam_name = beam_name
+        self.beam = beam
+        self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
+        self.beam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
+        self.beam.set_gratingPeriod(grating_period)
     
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
@@ -383,28 +377,29 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     
                             self.sendProgress.emit(i/len(self.Chirp_data)*100)
                             self.send_chirp.emit(np.array(self.Chirp_data[:i]), np.array(self.wls), np.array(self.data[:i]))
-        else:
-                    # self.BEAM = self.SLM['beam'][self.beam_]
-                    for i in range(len(self.chirp_)):
-                        if not self.terminate:    
-                            self.monobeam.set_currentPhase(Polynomial([0,0,self.chirp_[i]]),mode='absolute')
-                            image_output=self.monobeam.makeGrating()                
+                else:
+                    for i in range(len(self.chirp)):
+                        if not self.terminate:
+                            self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
+                            self.beam.set_currentPhase(P(self.coeffs), mode='absolute')
+                            self.send_beam.emit((self.beam_name, self.beam))
+                            image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)
                             self.take_spectrum(i)
                             self.intensities.append(self.spec)
-                            self.sendProgress.emit(i/len(self.chirp_)*100)
+                            self.sendProgress.emit(i/len(self.chirp)*100)
                             self.Chirp_calibration_data={
-                                'Chirp' : self.chirp_,
+                                'Chirp' : self.chirp,
                                 'wavelengths' : self.wls,
                                 'data' : np.array(self.intensities)
                                 }
                             if i>=1:
-                                self.send_chirp.emit(self.chirp_[:i],self.wls,np.array(self.intensities))
+                                self.send_chirp.emit(self.chirp[:i],self.wls,np.array(self.intensities))
         self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
         print('Temporal Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
-        np.savetxt('chirp.txt', self.chirp_)
+        np.savetxt('chirp.txt', self.chirp)
         np.savetxt('wls.txt', self.wls)
         np.savetxt('intensities.txt', np.array(self.intensities))
     def stop(self):

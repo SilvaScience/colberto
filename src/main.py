@@ -31,7 +31,7 @@ from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Genera
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
 from drivers.Instruments import load_instruments
-from GUI.BeamExplorer import BeamExplorer
+from GUI.BeamExplorer import BeamExplorer, BeamWidget
 import logging
 import datetime
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
@@ -202,8 +202,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
 
         #start Beam explorer
-        self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
-        
+        self.beam_explorer = BeamExplorer(self.DataHandling.get_beams())
         self.show_beam_explorer()
 
         # start Updater to update device read parameters
@@ -495,21 +494,22 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         if not self.measurement_busy:
             self.measurement_busy = True
-            if 'ALL' in self.DataHandling.get_beams():
-                beam_= self.DataHandling.get_beams()['ALL']
+            if self.beam_name_box.currentText() in self.DataHandling.get_beams():
+                beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
             else:
-                beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+                beam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
             self.DataHandling.clear_data() 
             if hasattr(self, 'chirpbackground'):
                 chirpbackground = self.DataHandling.calibration['chirp_background_data']
                 background = chirpbackground['spec']
             else:
                 background = 0
-            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), self.beam_name_box.currentText(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
+            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), self.beam_name_box.currentText(), beam, demo=self.chirp_calib_demo_mode_checkbox.isChecked())
             self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+            self.measurement.send_beam.connect(self.DataHandling.set_beam)
             self.temporalfitting.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
             self.temporalfitting.send_chirp_region.connect(self.ChirpSelectionPlot.set_data)
             self.temporalfitting.send_chirp_fit.connect(self.ChirpFitplot.set_data)
@@ -549,7 +549,6 @@ class MainInterface(QtWidgets.QMainWindow):
             poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x^{i}" for i in range(len(coeffs)))
             lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2f} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs)]
             self.chirp_coeff.setText('\n'.join(lines))
-            self.coef = np.array(np.concatenate(([0, 0], coeffs)))
             self.coeffs = np.array(np.concatenate(([0, 0], coeffs)))
 
     def assignTemporalCalibration(self):
@@ -557,11 +556,12 @@ class MainInterface(QtWidgets.QMainWindow):
             Assign the polynomial calibration to the beam.
             TO BE DONE LATER
         ''' 
-        beams = self.DataHandling.get_beams()
-        beam = beams[self.beam_name_box.currentText()]
+        print(self.beam_name_box.currentText())
+        beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
+        print(self.beam_name_box.currentText())
         beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()))
         beam.set_optimalPhase(P(self.coeffs))
-        self.DataHandling.set_beam((self.beam_name_box.currentText(),beam))
+        self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 
     def assign_vertical_beam_calibration(self):
         '''
