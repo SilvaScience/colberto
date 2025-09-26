@@ -171,8 +171,7 @@ class BeamWidget(QWidget):
         self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
 
     def clear_optimal(self):
-        self.beam.set_optimalPhase(P([0,0,0]))
-        print(self.beam.get_optimalPhase().coef)
+        self.beam.set_optimalPhase(P([0,0,0]),flag='clear phase')
         self.update_display_from_beam()
 
     def toggle_beam_to_slm(self):
@@ -201,7 +200,7 @@ class BeamWidget(QWidget):
             self.beam.set_current_phase_mode('absolute')
         self.beam.set_beamVerticalDelimiters([int(self.delimiter_table.item(0,0).text()),int(self.delimiter_table.item(0,1).text())])
         self.beam.set_beamHorizontalDelimiters([int(self.delimiter_table.item(1,0).text()),int(self.delimiter_table.item(1,1).text())])
-        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]))
+        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]), flag='apply phase')
         self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
 
         return self.name,self.beam

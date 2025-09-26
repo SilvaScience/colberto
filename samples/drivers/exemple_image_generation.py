@@ -19,7 +19,7 @@ def beam_image_gen():
     bm.set_pixelToWavelength(P(1e-9*np.array([500,1/6])))# Sets bogus polynomial for pix to wave conversionpix2wave
     bm.set_compressionCarrierWave(600e-9)
         
-    bm.set_optimalPhase(P([0,0,1000,500]))
+    bm.set_optimalPhase(P([0,0,1000,500]),flag='apply phase')
     bm.set_currentPhase(P([0,-100,-400]),mode='relative')
     bm.set_beamVerticalDelimiters([0,1200])
 

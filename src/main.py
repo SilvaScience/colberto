@@ -559,7 +559,9 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
         beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
-        beam.set_optimalPhase(P(self.coeffs))
+        self.coeffs = np.rint(self.coeffs).astype(int)
+        print(self.coeffs)
+        beam.set_optimalPhase(P(self.coeffs),flag='add phase')
         self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 
     def assign_vertical_beam_calibration(self):

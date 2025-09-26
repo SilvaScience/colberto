@@ -32,7 +32,7 @@ class Beam:
         self.set_beamHorizontalDelimiters([0,SLMWidth])
         self.set_beamVerticalDelimiters([0,SLMHeight])
         self.make_mask()
-        self.set_optimalPhase(P([0,0,0]))
+        self.set_optimalPhase(P([0,0,0]),flag='apply phase')
         self.set_currentPhase(P([0,0,0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
@@ -184,22 +184,27 @@ class Beam:
                             'energy':co.angFreqToeV}
         return conversionFunction[unit](self.compressionCarrierFreq)
     
-    def set_optimalPhase(self,phasePolynomial,unit='fs'):
+    def set_optimalPhase(self,phasePolynomial,flag,unit='fs'):
         '''
             Sets the optimal phase for the beam (spectral phase profile to apply to get best compression and synchronization with the LO)
             input:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
-                - unit (str, default 'fs'): The units in which the phase coefficients are provided. 
+                - unit (str, default 'fs'): The units in which the phase coefficients are provided.
+                - flag (str) : 'clear phase', 'apply phase', 'add phase'
         '''
         if hasattr(self, 'optimalPhasePolynomial'):
-            if all(coef == 0 for coef in phasePolynomial):
-                self.optimalPhasePolynomial = P(np.zeros(len(phasePolynomial)))
-            else:
+            if flag == 'apply phase':
+                print('Apply phases')
+            elif flag == 'add phase':
                 self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units='fs')
                 self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial+phasePolynomial,input_units=unit,output_units='s')
+                self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')
+                print('Modify optimal phase')
+            elif flag == 'clear phase':
+                self.optimalPhasePolynomial=P(np.zeros(len(phasePolynomial)))
+                print('Clear optimal phase')
         else:
             self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
-        self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')
 
     def get_optimalPhase(self,units_to_return='s'):
         '''
@@ -249,7 +254,8 @@ class Beam:
             mode=self.current_phase_mode
         phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
         if mode=='relative':
-            self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
+            #self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
+            self.currentPhasePolynomial=phasePolynomial
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
@@ -268,7 +274,7 @@ class Beam:
         if mode is None:
             mode=self.current_phase_mode
         if mode=='relative':
-            returnPolynomial=self.currentPhasePolynomial-self.optimalPhasePolynomial
+            returnPolynomial=self.currentPhasePolynomial+self.optimalPhasePolynomial
         elif mode=='absolute':
             returnPolynomial=self.currentPhasePolynomial
         return self.convertPhaseCoeffUnits(returnPolynomial,input_units='s',output_units=units_to_return)
@@ -280,7 +286,7 @@ class Beam:
         '''
         return np.arange(self.beamHorizontalDelimiters[0],self.beamHorizontalDelimiters[1])
 
-    def get_sampledCurrentPhase(self,indices=None,mode='absolute'):
+    def get_sampledCurrentPhase(self,indices=None,mode=None):
         '''
             Returns the current phase at the horizontal pixel indices provided
             input:
@@ -291,9 +297,12 @@ class Beam:
                 -  nd.array of float: the current phase at the provided pixel column indices (in rad)
         
         '''
+        if mode is None:
+            mode=self.current_phase_mode
         if indices is None:
             indices=self.indices
         phase_polynomial=self.get_currentPhase(mode=mode)
+
         compression_polynomial=phase_polynomial.copy()
         if len(phase_polynomial.coef)>1:
             delay_polynomial=P([0,phase_polynomial.coef[1]])
