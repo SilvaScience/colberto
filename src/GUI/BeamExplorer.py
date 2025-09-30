@@ -102,6 +102,7 @@ class BeamWidget(QWidget):
         self.plot_relative_checkbox.clicked.connect(self.plot_phase)
         self.mask_pushbutton.clicked.connect(self.toggle_beam_on_off_display)
         self.clear_optimal_pushbutton.clicked.connect(self.clear_optimal)
+        self.phase_coeff_table.cellChanged.connect(self.set_phase_manually)
         self.import_beam(name,beam)
 
     def toggle_beam_on_off_display(self):
@@ -173,6 +174,10 @@ class BeamWidget(QWidget):
     def clear_optimal(self):
         self.beam.set_optimalPhase(P([0,0,0]),flag='clear phase')
         self.update_display_from_beam()
+
+    def set_phase_manually(self):
+        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]), flag='apply phase')
+        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
 
     def toggle_beam_to_slm(self):
         '''

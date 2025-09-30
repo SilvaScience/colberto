@@ -194,15 +194,16 @@ class Beam:
         '''
         if hasattr(self, 'optimalPhasePolynomial'):
             if flag == 'apply phase':
-                print('Apply phases')
+                self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
+                #print('Apply phases')
             elif flag == 'add phase':
                 self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units='fs')
                 self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial+phasePolynomial,input_units=unit,output_units='s')
                 self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')
-                print('Modify optimal phase')
+                #print('Modify optimal phase')
             elif flag == 'clear phase':
                 self.optimalPhasePolynomial=P(np.zeros(len(phasePolynomial)))
-                print('Clear optimal phase')
+                #print('Clear optimal phase')
         else:
             self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
 
