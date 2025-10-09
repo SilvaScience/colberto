@@ -195,15 +195,12 @@ class Beam:
         if hasattr(self, 'optimalPhasePolynomial'):
             if flag == 'apply phase':
                 self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
-                #print('Apply phases')
             elif flag == 'add phase':
                 self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units='fs')
                 self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial+phasePolynomial,input_units=unit,output_units='s')
                 self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')
-                #print('Modify optimal phase')
             elif flag == 'clear phase':
                 self.optimalPhasePolynomial=P(np.zeros(len(phasePolynomial)))
-                #print('Clear optimal phase')
         else:
             self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
 
@@ -257,6 +254,7 @@ class Beam:
         if mode=='relative':
             #self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
             self.currentPhasePolynomial=phasePolynomial
+            #print(self.currentPhasePolynomial)
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
@@ -300,9 +298,11 @@ class Beam:
         '''
         if mode is None:
             mode=self.current_phase_mode
+            #print(mode)
         if indices is None:
             indices=self.indices
         phase_polynomial=self.get_currentPhase(mode=mode)
+        #print(phase_polynomial)
 
         compression_polynomial=phase_polynomial.copy()
         if len(phase_polynomial.coef)>1:

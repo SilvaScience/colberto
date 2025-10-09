@@ -60,7 +60,7 @@ def load_instruments():
     # initialize StresingDemo
     stresing_params={
         'pixel_size_mm':24e-3,
-        'num_pixels':1024,
+        'num_pixels':1010,
         'calibrated': False
     }
     try: 

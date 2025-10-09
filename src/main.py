@@ -195,7 +195,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
 
         # start DataHandling
-        self.spec_length = 1024
+        self.spec_length = self.devices['spectrometer'].get_num_pixel()
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
@@ -560,7 +560,6 @@ class MainInterface(QtWidgets.QMainWindow):
         beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
         beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
         self.coeffs = np.rint(self.coeffs).astype(int)
-        print(self.coeffs)
         beam.set_optimalPhase(P(self.coeffs),flag='add phase')
         self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 

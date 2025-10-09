@@ -48,7 +48,7 @@ class StresingCamera(QtCore.QThread):
         path_dll = folder_path_dll / "stresing" / "ESLSCDLL.dll"
         path_dll = str(path_dll)
 
-        path_config = Path(r"C:\Program Files\Stresing\Escam\config.ini")
+        path_config = Path(r"C:\Program Files\Stresing\Escam\config_UdeM.ini")
 
         # Create a ConfigParser object
         config = configparser.ConfigParser()
@@ -65,19 +65,19 @@ class StresingCamera(QtCore.QThread):
         # Parameters. Defines parameters that are required for by the interface
         self.sample = int(config.get("General","nos"))
         self.block = int(config.get("General","nob"))
-        self.adc_gain = int(config.get("board0","adcGain"))
-        self.channel0 = int(config.get("board0","dacCameraChannel0"))
-        self.channel1 = int(config.get("board0","dacCameraChannel1"))
-        self.channel2 = int(config.get("board0","dacCameraChannel2"))
-        self.channel3 = int(config.get("board0","dacCameraChannel3"))
-        self.channel4 = int(config.get("board0","dacCameraChannel4"))
-        self.channel5 = int(config.get("board0","dacCameraChannel5"))
-        self.channel6 = int(config.get("board0","dacCameraChannel6"))
-        self.channel7 = int(config.get("board0","dacCameraChannel7"))
-        self.bti = int(config.get("board0","bti"))
-        self.sti = int(config.get("board0","sti"))
-        self.btimer = int(config.get("board0","btimer"))
-        self.stimer = int(config.get("board0","stimer"))
+        self.adc_gain = int(config.get("Board0","adcGain"))
+        self.channel0 = int(config.get("Board0","dacCameraChannel0"))
+        self.channel1 = int(config.get("Board0","dacCameraChannel1"))
+        self.channel2 = int(config.get("Board0","dacCameraChannel2"))
+        self.channel3 = int(config.get("Board0","dacCameraChannel3"))
+        self.channel4 = int(config.get("Board0","dacCameraChannel4"))
+        self.channel5 = int(config.get("Board0","dacCameraChannel5"))
+        self.channel6 = int(config.get("Board0","dacCameraChannel6"))
+        self.channel7 = int(config.get("Board0","dacCameraChannel7"))
+        self.bti = int(config.get("Board0","bti"))
+        self.sti = int(config.get("Board0","sti"))
+        self.btimer = int(config.get("Board0","btimer"))
+        self.stimer = int(config.get("Board0","stimer"))
         self.new_spectrum = False
 
         # set parameter dict
@@ -301,7 +301,7 @@ class StresingCamera(QtCore.QThread):
                 # 435.83        495.90
                 # 546.07        611.90
                 # 1013.98       1111.80
-                self.wavelengths = 0.9402*self.wavelengths-30.864
+                self.wavelengths = 0.955*self.wavelengths-30.864
         else:
             self.wavelengths= self.hardware_params['num_pixels']
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength'%datetime.datetime.now())
@@ -316,6 +316,9 @@ class StresingCamera(QtCore.QThread):
         self.type='Spectrometer'
         self.hardware_params.update(self.monochromator.get_hardware_parameters())
 
+    def get_num_pixel(self):
+        return self.hardware_params['num_pixels']
+
     def get_wavelength(self):
         """
             Returns the wavelengths corresponding to each pixel of the camera
@@ -329,8 +332,8 @@ class StresingCamera(QtCore.QThread):
         while not self.new_spectrum:
             time.sleep(0.01)
             self.new_spectrum = False
-        self.spec = np.array(self.spectrum)
-        self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
+        self.spec = np.array(self.spectrum[13:-1])
+        #self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
         return self.spec
 
 class StresingWorker(QtCore.QThread):

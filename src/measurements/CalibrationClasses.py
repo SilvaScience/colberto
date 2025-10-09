@@ -231,7 +231,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.wavelength_array=wavelength_array
         self.data=data
         for spectrum in data:
-            wavelengths.append(wavelength_array[np.mean(np.argmax(spectrum[13:-1]),dtype=int)])
+            wavelengths.append(self.wavelength_array[np.mean(np.argmax(spectrum),dtype=int)])
         wavelengths=np.array(wavelengths)
         index = np.arange(len(wavelengths))*self.increment
         columns_out=column_array[np.logical_and(index>=boundaries[0],index<=boundaries[1])]
@@ -383,7 +383,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                         if not self.terminate:
                             self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
                             self.beam.set_currentPhase(P(self.coeffs), mode='relative')
-                            self.send_beam.emit((self.beam_name, self.beam))
+                            #self.send_beam.emit((self.beam_name, self.beam))
                             image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)
                             self.take_spectrum(i)
@@ -451,10 +451,10 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         SNR = self.data/noise_level
         data_filtered = np.where(SNR >= SNR_threshold, self.data, 0) # Replace data with SNR below threshold with 0. 
 
-        chirp_array_region = self.chirp_array[5:-5]
+        chirp_array_region = self.chirp_array[1:-1]
         mask = np.logical_and(self.wavelength_array >= boundaries[0], self.wavelength_array <= boundaries[1])
         wavelength_array_region = self.wavelength_array[mask]
-        data_filtered_region = data_filtered[5:-5, mask]
+        data_filtered_region = data_filtered[1:-1, mask]
 
         self.send_chirp_region.emit(chirp_array_region, wavelength_array_region, data_filtered_region)
         self.temporal_calibration_processed_data={
@@ -520,8 +520,13 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
 
         # Convert to standard basis
-        standard_poly = self.fit_polynomial.convert(domain=[min(freqs_shifted_THz), max(freqs_shifted_THz)])
+        standard_poly = self.fit_polynomial.convert(self.fit_polynomial.domain, kind=Polynomial)
+        adjusted_coeffs = [
+            (coeff * math.factorial(n - 2))
+            for n, coeff in enumerate(standard_poly.coef, start=3)
+        ]
+        print(adjusted_coeffs)
 
         # Get the coefficients
-        self.coeffs = standard_poly.coef
+        self.coeffs = adjusted_coeffs
         return self.coeffs
