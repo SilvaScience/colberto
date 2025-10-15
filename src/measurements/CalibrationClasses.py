@@ -514,6 +514,8 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         freqs_shifted_THz = freqs_shifted * 1e-12 # THz
 
         # Fit a nth order polynimial
+        # DO THE FIT ON OMEGA INSTEAD OF THE SHIFTED FREQUENCY DOMAIN. DON'T FORGET TO IMPLEMENT THE 2PI FATOR. THE POLYNOMIAL ARE DEFINE IN RAD/S.
+        # IT MEANS THAT IT MIGHT NO BE A GOOD THING TO PRINT THE FIGURE ON SHIFTED FREQUENCY. LET'S KEEP THAT IN MIND FOR THE NEXT IMPLEMENTATION. 
         self.fit_polynomial = Polynomial.fit(freqs_shifted_THz, max_chirp_values, deg)
         self.send_chirp_fit.emit(freqs_shifted_THz, max_chirp_values)
         self.send_polynomial.emit(self.fit_polynomial)
