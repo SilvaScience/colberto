@@ -317,7 +317,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
     send_beam = QtCore.pyqtSignal(object)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, background, grating_period, compression_carrier_wavelength, chirp_step, chirp_max, chirp_min, beam_name, beam, demo=False):
+    def __init__(self,devices, background, grating_period, compression_carrier_wavelength, chirp_step, chirp_max, chirp_min, beam_name, beam, spectral_calibration=None, demo=False):
         '''
          Initializes the semporal beam calibration measurement
          input:
@@ -347,7 +347,10 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.isDemo= demo
         self.beam_name = beam_name
         self.beam = beam
-        self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
+        if spectral_calibration == None:
+            self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) # arbitrairy polynomial spectral calibration
+        else:        
+            self.beam.set_pixelToWavelength(spectral_calibration)
         self.beam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
         self.beam.set_gratingPeriod(grating_period)
     
@@ -505,17 +508,22 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         # Convert wavelengts to frequency [Hz]
         c = 3e8 # speed of light in m/s
         freqs_values = c / (np.array(wavelength_values) * 1e-9) # Hz
+        omega_values = 2*np.pi*c / (np.array(wavelength_values) * 1e-9) # rad Hz
         #freq_at_max_iintensity = c / (wavelength_at_max_intensity * 1e-9) # Hz
         carrier_freq_SHG = c / (carrier_wavelength/2 * 1e-9) # Hz
+        carrier_omega_SHG = 2*np.pi*c / (carrier_wavelength/2 * 1e-9) # rad Hz
+        omega_values_THz = omega_values * 1e-12 # rad THz
 
         # Shift frequencies so carrier frequency is at zero
         #freqs_shifted = freqs_values-freq_at_max_iintensity
         freqs_shifted = freqs_values-carrier_freq_SHG
+        omega_shifted = omega_values-carrier_omega_SHG
         freqs_shifted_THz = freqs_shifted * 1e-12 # THz
+        omega_shifted_THz = omega_shifted * 1e-12 # rad THz
 
         # Fit a nth order polynimial
-        self.fit_polynomial = Polynomial.fit(freqs_shifted_THz, max_chirp_values, deg)
-        self.send_chirp_fit.emit(freqs_shifted_THz, max_chirp_values)
+        self.fit_polynomial = Polynomial.fit(omega_values, max_chirp_values, deg)
+        self.send_chirp_fit.emit(omega_values, max_chirp_values)
         self.send_polynomial.emit(self.fit_polynomial)
         self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
 
