@@ -386,12 +386,8 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                     for i in range(len(self.chirp)):
                         if not self.terminate:
                             self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
-                            print('New coeff', self.coeffs)
                             self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
-                            print('CalibrationClasses', self.beam.get_currentPhase(mode='absolute', units_to_return='fs').coef)
                             self.send_beam.emit((self.beam_name, self.beam))
-                            time.sleep(1)
-                            print('done')
                             image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)
                             self.take_spectrum(i)
@@ -538,7 +534,6 @@ class FitTemporalBeamCalibration(QtCore.QThread):
             (coeff * math.factorial(n - 2))
             for n, coeff in enumerate(standard_poly.coef, start=3)
         ]
-        print(adjusted_coeffs)
 
         # Get the coefficients
         self.coeffs = adjusted_coeffs
