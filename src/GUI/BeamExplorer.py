@@ -159,7 +159,7 @@ class BeamWidget(QWidget):
         [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef)]
         [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(mode='absolute', units_to_return='fs').coef)]
         self.plot_phase()
-        #[self.phase_coeff_table.item(1,i).setText(coeff) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coeff)]
+        #[self.phase_coeff_table.item(1,i).setText(coeff) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coef)]
     def plot_phase(self):
         '''
             Plots the current phase of the beam either relative to the compression or absolute
@@ -172,6 +172,9 @@ class BeamWidget(QWidget):
         self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
 
     def clear_optimal(self):
+        '''
+            Clear both the current and optimal phase coefficients
+        '''
         self.beam.set_optimalPhase(P([0,0,0]),flag='clear phase')
         self.update_display_from_beam()
 

@@ -254,7 +254,6 @@ class Beam:
         if mode=='relative':
             #self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
             self.currentPhasePolynomial=phasePolynomial
-            #print(self.currentPhasePolynomial)
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
@@ -298,18 +297,16 @@ class Beam:
         '''
         if mode is None:
             mode=self.current_phase_mode
-            #print(mode)
         if indices is None:
             indices=self.indices
         phase_polynomial=self.get_currentPhase(mode=mode)
-        #print(phase_polynomial)
 
         compression_polynomial=phase_polynomial.copy()
         if len(phase_polynomial.coef)>1:
             delay_polynomial=P([0,phase_polynomial.coef[1]])
             compression_polynomial.coef[1]=0
         else:
-            delay_polynomial=P([0,0])
+            delay_polynomial=P([0,0])   
         angFreq_compression=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
         angFreq_delay=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_delayCarrier()
         return delay_polynomial(angFreq_delay)+compression_polynomial(angFreq_compression)

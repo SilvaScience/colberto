@@ -236,7 +236,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         index = np.arange(len(wavelengths))*self.increment
         columns_out=column_array[np.logical_and(index>=boundaries[0],index<=boundaries[1])]
         wavelengths_out=wavelengths[np.logical_and(index>=boundaries[0],index<=boundaries[1])]
-        self.send_maxima.emit(columns_out,wavelengths_out)
+        self.send_maxima.emit(columns_out,wavelengths_out*1e-9)
         self.spectral_calibration_processed_data={
             'columns':columns_out,
             'wavelengths':wavelengths_out
@@ -260,7 +260,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
                 - columns: (nd.array) array of SLM columns indices
                 - maxima_wavelenghts: (nd.array) array of the maxima (wavelengths) of the spectral calibration measurements
         '''
-        self.fit_polynomial=Polynomial.fit(columns,maxima_wavelengths,deg=degree)
+        self.fit_polynomial=Polynomial.fit(columns,maxima_wavelengths*1e-9,deg=degree)
         self.send_polynomial.emit(self.fit_polynomial)
         self.send_spectral_calibration_fit.emit(('spectral_calibration_fit',self.fit_polynomial))
         
@@ -349,8 +349,9 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.beam = beam
         if spectral_calibration == None:
             self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) # arbitrairy polynomial spectral calibration
-        else:        
-            self.beam.set_pixelToWavelength(spectral_calibration)
+        else:
+            print('no spectral calibration')       
+            #self.beam.set_pixelToWavelength(spectral_calibration)
         self.beam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
         self.beam.set_gratingPeriod(grating_period)
     
@@ -385,8 +386,12 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                     for i in range(len(self.chirp)):
                         if not self.terminate:
                             self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
-                            self.beam.set_currentPhase(P(self.coeffs), mode='relative')
-                            #self.send_beam.emit((self.beam_name, self.beam))
+                            print('New coeff', self.coeffs)
+                            self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                            print('CalibrationClasses', self.beam.get_currentPhase(mode='absolute', units_to_return='fs').coef)
+                            self.send_beam.emit((self.beam_name, self.beam))
+                            time.sleep(1)
+                            print('done')
                             image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)
                             self.take_spectrum(i)
