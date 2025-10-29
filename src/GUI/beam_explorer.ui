@@ -53,7 +53,7 @@
    </column>
    <column>
     <property name="text">
-     <string>GDD (fs^2)</string>
+     <string>O(2) (fs^2)</string>
     </property>
    </column>
    <column>

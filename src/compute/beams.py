@@ -32,7 +32,7 @@ class Beam:
         self.set_beamHorizontalDelimiters([0,SLMWidth])
         self.set_beamVerticalDelimiters([0,SLMHeight])
         self.make_mask()
-        self.set_optimalPhase(P([0,0,0]),flag='apply phase')
+        self.set_optimalPhase(P([0,0,0]))
         self.set_currentPhase(P([0,0,0]))
         self.phaseGratingAmplitude=1
         self.phaseGratingPeriod=None
@@ -184,25 +184,14 @@ class Beam:
                             'energy':co.angFreqToeV}
         return conversionFunction[unit](self.compressionCarrierFreq)
     
-    def set_optimalPhase(self,phasePolynomial,flag,unit='fs'):
+    def set_optimalPhase(self,phasePolynomial,unit='fs'):
         '''
             Sets the optimal phase for the beam (spectral phase profile to apply to get best compression and synchronization with the LO)
             input:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
                 - unit (str, default 'fs'): The units in which the phase coefficients are provided.
-                - flag (str) : 'clear phase', 'apply phase', 'add phase'
         '''
-        if hasattr(self, 'optimalPhasePolynomial'):
-            if flag == 'apply phase':
-                self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
-            elif flag == 'add phase':
-                self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial,input_units='s',output_units='fs')
-                self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(self.optimalPhasePolynomial+phasePolynomial,input_units=unit,output_units='s')
-                self.set_currentPhase(P(np.zeros(len(phasePolynomial))), mode='absolute')
-            elif flag == 'clear phase':
-                self.optimalPhasePolynomial=P(np.zeros(len(phasePolynomial)))
-        else:
-            self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
+        self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
 
     def get_optimalPhase(self,units_to_return='s'):
         '''
@@ -252,8 +241,7 @@ class Beam:
             mode=self.current_phase_mode
         phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
         if mode=='relative':
-            #self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
-            self.currentPhasePolynomial=phasePolynomial
+            self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
@@ -272,10 +260,11 @@ class Beam:
         if mode is None:
             mode=self.current_phase_mode
         if mode=='relative':
-            returnPolynomial=self.currentPhasePolynomial+self.optimalPhasePolynomial
+            returnPolynomial=self.currentPhasePolynomial-self.optimalPhasePolynomial
         elif mode=='absolute':
             returnPolynomial=self.currentPhasePolynomial
         return self.convertPhaseCoeffUnits(returnPolynomial,input_units='s',output_units=units_to_return)
+    
     def get_horizontalIndices(self):
         '''
             Returns an array with indices from the active part of the SLM
@@ -390,7 +379,7 @@ class Beam:
         if self.phaseGratingPeriod is None:
             return phaseGratingImage
         numberVerticalPixels=self.SLMHeight
-        phaseProfile=self.get_sampledCurrentPhase()
+        phaseProfile=self.get_sampledCurrentPhase(mode='absolute')
         for i,phase in enumerate(phaseProfile):
             phaseGratingImage[:,i]=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
         phaseGratingImage=np.array(phaseGratingImage)
