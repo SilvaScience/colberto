@@ -322,9 +322,16 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
          Initializes the semporal beam calibration measurement
          input:
              - devices: the devices dictionnary holding at least a spectrometer and a SLM
+             - background: the background to be remove of each measurements
              - grating_period: (int) the vertical period (in pixels) of the phase grating
-             - column_increment: (int) the step by which to shift the columns 
-             - column_width: (int) the width (in pixels) of the scanned column
+             - compression_carrier_wavlength: set in the GUI in nm
+             - chirp_step: set in the GUI in fs^2
+             - chrip_max: set in the GUI in fs^2
+             - chirp_min: set in the GUI in fs^2
+             - beam_name: set in the GUI 
+             - beam: disctionnary of all beam attributes
+             - spectral_calibration: pixel to wavelength calibration obtained (polynomial)
+             - demo: is demo or not
         ''' 
         super(ChirpCalibrationMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
