@@ -79,6 +79,8 @@ class StresingCamera(QtCore.QThread):
         self.btimer = int(config.get("Board0","btimer"))
         self.stimer = int(config.get("Board0","stimer"))
         self.new_spectrum = False
+        self.calibrationSlope = int(config.get("Board0","calibrationSlope"))
+        self.calibrationOffset = int(config.get("Board0","calibrationOffset"))
 
         # set parameter dict
         self.parameter_dict = defaultdict()
@@ -301,7 +303,7 @@ class StresingCamera(QtCore.QThread):
                 # 435.83        495.90
                 # 546.07        611.90
                 # 1013.98       1111.80
-                self.wavelengths = 0.955*self.wavelengths-30.864
+                self.wavelengths = self.calibrationSlope*self.wavelengths+self.calibrationOffset
         else:
             self.wavelengths= self.hardware_params['num_pixels']
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength'%datetime.datetime.now())
