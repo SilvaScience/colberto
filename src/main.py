@@ -557,7 +557,7 @@ class MainInterface(QtWidgets.QMainWindow):
             poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x^{i}" for i in range(len(coeffs)))
             lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2f} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs)]
             self.chirp_coeff.setText('\n'.join(lines))
-            self.coeffs = np.array(np.concatenate(([0, 0], coeffs)))
+            self.last_temp_fit_coeffs = np.array(np.concatenate(([0, 0], coeffs)))
 
     def assignTemporalCalibration(self):
         '''
@@ -566,13 +566,13 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
         beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
-        self.coeffs = np.rint(self.coeffs).astype(int)
+        self.last_temp_fit_coeffs = np.rint(self.last_temp_fit_coeffs).astype(int)
         old_coeff = beam.get_optimalPhase(units_to_return='fs').coef
-        if len(self.coeffs) < len(old_coeff):
-            self.coeffs = np.pad(self.coeffs, (0, len(old_coeff) - len(self.coeffs)), 'constant', constant_values=0)
-        elif len(old_coeff) < len(self.coeffs):
-            old_coeff = np.pad(old_coeff, (0, len(self.coeffs) - len(old_coeff)), 'constant', constant_values=0)
-        beam.set_optimalPhase(P(self.coeffs+old_coeff))
+        if len(self.last_temp_fit_coeffs) < len(old_coeff):
+            self.last_temp_fit_coeffs = np.pad(self.last_temp_fit_coeffs, (0, len(old_coeff) - len(self.last_temp_fit_coeffs)), 'constant', constant_values=0)
+        elif len(old_coeff) < len(self.last_temp_fit_coeffs):
+            old_coeff = np.pad(old_coeff, (0, len(self.last_temp_fit_coeffs) - len(old_coeff)), 'constant', constant_values=0)
+        beam.set_optimalPhase(P(self.last_temp_fit_coeffs+old_coeff))
         self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 
     def assign_vertical_beam_calibration(self):
