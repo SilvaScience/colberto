@@ -355,9 +355,8 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.beam_name = beam_name
         self.beam = beam
         if spectral_calibration == None:
-            self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) # arbitrairy polynomial spectral calibration
-        else:
-            print('no spectral calibration')       
+            self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) # arbitrary polynomial spectral calibration
+            print('Arbitrary spectral calibration used') 
             #self.beam.set_pixelToWavelength(spectral_calibration)
         self.beam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
         self.beam.set_gratingPeriod(grating_period)
