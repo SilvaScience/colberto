@@ -31,7 +31,7 @@ from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Genera
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
 from drivers.Instruments import load_instruments
-from GUI.BeamExplorer import BeamExplorer, BeamWidget
+from GUI.BeamExplorer import BeamExplorer
 import logging
 import datetime
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
