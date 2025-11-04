@@ -11,6 +11,7 @@ from numpy.polynomial.polynomial import Polynomial
 from numpy.polynomial import Polynomial as P
 from pathlib import Path
 from scipy import special
+from compute import colbertoutils as co
 import sys
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
@@ -493,11 +494,6 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         self.chirp_array = chirp_array
         self.wavelength_array = wavelength_array
         self.data = data
-
-        # Find max in whole data
-        max_pos = np.unravel_index(np.nanargmax(self.data), self.data.shape)
-        max_chirp, max_wavelength = max_pos
-        wavelength_at_max_intensity = self.wavelength_array[max_wavelength]
         
         # Loop through each wavelength 
         max_chirp_values = []
@@ -511,22 +507,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
             wavelength_values.append(self.wavelength_array[wls])
         max_chirp_values = np.array(max_chirp_values)
         wavelength_values = np.array(wavelength_values)
-
-        # Convert wavelengts to frequency [Hz]
-        c = 3e8 # speed of light in m/s
-        freqs_values = c / (np.array(wavelength_values) * 1e-9) # Hz
-        omega_values = 2*np.pi*c / (np.array(wavelength_values) * 1e-9) # rad Hz
-        #freq_at_max_iintensity = c / (wavelength_at_max_intensity * 1e-9) # Hz
-        carrier_freq_SHG = c / (carrier_wavelength/2 * 1e-9) # Hz
-        carrier_omega_SHG = 2*np.pi*c / (carrier_wavelength/2 * 1e-9) # rad Hz
-        omega_values_THz = omega_values * 1e-12 # rad THz
-
-        # Shift frequencies so carrier frequency is at zero
-        #freqs_shifted = freqs_values-freq_at_max_iintensity
-        freqs_shifted = freqs_values-carrier_freq_SHG
-        omega_shifted = omega_values-carrier_omega_SHG
-        freqs_shifted_THz = freqs_shifted * 1e-12 # THz
-        omega_shifted_THz = omega_shifted * 1e-12 # rad THz
+        omega_values = co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz
 
         # Fit a nth order polynimial
         self.fit_polynomial = Polynomial.fit(omega_values, max_chirp_values, deg)
