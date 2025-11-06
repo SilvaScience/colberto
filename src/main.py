@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 from numpy.polynomial import Polynomial as P
 from PyQt5 import QtCore, QtWidgets, uic
+from PyQt5.QtWidgets import QApplication
 import pyqtgraph as pg
 from functools import partial
 import pyqtgraph as pg
@@ -675,7 +676,11 @@ class MainInterface(QtWidgets.QMainWindow):
         """
         self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
         self.beam_explorer.show()
-    
+    def closeEvent(self,event):
+        '''
+            Closes all windows when the main window is closed.
+        '''
+        QApplication.closeAllWindows()
 
 class UpdateWorker(QtCore.QThread):
 
@@ -698,7 +703,6 @@ class UpdateWorker(QtCore.QThread):
                         self.updated_param[param] = self.devices[devices].parameter_dict[param]
                 self.new_parameter.emit(self.updated_param)
             time.sleep(self.update_interval)
-
 
 app = QtWidgets.QApplication(sys.argv)
 window = MainInterface()
