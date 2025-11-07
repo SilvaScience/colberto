@@ -505,26 +505,25 @@ class MainInterface(QtWidgets.QMainWindow):
                 background = chirpbackground['spec']
             else:
                 background = 0
-            if hasattr(self, 'spectralfitting') or self.chirp_calib_demo_mode_checkbox.isChecked():
-                if not self.chirp_calib_demo_mode_checkbox.isChecked():
-                    spectral_calib_dict = self.DataHandling.calibration['spectral_calibration_fit']
-                else:
-                    spectral_calib_dict = None
-                self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), self.beam_name_box.currentText(), beam, spectral_calib_dict, demo=self.chirp_calib_demo_mode_checkbox.isChecked())
-                self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
-                self.measurement.sendProgress.connect(self.set_progress)
-                self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-                self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
-                self.measurement.send_beam.connect(self.DataHandling.set_beam)
-                self.temporalfitting.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
-                self.temporalfitting.send_chirp_region.connect(self.ChirpSelectionPlot.set_data)
-                self.temporalfitting.send_chirp_fit.connect(self.ChirpFitplot.set_data)
-                self.temporalfitting.send_polynomial.connect(self.ChirpFitplot.set_fit)
-                self.temporalfitting.send_chirp_calibration_fit.connect(self.DataHandling.add_calibration)
-                self.measurement.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
-                self.measurement.start()
-            else:
-                print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
+            try:
+                spectral_calib_dict = self.DataHandling.calibration['spectral_calibration_fit']
+            except:
+                spectral_calib_dict = None
+            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), self.beam_name_box.currentText(), beam, spectral_calib_dict, demo=self.chirp_calib_demo_mode_checkbox.isChecked())
+            self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+            self.measurement.send_beam.connect(self.DataHandling.set_beam)
+            self.temporalfitting.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
+            self.temporalfitting.send_chirp_region.connect(self.ChirpSelectionPlot.set_data)
+            self.temporalfitting.send_chirp_fit.connect(self.ChirpFitplot.set_data)
+            self.temporalfitting.send_polynomial.connect(self.ChirpFitplot.set_fit)
+            self.temporalfitting.send_chirp_calibration_fit.connect(self.DataHandling.add_calibration)
+            self.measurement.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+            #else:
+            #    print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
         else:
             print('Measurement not started, devices are busy')
 

@@ -51,13 +51,12 @@ class StresingCamera(QtCore.QThread):
         path_config = Path(r"C:\Program Files\Stresing\Escam\config_UdeM.ini")
 
         # Create a ConfigParser object
-        config = configparser.ConfigParser()
+        config = CaseInsensitiveConfig()
         # Read the INI file
         config.read(path_config)
 
         # Intitalize stresing camera 
-        #self.CAM = stresing(path_config, path_dll, path_dll2)
-        self.driver = init_driver(self, path_dll, path_config) # type: ignore
+        self.driver = init_driver(self, path_dll, config) # type: ignore
 
         # preallocate arrays
         self.spectrum = np.ndarray([])
@@ -361,3 +360,18 @@ class StresingWorker(QtCore.QThread):
         self.spectrum = measure(self, use_blocking_call) # type: ignore
         self.new_spectrum = True
         return self.spectrum
+    
+class CaseInsensitiveConfig(configparser.ConfigParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.optionxform = str.lower  # lowercase all option keys
+
+    def read(self, filenames, encoding=None):
+        super().read(filenames, encoding)
+        # lowercase section names
+        self._sections = {k.lower(): {kk.lower(): vv for kk, vv in v.items()}
+                          for k, v in self._sections.items()}
+
+    # override .get() to lowercase section/option lookups
+    def get(self, section, option, **kwargs):
+        return super().get(section.lower(), option.lower(), **kwargs)

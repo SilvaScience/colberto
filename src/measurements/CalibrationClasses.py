@@ -20,6 +20,7 @@ from src.compute.calibration import Calibration
 import logging
 import os
 import math
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -357,8 +358,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.beam = beam
         if spectral_calibration == None:
             self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) # arbitrary polynomial spectral calibration
-            print('Arbitrary spectral calibration used') 
-            #self.beam.set_pixelToWavelength(spectral_calibration)
+            logger.warning('%s Arbitrary spectral calibration used'%datetime.datetime.now())
         self.beam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
         self.beam.set_gratingPeriod(grating_period)
     
@@ -411,9 +411,9 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.sendProgress.emit(100)
         self.stop()
         print('Temporal Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
-        np.savetxt('chirp.txt', self.chirp)
-        np.savetxt('wls.txt', self.wls)
-        np.savetxt('intensities.txt', np.array(self.intensities))
+        #np.savetxt('chirp.txt', self.chirp)
+        #np.savetxt('wls.txt', self.wls)
+        #np.savetxt('intensities.txt', np.array(self.intensities))
     def stop(self):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
@@ -422,8 +422,8 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             self.spec = np.array(self.spectrometer.get_intensities())
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
-            self.background_subtraction = self.spec-self.background
-            self.sendSpectrum.emit(self.wls, self.background_subtraction)
+            self.spec = self.spec-self.background
+            self.sendSpectrum.emit(self.wls, self.spec)
 
 class FitTemporalBeamCalibration(QtCore.QThread):
     '''
