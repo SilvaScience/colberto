@@ -20,6 +20,7 @@ from collections import defaultdict
 
 class Cryocore(QtCore.QThread):
     name = 'cryostat'
+    type= 'Cryostat'
 
     def __init__(self):
         super(Cryocore, self).__init__()
