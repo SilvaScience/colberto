@@ -7,98 +7,49 @@ Created on Tue Jan  1 14:34:11 2025
 import sys
 import time
 import re
+import h5py
 import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
+from numpy.polynomial import Polynomial as P
 from PyQt5 import QtCore, QtWidgets, uic
 import pyqtgraph as pg
 from functools import partial
 import pyqtgraph as pg
 from GUI.ParameterPlot import ParameterPlot
 from GUI.SpectrometerPlot import SpectrometerPlot
-from GUI.VerticalCalibPlot import VerticalCalibPlot
-from GUI.SpectralCalibPlot import SpectralCalibDataPlot,SpectralCalibFitPlot
-from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot
+from GUI.LUT_Calib_plot import LUT_Calib_plot
+from GUI.VerticalCalibPlot import VerticalCalibPlot 
+from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
+from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
-from drivers.CryoDemo import CryoDemo
-from drivers.SpectrometerDemo_advanced import SpectrometerDemo
-from drivers.SLM import Slm
-from drivers.SLMDemo import SLMDemo
-from drivers.StresingDemo import StresingDemo
-from drivers.MonochromDemo import MonochromDemo
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement,SpectralBeamCalibrationMeasurement,FitSpectralBeamCalibration,ChirpCalibrationMeasurement
-from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, ChirpAcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration
+from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale
 from compute.beams import Beam
+from samples.drivers.exemple_image_generation import beam_image_gen
+from drivers.Instruments import load_instruments
+from GUI.BeamExplorer import BeamExplorer
 import logging
 import datetime
 
 logger = logging.getLogger(__name__)
-
 class MainInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainInterface, self).__init__()
         project_folder = Path(__file__).parent.resolve()
-        uic.loadUi(Path(project_folder, r'GUI/main_GUI.ui'), self)
+        uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
         logging.basicConfig(filename='main.log', level=logging.INFO)
-        logger.info('%s Started log' % datetime.datetime.now())
-
+        logger.info('%s Started log'%datetime.datetime.now())
         # fancy name
         self.setWindowTitle('COLBERTo')
 
-        # set devices dict
-        self.devices = defaultdict(dict)
-
-        # initialize cryostat
-        """ This is a demo devices that has read and write parameters. 
-        Illustrates use of parameters"""
-        # always try to include communication on important events.
-        # This is extremely useful for debugging and troubleshooting.
-        logger.warning('%s You are using a DEMO version of the cryostat' % datetime.datetime.now())
-        self.cryostat = CryoDemo()  # launch cryostat interface
-        self.devices['cryostat'] = self.cryostat  # store in global device dict.
-
-        # initialize Spectrometer
-        try:
-            from drivers.OceanSpectrometer import OceanSpectrometer
-            self.spectrometer = OceanSpectrometer()
-            self.spectrometer.start()
-            self.spec_length = self.spectrometer.spec_length
-            self.devices['spectrometer'] = self.spectrometer
-            logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
-        except:
-            self.spectrometer = SpectrometerDemo()
-            self.spec_length = self.spectrometer.spec_length
-            self.devices['spectrometer'] = self.spectrometer
-            logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
-
-        # initialize SLM
-        try:
-            from samples.drivers.exemple_image_generation import beam_image_gen
-            # raise Exception('DEMO')
-            self.SLM = Slm()
-            self.devices['SLM'] = self.SLM
-            logger.info('%s SLM connected' % datetime.datetime.now())
-        except Exception as e:
-            self.SLM = SLMDemo()
-            self.devices['SLM'] = self.SLM
-            logger.error('%s SLM initialization failed at interface startup. Error type %s' % (
-            datetime.datetime.now(), str(e)))
-            logger.info('%s SLMDemo connected' % datetime.datetime.now())
-
-        # initialize StresingDemo
-        self.Stresing = StresingDemo()
-        self.devices['Stresing'] = self.Stresing
-        logger.info('%s Stresing connected'%datetime.datetime.now())
-
-        # initialize MonochromDemo
-        self.Monochrom = MonochromDemo() 
-        self.devices['Monochrom'] = self.Monochrom 
-        logger.info('%s Monochrom DEMO connected'%datetime.datetime.now())
+        
+        self.devices = load_instruments()
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -118,45 +69,55 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_file_indicator = self.findChild(QtWidgets.QLineEdit, 'bg_file_lineEdit')
         self.bg_scans_box = self.findChild(QtWidgets.QSpinBox, 'bg_scans_spinBox')
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
-        self.grating_period_edit = self.findChild(QtWidgets.QSpinBox, 'grating_period_spin_box')
+        self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
+        self.show_beam_explorer_pushbutton=self.findChild(QtWidgets.QPushButton,'show_beam_explorer_button')
         # Spatial calibration tab
         ## Vertical calibration tab
-        self.spatial_calib_demo_mode_checkbox = self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
-        self.spatial_calibration_tab = self.findChild(QtWidgets.QWidget, 'spatial_tab')
-        self.vertical_calibration_box = self.findChild(QtWidgets.QGroupBox, 'vertical_calibration_groupbox')
-        self.vertical_calibration_plot_layout = self.findChild(pg.PlotWidget, 'vertical_calib_plot_layout')
+        self.spatial_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
+        self.spatial_calibration_tab= self.findChild(QtWidgets.QWidget, 'spatial_tab')
+        self.vertical_calibration_box=self.findChild(QtWidgets.QGroupBox,'vertical_calibration_groupbox')
+        self.vertical_calibration_plot_layout=self.findChild(pg.PlotWidget,'vertical_calib_plot_layout')
         self.vertical_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_vertical_calibration')
-        self.assign_beams_vertical_delimiters_button = self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
-        self.beam_vertical_delimiters_table = self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
-        self.row_increment = self.findChild(QtWidgets.QSpinBox, 'row_increment_spin_box')
+        self.assign_beams_vertical_delimiters_button= self.findChild(QtWidgets.QPushButton, 'assign_beams_button')
+        self.beam_vertical_delimiters_table= self.findChild(QtWidgets.QTableWidget, 'beam_vertical_delimiters_table')
+        self.row_increment=self.findChild(QtWidgets.QSpinBox,'row_increment_spin_box')
         ## Spectral calibration tab
-        self.column_increment_spinbox = self.findChild(QtWidgets.QSpinBox, 'column_increment_spin_box')
-        self.column_width_spinbox = self.findChild(QtWidgets.QSpinBox, 'column_width_spin_box')
+        self.column_increment_spinbox=self.findChild(QtWidgets.QSpinBox,'column_increment_spin_box')
+        self.column_width_spinbox=self.findChild(QtWidgets.QSpinBox,'column_width_spin_box')
         self.spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'measure_spectral_calibration')
-        self.spectral_calibration_image_layout = self.findChild(pg.GraphicsLayoutWidget, 'spectral_calib_plot_layout')
-        self.shortest_fitting_wave_spin_box = self.findChild(QtWidgets.QSpinBox, 'shortest_fitting_wave_spin_box')
-        self.longest_fitting_wave_spin_box = self.findChild(QtWidgets.QSpinBox, 'longest_fitting_wave_spin_box')
-        self.spectral_fit_polynomial_order_spinbox = self.findChild(QtWidgets.QSpinBox, 'polynomial_order_spin_box')
-        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton,
-                                                                 'fit_spectral_calibration_button')
-        self.spectral_calibration_fit_plot_layout = self.findChild(pg.PlotWidget, 'spectral_calib_fit_plot_layout')
-        self.spectral_calibration_fit_residual_plot_layout = self.findChild(pg.PlotWidget,
-                                                                            'spectral_calib_fit_residual_plot_layout')
-        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton,
-                                                                 'assign_spectral_calibration_button')
+        self.spectral_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'spectral_calib_plot_layout')
+        self.shortest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'shortest_fitting_wave_spin_box')
+        self.longest_fitting_wave_spin_box=self.findChild(QtWidgets.QSpinBox,'longest_fitting_wave_spin_box')
+        self.spectral_fit_polynomial_order_spinbox=self.findChild(QtWidgets.QSpinBox,'polynomial_order_spin_box')
+        self.fit_spectral_calibration_runButton = self.findChild(QtWidgets.QPushButton, 'fit_spectral_calibration_button')
+        self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
+        self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
+        self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
 
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
         ## Temp calibration tab
-        self.beam_spinbox = self.findChild(QtWidgets.QSpinBox, 'Beam_spin_box')
-        self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit,
-                                                                   'Compression_carrier_wavelength')
+        self.chirp_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'Chirp_calib_demo_mode_checkbox')
+        self.beam_spinbox=self.findChild(QtWidgets.QSpinBox,'Beam_spin_box')
+        self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit, 'Compression_carrier_wavelength')
         self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
         self.chirp_max_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_max')
         self.chirp_min_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_min')
+        self.background_chirp_data_runbutton = self.findChild(QtWidgets.QPushButton, 'Background_data_temp_calibration')
         self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
-        self.chirp_calibration_image_layout = self.findChild(pg.GraphicsLayoutWidget, 'Chirp_plot_layout')
-
+        self.chirp_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'Chirp_plot_layout')
+        
+        self.chirp_SNR_threshold_value = self.findChild(QtWidgets.QSpinBox,'SNR_threshold_value')
+        self.chirp_apply_SNR_button = self.findChild(QtWidgets.QPushButton, 'SNR_temporal_calibration_button')
+        self.chirp_min_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_minimum_value')
+        self.chirp_max_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_maximum_value')
+        self.chirp_polynomial_order_value = self.findChild(QtWidgets.QSpinBox, 'Polynomial_order_value')
+        self.chirp_fit_calibration_button = self.findChild(QtWidgets.QPushButton, 'fit_temporal_calibration_button')
+        self.chirp_coeff = self.findChild(QtWidgets.QTextEdit, 'Chirp_fitted_coefficients')
+        self.chirp_assign_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_temporal_calibration_button')
+        self.chirp_selection_layout = self.findChild(pg.GraphicsLayoutWidget, 'Chirp_selection')
+        self.chirp_fit_layout = self.findChild(pg.PlotWidget, 'Chirp_fit')
+        
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
         self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
@@ -164,16 +125,23 @@ class MainInterface(QtWidgets.QMainWindow):
         self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
         self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout')
         self.measure_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'measure_LUT_calib')
-        self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
-        self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
-        self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
-        # SLM Related
+        #self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
+        #self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
+        #self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+        # SLM Tab Related
         self.slm_display = self.findChild(pg.GraphicsLayoutWidget, 'slm_display')
+        self.select_SLM_Calibration_Data_file_button = self.findChild(QtWidgets.QPushButton,
+                                                                      'select_SLM_Calibration_Data_file_pushButton')
+        self.SLM_Calibration_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'SLM_Calibration_Data_file_lineEdit')
+        self.Test_Phase2Gray_button = self.findChild(QtWidgets.QPushButton, 'Test_Phase2Gray_pushButton')
+        
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
         for device in self.devices.keys():
             self.parameter_dic[device] = self.devices[device].parameter_display_dict
+
+        #print(self.devices)
 
         # create parameter array for easy access
         self.create_parameter_array()
@@ -188,13 +156,14 @@ class MainInterface(QtWidgets.QMainWindow):
         vbox.addWidget(self.ParameterPlot)
         self.parameter_tab.setLayout(vbox)
 
-        self.VerticalCalibPlot = VerticalCalibPlot(self.vertical_calibration_plot_layout)
-        self.SpectralCalibDataPlot = SpectralCalibDataPlot(self.spectral_calibration_image_layout)
-        self.SpectralCalibrationFitPlot = SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,
-                                                               self.spectral_calibration_fit_residual_plot_layout)
-        self.ChirpCalibrationPlot = ChirpCalibrationPlot(self.chirp_calibration_image_layout)
+        self.VerticalCalibPlot= VerticalCalibPlot(self.vertical_calibration_plot_layout)
+        self.SpectralCalibDataPlot= SpectralCalibDataPlot(self.spectral_calibration_image_layout)
+        self.SpectralCalibrationFitPlot= SpectralCalibFitPlot(self.spectral_calibration_fit_plot_layout,self.spectral_calibration_fit_residual_plot_layout)
+        self.ChirpCalibrationPlot= ChirpCalibrationPlot(self.chirp_calibration_image_layout)
+        self.ChirpSelectionPlot = ChirpSelectionPlot(self.chirp_selection_layout)
+        self.ChirpFitplot = ChirpFitPlot(self.chirp_fit_layout)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
-        self.slm_display_plot = SLMDisplay(self.slm_display)
+        self.slm_display_plot= SLMDisplay(self.slm_display)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
         that includes parameter information of each device """
@@ -232,10 +201,14 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
 
         # start DataHandling
+        self.spec_length = 2048#1024
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
+
+        #start Beam explorer
+        self.show_beam_explorer()
 
         # start Updater to update device read parameters
         self.Updater = UpdateWorker(self.devices, self.readonly_parameter)
@@ -263,13 +236,42 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_check_box.stateChanged.connect(self.update_check_bg)
         self.ParameterPlot.send_idx_change.connect(self.DataHandling.change_send_idx)
         self.ParameterPlot.send_parameter_filename.connect(self.DataHandling.save_parameter)
-        self.kinetic_lineEdit.editingFinished.connect(self.change_kinetic_interval)
-        self.kinetic_run_button.clicked.connect(self.kinetic_measurement)
-        #LUT Calibration Measurement Connect Events
-        self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale) # measure spectrum
-        self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
-        self.generate_LUT_calib_button.clicked.connect(self.Generate_LUT_PhasetoGreyscale) # use spectrum data to generate LUT file
-
+        # Vertical calibration connect events
+        self.vertical_calibration_runButton.clicked.connect(self.verticalBeamCalibrationMeasurement)
+        self.beam_vertical_delimiters_table.cellChanged.connect(self.verticalBeamDelimitersChanged)
+        self.assign_beams_vertical_delimiters_button.clicked.connect(self.assign_vertical_beam_calibration)
+        # Spectral calibration connect events
+        self.spectral_calibration_runButton.clicked.connect(self.spectralBeamCalibrationMeasurement)
+        self.shortest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.longest_fitting_wave_spin_box.valueChanged.connect(self.update_spectra_calibration_boundaries)
+        self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
+        self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
+        # LUT Calibration Measurement Connect Events
+        self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
+        #self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
+        #self.generate_LUT_calib_button.clicked.connect(self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
+        # Chirp calibration connect events
+        self.background_chirp_data_runbutton.clicked.connect(self.chirpBackgroundMeasurement)
+        self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
+        self.chirp_SNR_threshold_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
+        self.chirp_min_wavelength_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
+        self.chirp_max_wavelength_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
+        self.chirp_apply_SNR_button.clicked.connect(self.applySNRthreshold)
+        self.chirp_fit_calibration_button.clicked.connect(self.fitChirpMeasurement)
+        self.chirp_assign_calibration_button.clicked.connect(self.assignTemporalCalibration)
+        # SLM display connections
+        self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
+        test_image=beam_image_gen()
+        # SLM Calibration Event - Select Data File
+        self.select_SLM_Calibration_Data_file_button.clicked.connect(self.load_SLM_Calibration_Data_file)
+        self.Test_Phase2Gray_button.clicked.connect(self.Test_Phase2Gray_Normalization)
+        # Beam update connection
+        self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
+        #Beam Explorer related
+        self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
+        self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
+        self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
+        self.devices['SLM'].write_image(test_image)
         # run some functions once to define default values
         self.change_filename()
 
@@ -310,7 +312,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def test(self):
         # test function to test anything
-        print('I am testing')
+        logger.info('%s I am testing'%datetime.datetime.now())
 
     def set_progress(self, progress):
         # set progress bar and define whether a measurement is running. When progess ne 100, no new measurement starts
@@ -321,13 +323,13 @@ class MainInterface(QtWidgets.QMainWindow):
     def change_folder(self):
         # select folder to save data
         self.save_folder_path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Select data saving folder')
-        print('Data folder: ' + str(self.save_folder_path))
+        logger.info('%s Data folder: %s'%(datetime.datetime.now(),str(self.save_folder_path)))
         self.change_filename()
 
     def change_filename(self):
         # change filename to string of LineEdit
         self.filename = str(self.save_folder_path) + "/" + str(self.filename_edit.text().strip('\n'))
-        print('filename changed to: ' + str(self.filename))
+        logger.info('%s filename changed to: %s'%(datetime.datetime.now(),str(self.filename)))
 
     def save_data(self):
         # save data
@@ -337,13 +339,36 @@ class MainInterface(QtWidgets.QMainWindow):
         # open background file and set as background
         BackgroundFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select background data')
         bg_path = BackgroundFile[0]
-        bg = np.loadtxt(bg_path, delimiter=',')
-        self.DataHandling.background = bg[-self.spec_length:, 1]
-        # print(np.shape(bg[1:,1]))
 
-        # display background filename
+        ############  '''## Load datasets and attributes ##''' #############
+        with h5py.File(bg_path, 'r') as hdf:
+            ls = list(hdf.keys())
+            print('List of Data Sets in this file: \n', ls)
+
+            data = hdf.get('spectra')
+            param_set = hdf.get('parameter')
+
+            data_set = np.array([np.asarray(x, dtype=float).flatten() for x in data])
+            param_set = np.array([np.asarray(x, dtype=float).flatten() for x in param_set])
+
+            grf = hdf['parameter']
+            params = grf.attrs['parameter_keys']
+
+            grp = hdf['spectra']
+            wave = grp.attrs['xaxis']
+
+        bg = data_set
+        # print(np.shape(bg))
+        self.DataHandling.background = bg[-self.spec_length:]
+
+        # print(bg)
+
+        # display measured spectra filepath
         idx = bg_path.rfind('/')
         self.bg_file_indicator.setText(bg_path[idx+1:])
+        print('BG Data path stored')
+
+        return wave, bg
 
     def update_check_bg(self):
         self.DataHandling.correct_background = self.bg_check_box.isChecked()
@@ -369,20 +394,48 @@ class MainInterface(QtWidgets.QMainWindow):
                 else:
                     numbers = re.split(':', s)
                     self.kinetic_interval.append(np.linspace(float(numbers[0]), float(numbers[2]), int(numbers[1])))
-            print('Kinetic Interval: ' + str(self.kinetic_interval))
+            logger.info('%s Kinetic Interval: %s'%(datetime.datetime.now(),str(self.kinetic_interval)))
         except:
-            print('Lecture of kinetic interval failed')
+            logger.warning('%s Lecture of kinetic interval failed'%datetime.datetime.now())
 
-    def load_LUT_Data_file(self):
+    def load_SLM_Calibration_Data_file(self):
         # open background file and set as background
-        LUT_DataFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select LUT Data File')
-        #print('complete')
-        LUT_DataFile_path = LUT_DataFile[0]
-        #print(LUT_DataFile_path)
+        SLM_Calib_Coeff_DataFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select SLM Calibration File (.txt)')
+        print('complete')
+        SLM_Calib_Coeff_DataFile_path = SLM_Calib_Coeff_DataFile[0]
+        print(SLM_Calib_Coeff_DataFile_path)
+        #self.devices['SLM'].calibration_file = SLM_Calib_Coeff_DataFile_path
+
+        self.devices['SLM'].process_Phase2Gray_calibration(SLM_Calib_Coeff_DataFile_path)
 
         # display measured spectra filepath
-        self.LUT_Data_file_edit.setText(LUT_DataFile_path)
-        print('Data path stored')    
+        self.SLM_Calibration_Data_file_edit.setText(SLM_Calib_Coeff_DataFile_path)
+        print('Data path stored')
+
+    def Test_Phase2Gray_Normalization(self):
+
+        SLM_width = self.devices['SLM'].get_width()
+        print(SLM_width)
+
+        SLM_height = self.devices['SLM'].get_height()
+        print(SLM_height)
+
+        self.Beam = Beam(SLM_width,SLM_height)
+
+        amplitude = 1
+        self.Beam.set_gratingAmplitude(amplitude)
+        period = 100
+        self.Beam.set_gratingPeriod(period)
+
+        phase_image = self.Beam.makeGrating()
+        self.devices['SLM'].write_image(phase_image)
+        print('sent phase image to SLM')
+
+        gray_image = self.devices['SLM'].phase2gray(phase_image)
+        self.devices['SLM'].write_image(gray_image)
+
+        print('sent grayscale image to SLM')
+        return
 
     ##### Measurements #####
 
@@ -392,7 +445,7 @@ class MainInterface(QtWidgets.QMainWindow):
             try:
                 self.measurement.take_spectrum()
             except AttributeError:
-                print('Measurement not started, devices are busy')
+                logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
         else:
             self.measurement_busy = True
             self.DataHandling.clear_data()
@@ -412,7 +465,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendClear.connect(self.SpectrometerPlot.clear_plot)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
     def run_measurement(self):
         # continuously taking spectra with spectrometer
@@ -424,7 +477,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
     def background_measurement(self):
         # acquire background to subtract from spectra. May average over several spectra
@@ -438,22 +491,202 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendSave.connect(self.DataHandling.save_data)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
 
-    def kinetic_measurement(self):
-        # take time resolved measurements as defined in automation GUI section
+    def verticalBeamCalibrationMeasurement(self):
+        '''
+             Sets up and starts a vertical Beam Calibration.
+        ''' 
         if not self.measurement_busy:
             self.measurement_busy = True
-            #self.DataPlot.clear_data()
             self.DataHandling.clear_data()
-            self.change_kinetic_interval()
-            self.measurement =KineticMeasurement(self.devices, self.parameter, self.kinetic_interval)
+            self.measurement= VerticalBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.row_increment.value(),demo=self.spatial_calib_demo_mode_checkbox.isChecked())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            self.measurement.sendParameter.connect(self.change_parameter)
+            self.measurement.send_intensities.connect(self.VerticalCalibPlot.set_data)
+            self.measurement.send_vertical_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
+    
+    def verticalBeamDelimitersChanged(self,row_index,col_index):
+        '''
+            Validates the vertical delimiter change and refreshes the vertical beam delimiters plot when they are changed in the table
+            input:
+                - row_index (int): the index of the row of the changed column
+                - col_index (int): the index of the row of the changed column
+        '''
+        regions={}
+        table=self.beam_vertical_delimiters_table
+        if not col_index==0: #In case didn,t change the label of the beam
+            try:
+                added_item=int(table.item(row_index,col_index).text())# Check for integer
+                if any([added_item<0,added_item>self.devices['SLM'].get_height()]):# Check for proper bounds
+                    raise ValueError
+                for row in range(table.rowCount()):
+                    top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+                    bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+                    label=table.item(row,0).text()
+                    regions[label]=[top_index,bottom_index]
+                self.VerticalCalibPlot.draw_regions(regions)
+            except ValueError:
+                table.setItem(row_index,col_index,None)
+                
+    def chirpBackgroundMeasurement(self):
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.chirpbackground = ChirpAcquireBackground(self.devices)
+            self.chirpbackground.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.chirpbackground.send_background.connect(self.DataHandling.add_calibration)
+            self.chirpbackground.sendProgress.connect(self.set_progress)
+            self.chirpbackground.start()
+    
+    def chirpCalibrationMeasurement(self):
+        '''
+            Sets up and starts a temporal Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            if 'ALL' in self.DataHandling.get_beams():
+                beam_= self.DataHandling.get_beams()['ALL']
+            else:
+                beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+            self.DataHandling.clear_data() 
+            if hasattr(self, 'chirpbackground'):
+                chirpbackground = self.DataHandling.calibration['chirp_background_data']
+                background = chirpbackground['spec']
+            else:
+                background = 0
+            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
+            self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+            self.temporalfitting.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
+            self.temporalfitting.send_chirp_region.connect(self.ChirpSelectionPlot.set_data)
+            self.temporalfitting.send_chirp_fit.connect(self.ChirpFitplot.set_data)
+            self.temporalfitting.send_polynomial.connect(self.ChirpFitplot.set_fit)
+            self.temporalfitting.send_chirp_calibration_fit.connect(self.DataHandling.add_calibration)
+            self.measurement.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
+
+    def applySNRthreshold(self):
+        '''
+            Apply the SNR on the chirp scan and show the desired wavelength bandwidth.
+        '''
+        if hasattr(self, 'temporalfitting'):
+            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
+            self.temporalfitting.set_SNR(temporal_calib_dict, self.chirp_SNR_threshold_value.value()/10)
+    
+    def update_temporal_calibration_boundaries(self):
+        '''
+            Updates the boundaries to consider when processing temporal calibration data
+        ''' 
+        if hasattr(self, 'temporalfitting'):
+            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
+            try: 
+                self.temporalfitting.set_boundaries(temporal_calib_dict, [self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value()/10)
+            except KeyError:
+                print('Unexpected error. There should be a temporal_calibration_raw_data key in the calibration dict in Datahandling')
+
+    def fitChirpMeasurement(self):
+        '''
+            Fit the chirp scan to a polynomial function up to the fifth order.
+        ''' 
+        if hasattr(self, 'temporalfitting'):
+            temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
+            coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
+            poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x^{i}" for i in range(len(coeffs)))
+            lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2f} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs)]
+            self.chirp_coeff.setText('\n'.join(lines))
+
+    def assignTemporalCalibration(self):
+        '''
+            Assign the polynomial calibration to the beam.
+            TO BE DONE LATER
+        ''' 
+        return
+
+    def assign_vertical_beam_calibration(self):
+        '''
+            Saves the current vertical beam calibration to the DataHandling
+        '''
+        table=self.beam_vertical_delimiters_table
+        for row in range(table.rowCount()):
+            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
+            if all([label is not None, bottom_index is not None, top_index is not None]):
+                beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+                beam.set_beamVerticalDelimiters([top_index,bottom_index])
+                beam.set_gratingPeriod(self.grating_period_edit.value())
+                self.DataHandling.set_beam((label,beam))
+
+    def spectralBeamCalibrationMeasurement(self):
+        '''
+             Sets up and starts a spectral Beam Calibration.
+        ''' 
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.DataHandling.clear_data()
+            self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value(),demo=self.spatial_calib_demo_mode_checkbox.isChecked())
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()],increment=self.column_increment_spinbox.value())
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.send_intensities.connect(self.SpectralCalibDataPlot.set_data)
+            self.measurement.send_intensities.connect(self.spectralfitting.extractMaxima)
+            self.spectralfitting.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
+            self.spectralfitting.send_maxima.connect(self.SpectralCalibrationFitPlot.set_data)
+            self.spectralfitting.send_polynomial.connect(self.SpectralCalibrationFitPlot.set_fit)
+            self.spectralfitting.send_spectral_calibration_fit.connect(self.DataHandling.add_calibration)
+            self.measurement.send_spectral_calibration_data.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
+
+    def update_spectra_calibration_boundaries(self):
+        '''
+            Updates the boundaries to consider when processing spectral calibration data
+        '''
+        try:
+            self.spectralfitting.set_boundaries([self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+            try:
+                spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_raw_data']
+                self.spectralfitting.extractMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],spectral_calib_dict['data'])
+            except KeyError:
+                print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
+        except AttributeError:
+            self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+
+    def fit_spectral_calibration(self):
+        '''
+            Fits the last spectral beam calibration data using the displayed valued and updates the result in the Datahandling thread.
+        '''
+        try:
+            spectral_calib_dict=self.DataHandling.calibration['spectral_calibration_processed_data']
+            try:
+                self.spectralfitting.fitSpectraMaxima(spectral_calib_dict['columns'],spectral_calib_dict['wavelengths'],self.spectral_fit_polynomial_order_spinbox.value())
+            except AttributeError:
+                self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()])
+        except KeyError:
+            logger.warning('%s Spectral calibration data has not been processed. Run a spectral beam calibration measurement first'%datetime.datetime.now())
+    
+    def assign_spectral_calibration(self):
+        '''
+            Saves the current spectral beam calibration fit and parameters to the calibration thread
+        '''
+        self.devices['SLM'].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
+        print('Wave2Pix calibration sent to SLM')
+        beam_dict=self.DataHandling.get_beams()
+        if beam_dict=={}:
+            beam_dict={'ALL':Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())}
+        for key in beam_dict:
+            beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
+            beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
+            self.DataHandling.set_beam((key,beam_dict[key]))
+
 
     def stop_measurement(self):
         # stop measurement
@@ -462,10 +695,11 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def Measure_LUT_PhasetoGreyscale(self):
         '''
-                    Sets up and starts a Phase to Greyscale LUT Measurement. 
+                    Sets up and starts a Phase to Greyscale LUT Measurement.
         '''
 
         if not self.measurement_busy:
+            logger.info('%s Start LUT Calibration Measurement' % datetime.datetime.now())
             print('Start LUT Calibration Measurement')
             self.measurement_busy = True
             self.DataHandling.clear_data()
@@ -479,7 +713,8 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendParameter.connect(self.change_parameter)
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
+            logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
+            #print('Measurement not started, devices are busy')
 
     def Generate_LUT_PhasetoGreyscale(self):
         '''
@@ -487,19 +722,24 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
 
         if not self.measurement_busy:
+            logger.info('%s Start LUT Generation' % datetime.datetime.now())
             print('Start LUT File Generation')
             self.measurement_busy = True
             self.DataHandling.clear_data()
             self.measurement = Generate_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_Data_file_edit.text())
             self.measurement.sendProgress.connect(self.set_progress)
-            #self.DataHandling.sendSpectrum.connect(self.LUT_Calib_plot.set_data)
-            #self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            #self.measurement.sendParameter.connect(self.change_parameter)
 
             self.measurement.start()
         else:
-            print('Measurement not started, devices are busy')
-
+            logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
+            #print('Measurement not started, devices are busy')
+    def show_beam_explorer(self):
+        """
+            Shows the beam explorer if it is not already shown
+        """
+        self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
+        self.beam_explorer.show()
+    
 
 class UpdateWorker(QtCore.QThread):
 
