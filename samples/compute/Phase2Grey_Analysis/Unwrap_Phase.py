@@ -18,7 +18,7 @@ import Functions as kak
 
 # 2025_11_03_Spectra_SLM_Calib_2scan_FYLA_450nm_750nm_14_22_28.h5
 
-fn = r"Data_Files/Nov_Data/2025_11_03_Spectra_SLM_Calib_2scan_FYLA_450nm_750nm_14_22_28.h5"
+fn = r"Data_Files/2025_11_03_Spectra_SLM_Calib_2scan_FYLA_450nm_750nm_14_22_28.h5"
 
 ############  '''## Load Data & Process ##''' #############
 
