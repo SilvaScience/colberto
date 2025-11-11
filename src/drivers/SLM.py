@@ -27,12 +27,15 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remo
 from src.drivers.Slm_Meadowlark_optics import SLM
 import logging
 import datetime
+from numpy.polynomial import Polynomial
+
 
 logger = logging.getLogger(__name__)
 
 class Slm(QtCore.QThread):
     """ Interface to the SLM worker thread."""
-    name = 'SLM'
+    name = 'SLM_Meadowlark'
+    type= 'SLM'
 
     def __init__(self):
         super(Slm, self).__init__()
@@ -42,6 +45,9 @@ class Slm(QtCore.QThread):
         logger.info('%s SLM worker initialized'%datetime.datetime.now())
         self.slm_worker.start()
         logger.info('%s SLM worker running'%datetime.datetime.now())
+        self.calibration_file = None
+        self.phase2gray_coeffs = None
+        self.pixelToWavelength = None
 
         
         # set parameter dict
@@ -102,6 +108,8 @@ class Slm(QtCore.QThread):
         if parameter == 'amplitude':
             self.parameter_dict['amplitude'] = value
             self.amplitude = value
+
+
     def get_parameters(self):
         """
             Wrapper that returns the SLM parameters
@@ -162,8 +170,117 @@ class Slm(QtCore.QThread):
                 image: (2d.array of float) The image 
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
         """
+        #logger.info('Just received an image of %d by %d'%image.shape)
+        logger.info("Just received an image of %d by %d at %s", image.shape[0], image.shape[1], datetime.datetime.now())
         self.slm_worker.change_image(image,imagetype=imagetype)
 
+    def process_Phase2Gray_calibration(self, filepath):
+        """
+        Loads and stores SLM calibration coefficients from a CSV or TXT file.
+        """
+        try:
+            self.calibration_file = filepath
+            self.phase2gray_coeffs = np.loadtxt(filepath, delimiter=',', skiprows=1)
+            #print(f"Loaded SLM calibration from: {filepath}")
+            logger.info(f"Loaded SLM calibration from: {filepath}")
+            #print(f"Shape of coeffs: {self.phase2gray_coeffs.shape}")
+            logger.info(f"Shape of coeffs: {self.phase2gray_coeffs.shape}")
+
+            self.slm_worker.phase2gray_coeffs = self.phase2gray_coeffs
+            logger.info('calibration coeffs sent to SLMWorker')
+
+            print(f"Type of my_list: {type(self.phase2gray_coeffs)}")
+
+        except Exception as e:
+            print(f"Error loading SLM calibration: {e}")
+            self.phase2gray_coeffs = None
+            raise
+
+    def set_pixelToWavelength(self,polynomial):
+        '''
+        Sets the pixel to wavelength calibration polynomial for this beam
+        input:
+            - polynomial: (Polynomial object) a Numpy Power series polynomial relating a pixel index to a wavelength in m
+        '''
+        self.pixelToWavelength=polynomial
+        print(self.pixelToWavelength)
+
+    def normalize_phase_image(self,image, max_phase=2 * np.pi):
+        """
+        Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
+        """
+        image = np.clip(image, 0, max_phase)  # safety
+        norm_img = (image / max_phase) * 255
+        return norm_img.astype(np.uint8)
+
+    def phase2gray(self, phase_image):
+        """
+        Convert a phase image to grayscale values using the wavelength-dependent calibration.
+        Each SLM column is assigned a wavelength using the stored pixel→wavelength polynomial.
+
+        Parameters
+        ----------
+        phase_image : np.ndarray
+            2D phase image (radians).
+        self.phase2gray_coeffs : np.ndarray, optional
+            Table of polynomial coefficients mapping phase→gray per wavelength, shape (Nwaves, 6)
+            [wavelength, a5, a4, a3, a2, a1, a0].
+
+        Returns
+        -------
+        gray_image : np.ndarray
+            2D array (same shape as phase_image) with grayscale values [0–255].
+        """
+
+        # --- 1. Get or create wavelength mapping across SLM columns ---
+        if self.pixelToWavelength is None:
+            # fallback: use provided coefficients (if calibration not loaded)
+            poly_coeffs = [691.50709535, 95.41146932, -0.03298118, 0.38760572, 0.00850083, -0.33233454]
+            pixel_to_wavelength = Polynomial(poly_coeffs)
+            print("Created synthetic pixel→wavelength calibration")
+
+        else:
+            pixel_to_wavelength = self.pixelToWavelength
+            print("Using loaded pixel→wavelength calibration")
+
+        # --- 3. Loop through each column and apply wavelength-dependent phase→gray mapping ---
+        if self.phase2gray_coeffs is None:
+            raise ValueError("phase2gray_coeffs (the LUT) must be provided.")
+
+        cal_wavelengths = self.phase2gray_coeffs[:, 0]
+        coeff_table = self.phase2gray_coeffs[:, 1:]  # shape: (N, 5 or 6)
+
+        width = self.get_width()
+        height = self.get_height()
+        wavelengths_per_column = pixel_to_wavelength(width)
+
+        # Interpolate coefficients for each column based on wavelength
+        coeffs_interp = np.empty((width, coeff_table.shape[1]))
+        for i in range(coeff_table.shape[1]):
+            coeffs_interp[:, i] = np.interp(wavelengths_per_column, cal_wavelengths, coeff_table[:, i])
+
+        # Create an empty grayscale image matching the input
+        gray_image = np.zeros((height, width), dtype=np.float32)
+
+        # --- 4. Compute grayscale for each pixel column ---
+        for col in range(width):
+            coeffs = coeffs_interp[col]
+            # polynomial order should match your LUT (assumed 5th-order)
+            gray_image[:, col] = (
+                    coeffs[0] * phase_image[:, col] ** 5 +
+                    coeffs[1] * phase_image[:, col] ** 4 +
+                    coeffs[2] * phase_image[:, col] ** 3 +
+                    coeffs[3] * phase_image[:, col] ** 2 +
+                    coeffs[4] * phase_image[:, col] +
+                    coeffs[5]
+            )
+
+        # --- 5. Normalize and clip ---
+        #gray_image = np.clip(gray_image, 0, 255).astype(np.uint8)
+
+        print("phase2gray: completed normalization using pixel→wavelength calibration.")
+
+        return gray_image
 
 
 class SLMWorker(QtCore.QThread):
@@ -189,6 +306,7 @@ class SLMWorker(QtCore.QThread):
         self.current_image= np.zeros((self.width,self.height,3))
         self.new_image_available= False 
         self.frame_duration = 1/self.target_fps
+        self.phase2gray_coeffs = None
 
     def run(self):
         '''
@@ -286,6 +404,7 @@ class SLMWorker(QtCore.QThread):
                 image: (nd.array of uint8) The digital image (0 to 255 uint 8 3 channel RGB)
         '''
         self.imageSLM.emit(self.current_image)
+        #logger.info('Worker received SLM image to change')
         self.slm.write_image(self.current_image.reshape(-1),c_uint(1))
     
     def load_lut(self, lut_path):
@@ -309,6 +428,10 @@ class SLMWorker(QtCore.QThread):
         """
         if self.slm is not None:
             self.slm.delete_sdk()
+
+
+
+
 
 
 
