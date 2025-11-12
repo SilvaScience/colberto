@@ -430,11 +430,7 @@ class MainInterface(QtWidgets.QMainWindow):
         phase_image = self.Beam.makeGrating()
         self.devices['SLM'].write_image(phase_image)
         print('sent phase image to SLM')
-
-        gray_image = self.devices['SLM'].phase2gray(phase_image)
-        self.devices['SLM'].write_image(gray_image)
-
-        print('sent grayscale image to SLM')
+        
         return
 
     ##### Measurements #####
