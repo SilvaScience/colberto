@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy.polynomial import Polynomial
 from scipy.signal import savgol_filter, argrelextrema, find_peaks
-import Functions as kak
+import Functions as p2g
 
 ############  '''## Input file path ##''' #############
 # 06052025_WL_Test4_13_26_32.h5
@@ -22,7 +22,7 @@ fn = r"Data_Files/2025_11_03_Spectra_SLM_Calib_2scan_FYLA_450nm_750nm_14_22_28.h
 
 ############  '''## Load Data & Process ##''' #############
 
-[wave,spectra,Total_GreyScale_Vals] = kak.load_data(fn)
+[wave,spectra,Total_GreyScale_Vals] = p2g.load_data(fn)
 
 GreyScale_Vals = np.unique(Total_GreyScale_Vals)
 ############  '''## Average Spectra from Multiple Scans ##''' #############
@@ -117,7 +117,7 @@ yData  = trim_avg_spectrum[cut, idx1:idx2]
 
 #print("fit domain:", g_vals[idx1:idx2][0], g_vals[idx1:idx2][-1])
 
-coeffs, res = kak.fit_poly5_from_unwrap(
+coeffs, res = p2g.fit_poly5_from_unwrap(
     g_vals, yData,
     order=order,
     do_plots=True,
@@ -141,7 +141,7 @@ for i in range(Nw):
     yData = trim_avg_spectrum[i, idx1:idx2]
 
     # Unwrap + fit using the helper function
-    coeffs, res = kak.fit_poly5_from_unwrap(
+    coeffs, res = p2g.fit_poly5_from_unwrap(
         g_vals, yData,
         order=order,
         do_plots=False,
@@ -175,7 +175,7 @@ if 0 <= i < Nw and fit_ok[i]:
 
 
     # Recompute unwrapped phase for plotting
-    _, res_test = kak.fit_poly5_from_unwrap(
+    _, res_test = p2g.fit_poly5_from_unwrap(
         g_vals, trim_avg_spectrum[i, idx1:idx2],
         order=order, do_plots=False, smooth_yData=False, index=i, 
         wavelength=trim_wave[i],
