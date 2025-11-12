@@ -83,7 +83,7 @@ plt.show()
 
 ############  '''## Select wavelength index and grayscale trim ##''' #############
 
-cut = 140  # EN: wavelength selection (index in wave)
+cut = 480  # EN: wavelength selection (index in wave)
 print('#################################################################')
 print('Wavelegnth of cut', trim_wave[cut])
 print('#################################################################')
