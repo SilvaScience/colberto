@@ -1,0 +1,20 @@
+var searchData=
+[
+  ['save_5fbuffer_0',['save_buffer',['../classDataHandling_1_1DataHandling.html#a56ca0ee9688c79fae35db7cdad8df426',1,'DataHandling::DataHandling']]],
+  ['save_5fdata_1',['save_data',['../classDataHandling_1_1DataHandling.html#ae3920b09959c61a17684b110b23300bf',1,'DataHandling::DataHandling']]],
+  ['save_5fparameter_2',['save_parameter',['../classDataHandling_1_1DataHandling.html#ac1413259d4b1ea41de03bfde5b96e448',1,'DataHandling::DataHandling']]],
+  ['set_5fbeam_3',['set_beam',['../classDataHandling_1_1DataHandling.html#ad502774dc3bb7a087e5af17064071b5c',1,'DataHandling::DataHandling']]],
+  ['set_5fbeamhorizontaldelimiters_4',['set_beamHorizontalDelimiters',['../classbeams_1_1Beam.html#a2d8dd4dc79ee9773844f5f76b98c4ef0',1,'beams::Beam']]],
+  ['set_5fbeamverticaldelimiters_5',['set_beamVerticalDelimiters',['../classbeams_1_1Beam.html#a4d6f3bcfb4033faf5c57e1eddb06ad90',1,'beams::Beam']]],
+  ['set_5fcompressioncarrierwave_6',['set_compressionCarrierWave',['../classbeams_1_1Beam.html#aa96bbb9dcba35fb429153ca60b793eaa',1,'beams::Beam']]],
+  ['set_5fcurrentphase_7',['set_currentPhase',['../classbeams_1_1Beam.html#aba3d3a0e7df30e49987754b8e47d2b79',1,'beams::Beam']]],
+  ['set_5fdelaycarrierwave_8',['set_delayCarrierWave',['../classbeams_1_1Beam.html#a33886c0d1ee6bc9f5395027ed4f21963',1,'beams::Beam']]],
+  ['set_5fgratingamplitude_9',['set_gratingAmplitude',['../classbeams_1_1Beam.html#a30f3a9271440e140aaecce126fc2ae81',1,'beams::Beam']]],
+  ['set_5fgratingperiod_10',['set_gratingPeriod',['../classbeams_1_1Beam.html#a830354212a56834554f65eb326b2f1c9',1,'beams::Beam']]],
+  ['set_5fmaskstatus_11',['set_maskStatus',['../classbeams_1_1Beam.html#ad1d21f939060275a70472f1a13ef9d6d',1,'beams::Beam']]],
+  ['set_5foptimalphase_12',['set_optimalPhase',['../classbeams_1_1Beam.html#ad139312424a24222a986df739b169691',1,'beams::Beam']]],
+  ['set_5fparameter_13',['set_parameter',['../classMonochromDemo_1_1MonochromDemo.html#a6126290f31a19cc66977d33d993a01ce',1,'MonochromDemo.MonochromDemo.set_parameter()'],['../classSLMDemo_1_1SLMDemo.html#a702da84bc5fa4d184121dcdf7d495636',1,'SLMDemo.SLMDemo.set_parameter()'],['../classSpectrometerDemo__advanced_1_1SpectrometerDemo.html#a73f429d3974882234d366ab1b2dd604e',1,'SpectrometerDemo_advanced.SpectrometerDemo.set_parameter()'],['../classStresingDemo_1_1StresingDemo.html#a00ac59a9541f2596ec2fa9ffdbc9d601',1,'StresingDemo.StresingDemo.set_parameter()']]],
+  ['set_5fpixeltowavelength_14',['set_pixelToWavelength',['../classbeams_1_1Beam.html#a1b1d85ec337387a15665f5cde6e5d3b9',1,'beams::Beam']]],
+  ['spectral_5fcamera_5fpixel2wavelength_5fcalib_15',['spectral_camera_pixel2wavelength_calib',['../classcalibration_1_1Calibration.html#acd56ff5c2fbd0809d9815d5d27ca9a8a',1,'calibration::Calibration']]],
+  ['stop_16',['stop',['../classstreising__camera_1_1streising.html#ac11d2f1694e9d137569729c2d2ddb9b0',1,'streising_camera::streising']]]
+];

@@ -67,7 +67,7 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
         # empty array
         self.y ={}
         self.wls = []
-        
+
         # connect events
         self.clear_button.clicked.connect(self.clear_plot)
 
@@ -116,4 +116,7 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(np.ndarray)
     def update_datareader(self,max):
         self.maxvalue_label.setText(f"Data  : {max[2]:.1f} nm {max[1]:.1f} cts")
+
+
+
 

@@ -10,17 +10,18 @@ You should also check it out and build it yourself in your own branch by running
 
 You can add manual pages in Markdown format to the `manual` folder. The `index.md` page is the main page shown in the documentation. The [Doxygen Markdown documentation](https://www.doxygen.nl/manual/markdown.html) and how to [add pages to Doxygen documentation](https://www.doxygen.nl/manual/markdown.html) are useful ressources.
 
+You can also reference classes, functions, methods in the manual using `[text to referece](\ref ModuleName.ClassName#methodName)`
+
 Follow common [Python DocStrings guidelines](https://www.doxygen.nl/manual/docblocks.html#pythonblocks)
 
 ## Setting up your Python environnement
 1. Install [miniconda](https://docs.anaconda.com/free/miniconda/miniconda-install/) or [Anaconda](https://docs.anaconda.com/free/anaconda/install/) environnement managers
-2. Create a virtual environnement for the Colberto project using `conda create -n colberto_mybranch` or the Anaconda GUI interface and active it `conda activate colberto_mybranch`
-3. Navigate to the dependencies folder and update the virtual environnement using `conda install --yes --file requirements.txt`. Conda will install the packages required for the current branch. You might need to run `conda config --add channels conda-forge` and `conda config --set channel_priority strict` to add a channel where some pacakge are available.
-
+2. Navigate to `/dependencies/` and create a virtual environnement for the Colberto project using `conda env create -n colberto_mybranch -f environment.yml`
+3. You might need to run `conda config --add channels conda-forge` and `conda config --set channel_priority strict` to add a channel where some pacakge are available.
 4. You can then locate your environnement using which `which python` in Linux or `where python` in Windows and import it into your IDE (e.g. VCode with Python pluggin)
 ## Updating python environnement
 
-When developping new features in your branch, it is very likely that you will need to add python packages. You can do this using `conda install packagename`. You will then need to update the required package list by naviguating to /dependencies/ and using the command `conda list -e > requirements.txt`. This will dump your current package list into the file so that the packages will be appended to the project requirements. Don't forget to add requirements.txt to your commit.
+When developping new features in your branch, it is very likely that you will need to add python packages. You can do this using `conda install packagename`. You will then need to update the required package list by naviguating to /dependencies/ and using the command `conda env export -e > environment.yml`. This will dump your current package list into the file so that the packages will be appended to the project requirements. Don't forget to add requirements.txt to your commit.
 
 ## Naming Conventions
 In this project, we follow standard Python naming conventions to ensure that our code is readable and consistent. Below are the guidelines for naming functions and classes:
@@ -50,3 +51,17 @@ Examples:
 - `get_depth()`
 - `write_image()`
 - `send_email()`
+
+### Logging
+
+Thread safe logs are instantiated in each modules by importing the `logging` module and invoking `logger=logging.getLogger(__name__)` right after the module import block.
+
+The log file location is configured in `main.py` and points to a `main.log` file at the root of the project. This file is ignored in commits. The logging level is also configured there. You can check out [the python documentation on `logging`](https://docs.python.org/3/library/logging.html) to see how to use this module for informing, debugging and error handling.
+
+### SLM Calibration 
+
+The SLM Calibration is located in the utilities tab of the main interface.
+To calibrate the SLM for various wavelengths, one needs to create a Phase to Grayscale LUT file. 
+This is done in two steps:
+1. Measure_LUT_PhasetoGreyscale: Displays a pattern on the SLM where half of the SLM is set to a grayscale value of zero, and the other half of the SLM scans through the grayscale values (0-255). The spectrum of the beam is taken after each pattern. 
+2. Generate_LUT_PhasetoGreyscale: Analyzes the measured spectrum to determine the phase shift from the reference (where both sides of the SLM are at a greyscale value of zero). This is done by taking a Fourier transform of the spectrum and calculating the phase difference using the real and imaginary components. 

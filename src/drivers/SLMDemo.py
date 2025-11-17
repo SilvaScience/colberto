@@ -1,13 +1,13 @@
+
 """
 Created on Tue Feb  06 15:26:53 2025
 
-@author: Mathieu Desmarais
-Hardware class to control SLM. All hardware classes require a definition of
+@authors: Mathieu Desmarais, Felix Thouin
+DEMO Hardware class to control SLM. All hardware classes require a definition of
 parameter_display_dict (set Spinbox options and read/write)
 set_parameter function (assign set functions)
 
 """
-
 
 
 from matplotlib import pyplot as plt
@@ -298,3 +298,27 @@ class SLMWorker(QtCore.QThread):
             Shutdown routine for the SLM Worker and SLM
         """
         return True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+
+
+   
+
+
+
