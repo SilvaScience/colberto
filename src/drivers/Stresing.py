@@ -81,7 +81,7 @@ class StresingCamera(QtCore.QThread):
         self.channel7 = int(config.get("board0","dacCameraChannel7"))
         self.bti = int(config.get("board0","bti"))
         self.sti = int(config.get("board0","sti"))
-        self.btimer = int(config.get("board0","btimer"))
+        self.btimer = int(float(config.get("board0","btimer")))
         self.stimer = int(config.get("board0","stimer"))
         self.new_spectrum = False
 
