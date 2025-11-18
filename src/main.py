@@ -50,8 +50,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.setWindowTitle('COLBERTo')
 
         
-        self.devices = load_instruments()
+        self.devices, self.spectrometers = load_instruments()
 
+        
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
         self.spectro_tab = self.findChild(QtWidgets.QWidget, 'spectro_tab')
@@ -132,6 +133,32 @@ class MainInterface(QtWidgets.QMainWindow):
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
         
+        #Spectrometer Selection
+        self.spectrometer_select = self.findChild(QtWidgets.QComboBox, 'spec_selection_comboBox')
+        # print('Spec Select', self.spectrometer_select)
+
+        if self.spectrometer_select is not None:
+            logger.info(f"Available spectrometers: {list(self.spectrometers.keys())}")
+            # print("Available spectrometers:", self.spectrometers)
+            self.spectrometer_select.addItems(self.spectrometers.keys())
+
+            # Determine default spectrometer
+            default_name = self.devices.get('spectrometer_name', 'Ocean')  # fallback to 'Ocean' or 'Demo'
+            if default_name not in self.spectrometers:
+                default_name = next(iter(self.spectrometers))  # pick first available
+
+            # Set default spectrometer in both dropdown and device dict
+            self.spectrometer_select.setCurrentText(default_name)
+            self.active_spectrometer = self.spectrometers[default_name]
+            self.devices['spectrometer'] = self.active_spectrometer
+            self.spec_length = getattr(self.active_spectrometer, 'spec_length', 2048)
+
+            # Connect handler for when selection changes
+            self.spectrometer_select.currentTextChanged.connect(self.on_spectrometer_changed)
+
+        self.active_spectrometer = self.devices['spectrometer']
+        logger.info(f"Available Devices: {list(self.devices.keys())}")
+        # print('Available devices:', self.devices)
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
@@ -196,7 +223,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
 
         # start DataHandling
-        self.spec_length = 1024
+        #self.spec_length = 1024
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
@@ -273,6 +300,24 @@ class MainInterface(QtWidgets.QMainWindow):
 
     ##### General functions #####
 
+    def on_spectrometer_changed(self, new_name):
+        if new_name not in self.spectrometers:
+            logger.warning(f"Unknown spectrometer selected: {new_name}")
+            return
+
+        # Switch spectrometer object
+        self.active_spectrometer = self.spectrometers[new_name]
+        self.devices['spectrometer'] = self.active_spectrometer
+        self.devices['spectrometer_name'] = new_name
+
+        # Get new speclength
+        self.spec_length = getattr(self.active_spectrometer, 'spec_length', 2048)
+        #print(self.spec_length)
+
+        self.DataHandling.update_spec_length(self.spec_length)  # for Stresing
+
+        logger.info(f"Switched to spectrometer: {new_name} with spec_length={self.spec_length}")
+    
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
         self.parameter = {}
@@ -670,12 +715,14 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
             #print('Measurement not started, devices are busy')
+    
     def show_beam_explorer(self):
         """
             Shows the beam explorer if it is not already shown
         """
         self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
         self.beam_explorer.show()
+        
     def closeEvent(self,event):
         '''
             Closes all windows when the main window is closed.
@@ -696,13 +743,23 @@ class UpdateWorker(QtCore.QThread):
 
     def run(self):
         while not self.stop:
-            i = 0
-            for devices in self.devices.keys():
-                for param in self.devices[devices].parameter_dict.keys():
+            self.updated_param = {}
+
+            for name, device in self.devices.items():
+                # Skip anything that is not a real device object
+                if not hasattr(device, "parameter_dict"):
+                    continue
+
+                # Loop through parameters safely
+                for param in device.parameter_dict.keys():
                     if param in self.read_only:
-                        self.updated_param[param] = self.devices[devices].parameter_dict[param]
-                self.new_parameter.emit(self.updated_param)
+                        self.updated_param[param] = device.parameter_dict[param]
+
+            # Emit update only once per cycle
+            self.new_parameter.emit(self.updated_param)
+
             time.sleep(self.update_interval)
+
 
 app = QtWidgets.QApplication(sys.argv)
 window = MainInterface()
