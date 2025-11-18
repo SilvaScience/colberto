@@ -16,6 +16,7 @@ from collections import deque
 import shutil
 import logging
 import datetime
+
 """TO DOs: 
 - consider implementing data storage for several data acquiring devices (e.g. 2 spectrometer simultaneously) 
 - Implement proper saving of Beam object. Needs to be discussed. 
@@ -117,9 +118,16 @@ class DataHandling(QtCore.QThread):
         curr_time = time.time() - self.starttime
         self.wls = wls
         if self.data_dim == 1:
+            if self.correct_background:
+                # print('spec shape before bg subtraction', np.shape(spec))
+                spec = spec - self.background.ravel()
+                # print('bg shape', np.shape(self.background))
+                # print('spec shape', np.shape(spec))
+
             self.spec = np.c_[self.spec, spec]
+
         else:
-            self.spec = np.concatenate([self.spec, spec[np.newaxis,...]])
+            self.spec = np.concatenate([self.spec, spec[np.newaxis, ...]])
         for idx, param in enumerate(self.parameter_queue.keys()):
             self.param_from_deque[idx] = self.parameter_queue[param][-1]
         self.parameter_measured = np.c_[self.parameter_measured, self.param_from_deque]
@@ -127,7 +135,7 @@ class DataHandling(QtCore.QThread):
         self.parameter_measured[1, -1] = time.time()
         self.sendSpectrum.emit(wls, spec)
         # to prevent memory overload, save to temp file every 100th spectrum
-        self.data_in_flash =self.data_in_flash + 1
+        self.data_in_flash = self.data_in_flash + 1
         if self.data_in_flash > 49:
             self.save_buffer()
             self.data_in_flash = 0
@@ -251,6 +259,38 @@ class DataHandling(QtCore.QThread):
     def load_data(self):
         # not used currently, to be implemented to continue aborted measurements/ after software crash
         pass
+
+    def update_spec_length(self, new_length):
+        """
+        Update the spectrometer buffer length and reset data buffers.
+
+        Parameters:
+            new_length (int): The new number of pixels in the spectrum.
+        """
+        self.speclength = new_length
+
+        # Reset spectrum buffer
+        self.spec = np.zeros((self.speclength, 0))  # zero columns, rows = new_length
+
+        # Reset wavelength buffer if you store wavelengths
+        if hasattr(self, 'wls'):
+            self.wls = np.zeros(self.speclength)
+
+        # preallocate data arrays depending on data dimension (1D or 2D).
+        if self.data_dim == 1:
+            self.spec = np.empty([self.speclength, 0])
+            #print('1D', self.spec)
+            self.background = np.empty([self.speclength, 1])
+            self.wls = np.empty([self.speclength, 1])
+        else:
+            self.spec = np.empty([0, self.speclength[0], self.speclength[1]])
+            #print('2D', self.spec)
+            self.background = np.empty([0, self.speclength[0], self.speclength[1]])
+            self.wls = np.empty([self.speclength[1], 1])
+
+        # Optional: log the update
+        logger.info(f"Updated spec_length to {self.speclength} and reset buffers.")
+
 
 class BufferWorker(QtCore.QObject):
     """ Buffer worker saves data to a temp file.
