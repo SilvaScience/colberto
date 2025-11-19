@@ -21,6 +21,7 @@ import logging
 import os
 import math
 import datetime
+from scipy.ndimage import uniform_filter
 
 logger = logging.getLogger(__name__)
 
@@ -344,15 +345,14 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         self.spectra = []  # preallocate spec array
         self.terminate = False
         self.acquire_measurement = True
-        self.Chirp=np.arange(chirp_min,chirp_max,chirp_step,dtype=int)
+        self.chirp=np.arange(chirp_min,chirp_max,chirp_step,dtype=int) 
         self.intensities=[]
         self.spectral_calibration_data={
-            'Chirp' : self.Chirp,
+            'Chirp' : self.chirp,
             'wavelengths' : self.wls,
             'intensities' : self.intensities
         }
 
-        self.chirp = np.linspace(chirp_max,chirp_min,num=int((chirp_max-chirp_min)/chirp_step))
         self.isDemo= demo
         self.beam_name = beam_name
         self.beam = beam
@@ -366,16 +366,20 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         if not self.terminate:  # check whether stopping measurement is called
                 if self.isDemo:
                     project_folder = Path(__file__).parent.parent.resolve()
-                    file_path = os.path.join(project_folder, "Chirp_dataset.txt")
+                    #file_path = os.path.join(project_folder, "Chirp_dataset.txt")
+                    file_path = os.path.join(project_folder, "collcyl_correctoffset_bk7.txt")
+                    #file_path = os.path.join(project_folder, "collcyl_correctoffset_nobk7.txt")
                     a = np.loadtxt(file_path)
 
                     self.wls = a[-1]
                     self.Chirp_data= a[-2]
+                    f = len(self.Chirp_data)  # default to full length
                     for h in range(len(self.Chirp_data)):
-                        if self.Chirp_data[h]==0:
+                        if self.Chirp_data[h] == 0:
                             f = h
                             break
-                    self.Chirp_data = self.Chirp_data[:f]        
+
+                    self.Chirp_data = self.Chirp_data[:f]   
                     self.data = a[:-3]
                     # Emit the data through signals
 
@@ -393,7 +397,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                     for i in range(len(self.chirp)):
                         if not self.terminate:
                             self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
-                            self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                            self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs', TaylorPrefactorFlag='add')
                             self.send_beam.emit((self.beam_name, self.beam))
                             image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)
@@ -433,7 +437,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
     '''
     send_chirp_region = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     send_chirp_fit = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    send_polynomial= QtCore.pyqtSignal(Polynomial)
+    send_polynomial= QtCore.pyqtSignal(np.ndarray, np.ndarray)
     send_chirp_calibration_data = QtCore.pyqtSignal(tuple)
     send_chirp_calibration_fit = QtCore.pyqtSignal(tuple)
 
@@ -458,9 +462,53 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         self.wavelength_array = chirpdata['wavelengths']
         self.data = chirpdata['data']
 
-        noise_level = np.std(self.data)
-        SNR = self.data/noise_level
-        data_filtered = np.where(SNR >= SNR_threshold, self.data, 0) # Replace data with SNR below threshold with 0. 
+        # --- Compute local statistics to characterize the data structure ---
+
+        # Compute a smoothed version of the data using a uniform (mean) filter.
+        # This acts like a moving average over a square region of size `window × window`.
+        # It represents the local average intensity (the "baseline") at each point.
+        local_mean = uniform_filter(self.data, size=10)
+
+        # Compute the local average of the squared data (⟨x²⟩) over the same window.
+        # This is used to estimate the variance in each neighborhood.
+        local_sq_mean = uniform_filter(self.data**2, size=10)
+
+        # Compute the local standard deviation using σ = sqrt(⟨x²⟩ - ⟨x⟩²).
+        # This quantifies local fluctuations (i.e. how noisy or structured the region is).
+        # Avoid small negative values due to rounding
+        variance = local_sq_mean - local_mean**2
+        variance = np.clip(variance, 0, None)
+        local_std = np.sqrt(variance)
+
+        # --- Identify regions likely to be pure noise ---
+
+        # Define a "score" that combines:
+        #   - the absolute local mean (to find near-zero regions)
+        #   - the local standard deviation (to find low-variance regions)
+        # Regions with both low mean and low variance are good candidates for noise-only areas.
+        score = np.abs(local_mean) + local_std
+
+        # Compute a threshold value corresponding to the bottom `frac` percentile of the score distribution.
+        # For example, if frac=0.1, we keep the 10% of points with the smallest (mean + std) scores.
+        threshold = np.percentile(score, 100 * 0.1)
+
+        # Create a boolean mask identifying the pixels (or points) that fall below that threshold.
+        # True → region is considered noise-only
+        # False → region might contain signal
+        mask = score <= threshold
+
+        # --- Compute noise level safely ---
+        finite_mask = np.isfinite(self.data)
+        combined_mask = mask & finite_mask
+
+        if np.any(combined_mask) and np.sum(combined_mask) > 1:
+            noise_level = np.std(self.data[combined_mask])
+        else:
+            noise_level = np.std(self.data[finite_mask])
+
+        # --- Filter based on SNR ---
+        SNR = np.abs(self.data) / noise_level
+        data_filtered = np.where(SNR >= SNR_threshold, self.data, 0)
 
         chirp_array_region = self.chirp_array[1:-1]
         mask = np.logical_and(self.wavelength_array >= boundaries[0], self.wavelength_array <= boundaries[1])
@@ -507,21 +555,20 @@ class FitTemporalBeamCalibration(QtCore.QThread):
             wavelength_values.append(self.wavelength_array[wls])
         max_chirp_values = np.array(max_chirp_values)
         wavelength_values = np.array(wavelength_values)
-        omega_values = co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz
+        omega_values = 0.5*co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz
+
+        # Shifted frequency around the carrier
+        omega_carrier = co.waveToAngFreq(carrier_wavelength * 1e-9) # rad Hz
+        omega_shifted = omega_values-omega_carrier
 
         # Fit a nth order polynimial
-        self.fit_polynomial = Polynomial.fit(omega_values, max_chirp_values, deg)
-        self.send_chirp_fit.emit(omega_values, max_chirp_values)
-        self.send_polynomial.emit(self.fit_polynomial)
+        #self.fit_polynomial = Polynomial.fit(omega_shifted, max_chirp_values, deg)
+        coeffs = np.polyfit(omega_shifted, max_chirp_values, deg)
+        self.fit_polynomial = np.polyval(coeffs, omega_shifted)
+        self.send_chirp_fit.emit(omega_shifted, max_chirp_values)
+        self.send_polynomial.emit(omega_shifted, self.fit_polynomial)
         self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
 
-        # Convert to standard basis
-        standard_poly = self.fit_polynomial.convert(self.fit_polynomial.domain, kind=Polynomial)
-        adjusted_coeffs = [
-            (coeff * math.factorial(n - 2))
-            for n, coeff in enumerate(standard_poly.coef, start=3)
-        ]
-
         # Get the coefficients
-        self.coeffs = adjusted_coeffs
+        self.coeffs = coeffs[::-1]
         return self.coeffs

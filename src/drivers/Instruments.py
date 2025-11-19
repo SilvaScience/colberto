@@ -62,8 +62,9 @@ def load_instruments():
         'pixel_size_mm':24e-3,
         'num_pixels':1010,
         'calibrated': False,
-        'calibrationSlope': 0.955,
-        'calibrationOffset': -30.864
+        'calibrationThirdOrder': -3e-5,
+        'calibrationSlope': 0.9891,
+        'calibrationOffset': -51.163
     }
     try: 
         camera= StresingCamera(stresing_params)

@@ -11,6 +11,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
+import math
 from numpy.polynomial import Polynomial as P
 from PyQt5 import QtCore, QtWidgets, uic
 import pyqtgraph as pg
@@ -472,6 +473,21 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.VerticalCalibPlot.draw_regions(regions)
             except ValueError:
                 table.setItem(row_index,col_index,None)
+
+    def assign_vertical_beam_calibration(self):
+        '''
+            Saves the current vertical beam calibration to the DataHandling
+        '''
+        table=self.beam_vertical_delimiters_table
+        for row in range(table.rowCount()):
+            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
+            if all([label is not None, bottom_index is not None, top_index is not None]):
+                beam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+                beam.set_beamVerticalDelimiters([top_index,bottom_index])
+                beam.set_gratingPeriod(self.grating_period_edit.value())
+                self.DataHandling.set_beam((label,beam))
                 
     def update_beam_name_list(self, beamDict):
         old = self.beam_name_box.currentText()
@@ -553,10 +569,11 @@ class MainInterface(QtWidgets.QMainWindow):
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
             coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
-            poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x^{i}" for i in range(len(coeffs)))
-            lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2f} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs)]
+            coeffs_scaled = [coeffs[i] * (10**15)**i for i in range(len(coeffs))] # Multiply by the factorial denominator
+            poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x" if i == 1 else f"c{i} * x^{i}" for i in range(len(coeffs)))
+            lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2e} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs_scaled)]
             self.chirp_coeff.setText('\n'.join(lines))
-            self.last_temp_fit_coeffs = np.array(np.concatenate(([0, 0], coeffs)))
+            self.last_temp_fit_coeffs = np.array(np.concatenate(([0, 0], coeffs_scaled)))
 
     def assignTemporalCalibration(self):
         '''
@@ -566,28 +583,13 @@ class MainInterface(QtWidgets.QMainWindow):
         beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
         beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
         self.last_temp_fit_coeffs = np.rint(self.last_temp_fit_coeffs).astype(int)
-        old_coeff = beam.get_optimalPhase(units_to_return='fs').coef
+        old_coeff = beam.get_optimalPhase(units_to_return='fs',TaylorPrefactorFlag='remove').coef
         if len(self.last_temp_fit_coeffs) < len(old_coeff):
             self.last_temp_fit_coeffs = np.pad(self.last_temp_fit_coeffs, (0, len(old_coeff) - len(self.last_temp_fit_coeffs)), 'constant', constant_values=0)
         elif len(old_coeff) < len(self.last_temp_fit_coeffs):
             old_coeff = np.pad(old_coeff, (0, len(self.last_temp_fit_coeffs) - len(old_coeff)), 'constant', constant_values=0)
-        beam.set_optimalPhase(P(self.last_temp_fit_coeffs+old_coeff))
+        beam.set_optimalPhase(P(self.last_temp_fit_coeffs+old_coeff),TaylorPrefactorFlag='add')
         self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
-
-    def assign_vertical_beam_calibration(self):
-        '''
-            Saves the current vertical beam calibration to the DataHandling
-        '''
-        table=self.beam_vertical_delimiters_table
-        for row in range(table.rowCount()):
-            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
-            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
-            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
-            if all([label is not None, bottom_index is not None, top_index is not None]):
-                beam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
-                beam.set_beamVerticalDelimiters([top_index,bottom_index])
-                beam.set_gratingPeriod(self.grating_period_edit.value())
-                self.DataHandling.set_beam((label,beam))
 
     def spectralBeamCalibrationMeasurement(self):
         '''

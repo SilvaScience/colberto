@@ -291,16 +291,8 @@ class StresingCamera(QtCore.QThread):
 
                 # Wavelength at each pixel
                 self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-
-                # New calibration for screw set at 0 and center wavelength at 650nm
-                # Here you can find the data to retreive the linear fit parameters (nm)
-                # Theoretical   Measured
-                # 365.02        422.30
-                # 404.66        463.70
-                # 435.83        495.90
-                # 546.07        611.90
-                # 1013.98       1111.80
-                self.wavelengths = self.hardware_params['calibrationSlope']*self.wavelengths+self.hardware_params['calibrationOffset']
+                # Refine the calibration using a mercury spectral lamp
+                self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + self.hardware_params['calibrationSlope']*self.wavelengths + self.hardware_params['calibrationOffset']
         else:
             self.wavelengths= self.hardware_params['num_pixels']
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength'%datetime.datetime.now())
@@ -362,16 +354,39 @@ class StresingWorker(QtCore.QThread):
         return self.spectrum
     
 class CaseInsensitiveConfig(configparser.ConfigParser):
+    """ This class extends Python’s built-in configparser.ConfigParser to make both section names and option names case-insensitive.
+    Normally, ConfigParser is only case-insensitive for option names, not section names, so this subclass enforces lowercase normalization for both. """
+
     def __init__(self, *args, **kwargs):
+        """
+            Initialize the parent ConfigParser. By inheriting from it, your class gets all the functionality of ConfigParser — things like: 
+                Reading .ini files
+                Parsing sections and options
+                Providing .get(), .set(), .items(), etc.
+            Then you can override or extend parts of that functionality to make it case-insensitive.
+        """
         super().__init__(*args, **kwargs)
-        self.optionxform = str.lower  # lowercase all option keys
+
+        # Force all option (key) names to be lowercase when stored internally
+        # This makes option lookups case-insensitive
+        self.optionxform = str.lower
 
     def read(self, filenames, encoding=None):
+        """
+            Use the parent class's read method to load the config file(s)
+        """
         super().read(filenames, encoding)
-        # lowercase section names
-        self._sections = {k.lower(): {kk.lower(): vv for kk, vv in v.items()}
-                          for k, v in self._sections.items()}
 
-    # override .get() to lowercase section/option lookups
+        # Convert all section names and their corresponding option names to lowercase
+        # This ensures that both sections and options are case-insensitive
+        self._sections = {
+            k.lower(): {kk.lower(): vv for kk, vv in v.items()}
+            for k, v in self._sections.items()
+        }
+
     def get(self, section, option, **kwargs):
+        """
+            Override the default .get() method so that lookups are case-insensitive
+        """
+        # Both section and option names are converted to lowercase before lookup
         return super().get(section.lower(), option.lower(), **kwargs)

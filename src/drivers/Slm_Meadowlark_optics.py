@@ -10,6 +10,9 @@ from ctypes import *
 from pathlib import Path
 import logging
 import datetime
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
@@ -155,6 +158,11 @@ class SLM:
             - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
         """
         self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        height = 1200
+        width = 1920
+        image_2d = image_data.reshape((height, width))
+        img = Image.fromarray(image_2d, mode='L')
+        img.save("output_image.png")
 
     def load_lut(self, file_path):
         """
