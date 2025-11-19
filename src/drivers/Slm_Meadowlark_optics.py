@@ -16,7 +16,7 @@ from PIL import Image
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
-print(awareness.value)
+#print(awareness.value)
 
 # Set DPI Awareness  (Windows 10 and 8)
 errorCode = ctypes.windll.shcore.SetProcessDpiAwareness(2)
