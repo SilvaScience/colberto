@@ -271,8 +271,6 @@ class Beam:
         elif mode=='absolute':
             returnPolynomial=self.currentPhasePolynomial
         returnPolynomial = self.TaylorPrefactor(returnPolynomial, TaylorPrefactorFlag)
-        if TaylorPrefactorFlag == 'add':
-            print(returnPolynomial)
         return self.convertPhaseCoeffUnits(returnPolynomial,input_units='s',output_units=units_to_return)
     
     def get_horizontalIndices(self):
