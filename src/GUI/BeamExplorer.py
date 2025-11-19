@@ -146,11 +146,11 @@ class BeamWidget(QWidget):
         coefs = self.beam.get_optimalPhase().coef
         ncols = len(coefs)
         self.phase_coeff_table.setColumnCount(ncols)
-        headers = ["Phase", "Delay"]  # first two fixed
+        headers = ["CEP", "GD (fs)", "GDD (fs^2)", "TOD (fs^3)", "FOD (fs^4)"]  # first five fixed
 
         # Higher-order terms
-        for order in range(2, ncols):
-            headers.append(f"O({order}) (fs^{order})")
+        for order in range(5, ncols):
+            headers.append(f"{order}OD (fs^{order})")
         self.phase_coeff_table.setHorizontalHeaderLabels(headers)
 
         self.phase_coeff_table.blockSignals(True) # Avoid going into set_phase_manually

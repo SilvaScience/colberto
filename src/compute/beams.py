@@ -191,6 +191,7 @@ class Beam:
             input:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
                 - unit (str, default 'fs'): The units in which the phase coefficients are provided.
+                - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
         '''
         phasePolynomial = self.TaylorPrefactor(phasePolynomial, TaylorPrefactorFlag)
         self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
@@ -202,6 +203,7 @@ class Beam:
                 - indices (nd.array of int) : Indices at which to sample the 
                 - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of seconds
                     Specifying 'fs' converts the internal units to be displayed in fs.
+                - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
             output:
                 - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
         '''
@@ -239,6 +241,7 @@ class Beam:
             input:
                 - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
                 - mode (string): Specifies if the phase is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
+                - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
         '''
         phasePolynomial = self.TaylorPrefactor(phasePolynomial, TaylorPrefactorFlag)
         if mode is None:
@@ -257,7 +260,7 @@ class Beam:
                 - mode (string): Specifies if the phase returned is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
                 - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of seconds
                     Specifying 'fs' converts the internal units to be displayed in fs.
-                - for_display (bool): Specifies if the phase polynomial coeff are to be used for display only. In this case, the value of the optimal phase polynomial is not subtracted.
+                - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
             output:
                 - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
         '''
@@ -268,6 +271,8 @@ class Beam:
         elif mode=='absolute':
             returnPolynomial=self.currentPhasePolynomial
         returnPolynomial = self.TaylorPrefactor(returnPolynomial, TaylorPrefactorFlag)
+        if TaylorPrefactorFlag == 'add':
+            print(returnPolynomial)
         return self.convertPhaseCoeffUnits(returnPolynomial,input_units='s',output_units=units_to_return)
     
     def get_horizontalIndices(self):
@@ -293,7 +298,7 @@ class Beam:
             mode=self.current_phase_mode
         if indices is None:
             indices=self.indices
-        phase_polynomial=self.get_currentPhase(mode=mode)
+        phase_polynomial=self.get_currentPhase(mode=mode, TaylorPrefactorFlag='add')
 
         compression_polynomial=phase_polynomial.copy()
         if len(phase_polynomial.coef)>1:

@@ -13,7 +13,7 @@ Chirp scans can be performed from the Chirp Scan panel in the Temporal Calibrati
 
 2. The first thing you have to do is take the background by simply block the laser from Colbert, i.e. you do have to block the ambient light in front of the monochromator. By clicking on `Background`, the background will be saved in Data_Handling. 
 
-3. Secondly, you must enter the needed informations in the measurement block, i.e. carrier wavelength, beam name and the chirp scan parameters. YOU ALSO HAVE TO ADD THE SHG BANDPASS FILTER IN FRONT OF THE MONOCHROMATOR.
+3. Secondly, you must enter the needed informations in the measurement block, i.e. carrier wavelength, beam name and the GDD interval parameters. YOU ALSO HAVE TO ADD THE SHG BANDPASS FILTER IN FRONT OF THE MONOCHROMATOR.
 
 4. Then you can click on `acquire`. If demo mode is selected, it will take old saved data. Otherwise, the program will perform the chirp scan and show you the result on the top right figure. The background saved data will be subtracted from every scan step. 
 

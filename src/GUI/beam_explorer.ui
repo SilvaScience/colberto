@@ -43,27 +43,27 @@
    </row>
    <column>
     <property name="text">
-     <string>Phase</string>
+     <string>CEP</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>Delay (fs)</string>
+     <string>GD (fs)</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>O(2) (fs^2)</string>
+     <string>GDD (fs^2)</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>O(3) (fs^3)</string>
+     <string>TOD (fs^3)</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>O(4) (fs^4)</string>
+     <string>FOD (fs^4)</string>
     </property>
    </column>
    <item row="0" column="0">

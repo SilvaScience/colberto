@@ -569,9 +569,13 @@ class MainInterface(QtWidgets.QMainWindow):
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
             coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
-            coeffs_scaled = [coeffs[i] * (10**15)**i for i in range(len(coeffs))] # Multiply by the factorial denominator
-            poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x" if i == 1 else f"c{i} * x^{i}" for i in range(len(coeffs)))
-            lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2e} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs_scaled)]
+            coeffs_scaled = [coeffs[i] * (10**15)**i for i in range(len(coeffs))]
+            # Generate names dynamically
+            names = ["GDD" if i == 0 else "TOD" if i == 1 else "FOD" if i == 2 else f"{i+2}OD" for i in range(len(coeffs))]
+            # Polynomial string using the same names list
+            poly_eq = " + ".join(names[i] + ("" if i == 0 else " * x" if i == 1 else f" * x^{i}") for i in range(len(coeffs)))
+            # Lines with coefficients using the same names
+            lines = [f"Equation: {poly_eq}", ""] + [f"{names[i]} = {v:.2e} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs_scaled)]
             self.chirp_coeff.setText('\n'.join(lines))
             self.last_temp_fit_coeffs = np.array(np.concatenate(([0, 0], coeffs_scaled)))
 
@@ -583,12 +587,12 @@ class MainInterface(QtWidgets.QMainWindow):
         beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
         beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
         self.last_temp_fit_coeffs = np.rint(self.last_temp_fit_coeffs).astype(int)
-        old_coeff = beam.get_optimalPhase(units_to_return='fs',TaylorPrefactorFlag='remove').coef
+        old_coeff = beam.get_optimalPhase(units_to_return='fs').coef
         if len(self.last_temp_fit_coeffs) < len(old_coeff):
             self.last_temp_fit_coeffs = np.pad(self.last_temp_fit_coeffs, (0, len(old_coeff) - len(self.last_temp_fit_coeffs)), 'constant', constant_values=0)
         elif len(old_coeff) < len(self.last_temp_fit_coeffs):
             old_coeff = np.pad(old_coeff, (0, len(self.last_temp_fit_coeffs) - len(old_coeff)), 'constant', constant_values=0)
-        beam.set_optimalPhase(P(self.last_temp_fit_coeffs+old_coeff),TaylorPrefactorFlag='add')
+        beam.set_optimalPhase(P(self.last_temp_fit_coeffs+old_coeff))
         self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 
     def spectralBeamCalibrationMeasurement(self):

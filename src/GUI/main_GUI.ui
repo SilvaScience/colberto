@@ -1163,7 +1163,7 @@ p, li { white-space: pre-wrap; }
             </rect>
            </property>
            <property name="text">
-            <string>Arbitrary chirp [fs²/rad²] :</string>
+            <string>GDD [fs²/rad²] :</string>
            </property>
           </widget>
           <widget class="QLabel" name="SNR_threshold">
