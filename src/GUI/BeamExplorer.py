@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QTableWidget,QSpinBox,QCheckBox, QTableWidgetItem, QLineEdit
 from PyQt5 import QtCore,uic
+from PyQt5.QtCore import Qt
 import sys
 import os
 import logging
@@ -83,6 +84,7 @@ class BeamWidget(QWidget):
         uic.loadUi(Path(project_folder,r'GUI/beam_explorer.ui'), self)
         # Load components
         self.mask_pushbutton=self.findChild(QPushButton,'mask_pushbutton')
+        self.clear_optimal_pushbutton=self.findChild(QPushButton,'clear_optimal_pushbutton')
         self.beam_label=self.findChild(QLabel,'beam_label')
         self.grating_period=self.findChild(QSpinBox,'grating_period_value')
         self.lambda_comp=self.findChild(QLineEdit,'lambda_comp_box')
@@ -99,6 +101,8 @@ class BeamWidget(QWidget):
         # connect events
         self.plot_relative_checkbox.clicked.connect(self.plot_phase)
         self.mask_pushbutton.clicked.connect(self.toggle_beam_on_off_display)
+        self.clear_optimal_pushbutton.clicked.connect(self.clear_optimal)
+        self.phase_coeff_table.cellChanged.connect(self.set_phase_manually)
         self.import_beam(name,beam)
 
     def toggle_beam_on_off_display(self):
@@ -109,7 +113,7 @@ class BeamWidget(QWidget):
             self.mask_pushbutton.setText('BEAM ON')
         elif self.mask_pushbutton.text()=='BEAM ON':
             self.mask_pushbutton.setText('BEAM OFF')
-
+        
     def import_beam(self,name,beam):
         '''
             Updates the beam into the widget
@@ -137,10 +141,23 @@ class BeamWidget(QWidget):
             self.relative_checkbox.setChecked(False)
         [self.delimiter_table.setItem(0,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamVerticalDelimiters())]
         [self.delimiter_table.setItem(1,i,QTableWidgetItem(str(value))) for i,value in enumerate(self.beam.get_beamHorizontalDelimiters())]
+        
+        # Change the number of column depending of the number of coef
+        coefs = self.beam.get_optimalPhase().coef
+        ncols = len(coefs)
+        self.phase_coeff_table.setColumnCount(ncols)
+        headers = ["CEP", "GD (fs)", "GDD (fs^2)", "TOD (fs^3)", "FOD (fs^4)"]  # first five fixed
+
+        # Higher-order terms
+        for order in range(5, ncols):
+            headers.append(f"{order}OD (fs^{order})")
+        self.phase_coeff_table.setHorizontalHeaderLabels(headers)
+
+        self.phase_coeff_table.blockSignals(True) # Avoid going into set_phase_manually
         [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef)]
-        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(units_to_return='fs').coef)]
+        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(mode='absolute', units_to_return='fs').coef)]
+        self.phase_coeff_table.blockSignals(False)
         self.plot_phase()
-        #[self.phase_coeff_table.item(1,i).setText(coeff) for i,coeff in enumerate(self.beam.get_currentPhase(mode=mode).coeff)]
     def plot_phase(self):
         '''
             Plots the current phase of the beam either relative to the compression or absolute
@@ -151,6 +168,18 @@ class BeamWidget(QWidget):
         else:
             mode='absolute'
         self.graphlayout.plot(self.beam.get_spectrumAtPixel(),1./np.pi*self.beam.get_sampledCurrentPhase(mode=mode))
+
+    def clear_optimal(self):
+        '''
+            Clear both the current and optimal phase coefficients
+        '''
+        coefs = self.beam.get_optimalPhase().coef
+        self.beam.set_optimalPhase(P([0] * len(coefs)))
+        self.update_display_from_beam()
+
+    def set_phase_manually(self):
+        self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]))
+        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
 
     def toggle_beam_to_slm(self):
         '''

@@ -155,7 +155,7 @@ class ChirpFitPlot(QtWidgets.QMainWindow):
         self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         self.graphWidget.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
         self.graphWidget.setLabel('left', 'Chirp at max intensity [fs²/rad²]', **self.styles)
-        self.graphWidget.setLabel('bottom', 'Frequency relative [THz]', **self.styles)
+        self.graphWidget.setLabel('bottom', 'Frequency relative [Hz]', **self.styles)
         self.graphWidget.showGrid(True, True)
         # Clear data to show plot
         self.clear_plot()
@@ -178,13 +178,12 @@ class ChirpFitPlot(QtWidgets.QMainWindow):
         self.graphWidget.clear()
         self.graphWidget.plot(x_array,y_array,symbol='o')
 
-    def set_fit(self, polynomial):
+    def set_fit(self, x_array, y_array_fit):
         '''
             Displays the latest fit on the plot
             input:
              - polynomial: np.Polynomial object converting column index to wavelength
         '''
-        self.poly=polynomial
-        #self.clear_plot()
-        self.set_data(self.x_array,self.y_array)
-        self.graphWidget.plot(self.x_array,self.poly(self.x_array))
+        self.y_array_fit = y_array_fit
+        self.set_data(self.x_array, self.y_array)
+        self.graphWidget.plot(self.x_array, self.y_array_fit)

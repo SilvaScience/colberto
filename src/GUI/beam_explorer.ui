@@ -43,12 +43,12 @@
    </row>
    <column>
     <property name="text">
-     <string>Phase</string>
+     <string>CEP</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>Delay (fs)</string>
+     <string>GD (fs)</string>
     </property>
    </column>
    <column>
@@ -58,14 +58,94 @@
    </column>
    <column>
     <property name="text">
-     <string>O(3) (fs^3)</string>
+     <string>TOD (fs^3)</string>
     </property>
    </column>
    <column>
     <property name="text">
-     <string>O(4) (fs^4)</string>
+     <string>FOD (fs^4)</string>
     </property>
    </column>
+   <item row="0" column="0">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+    </property>
+   </item>
+   <item row="0" column="1">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+    </property>
+   </item>
+   <item row="0" column="2">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+    </property>
+   </item>
+   <item row="0" column="3">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+    </property>
+   </item>
+   <item row="0" column="4">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable</set>
+    </property>
+   </item>
+   <item row="1" column="0">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+    </property>
+   </item>
+   <item row="1" column="1">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+    </property>
+   </item>
+   <item row="1" column="2">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+    </property>
+   </item>
+   <item row="1" column="3">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+    </property>
+   </item>
+   <item row="1" column="4">
+    <property name="text">
+     <string>0</string>
+    </property>
+    <property name="flags">
+     <set>ItemIsSelectable|ItemIsEditable|ItemIsDragEnabled|ItemIsUserCheckable|ItemIsEnabled</set>
+    </property>
+   </item>
   </widget>
   <widget class="QLabel" name="beam_label">
    <property name="geometry">
@@ -281,6 +361,19 @@
    </property>
    <property name="checked">
     <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="clear_optimal_pushbutton">
+   <property name="geometry">
+    <rect>
+     <x>70</x>
+     <y>130</y>
+     <width>91</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Clear optimal</string>
    </property>
   </widget>
  </widget>

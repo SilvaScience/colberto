@@ -8,8 +8,10 @@ import time
 from PyQt5 import QtCore
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
+from numpy.polynomial import Polynomial as P
 from pathlib import Path
 from scipy import special
+from compute import colbertoutils as co
 import sys
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
@@ -18,6 +20,8 @@ from src.compute.calibration import Calibration
 import logging
 import os
 import math
+import datetime
+from scipy.ndimage import uniform_filter
 
 logger = logging.getLogger(__name__)
 
@@ -230,12 +234,12 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.wavelength_array=wavelength_array
         self.data=data
         for spectrum in data:
-            wavelengths.append(wavelength_array[np.mean(np.argmax(spectrum[13:-1]),dtype=int)])
+            wavelengths.append(self.wavelength_array[np.mean(np.argmax(spectrum),dtype=int)])
         wavelengths=np.array(wavelengths)
         index = np.arange(len(wavelengths))*self.increment
         columns_out=column_array[np.logical_and(index>=boundaries[0],index<=boundaries[1])]
         wavelengths_out=wavelengths[np.logical_and(index>=boundaries[0],index<=boundaries[1])]
-        self.send_maxima.emit(columns_out,wavelengths_out)
+        self.send_maxima.emit(columns_out,wavelengths_out*1e-9)
         self.spectral_calibration_processed_data={
             'columns':columns_out,
             'wavelengths':wavelengths_out
@@ -259,7 +263,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
                 - columns: (nd.array) array of SLM columns indices
                 - maxima_wavelenghts: (nd.array) array of the maxima (wavelengths) of the spectral calibration measurements
         '''
-        self.fit_polynomial=Polynomial.fit(columns,maxima_wavelengths,deg=degree)
+        self.fit_polynomial=Polynomial.fit(columns,maxima_wavelengths*1e-9,deg=degree)
         self.send_polynomial.emit(self.fit_polynomial)
         self.send_spectral_calibration_fit.emit(('spectral_calibration_fit',self.fit_polynomial))
         
@@ -311,65 +315,69 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             - sendProgress: float representing the progress of the measurement.
     '''
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    send_chirp= QtCore.pyqtSignal(np.ndarray,np.ndarray,np.ndarray)
+    send_chirp = QtCore.pyqtSignal(np.ndarray,np.ndarray,np.ndarray)
     send_chirp_calibration_data = QtCore.pyqtSignal(tuple)
+    send_beam = QtCore.pyqtSignal(object)
     sendProgress = QtCore.pyqtSignal(float)
 
-    def __init__(self,devices, background, grating_period, beam_, compression_carrier_wavelength, chirp_step, chirp_max, chirp_min,beam, demo=False):
+    def __init__(self,devices, background, grating_period, compression_carrier_wavelength, chirp_step, chirp_max, chirp_min, beam_name, beam, spectral_calibration=None, demo=False):
         '''
          Initializes the semporal beam calibration measurement
          input:
              - devices: the devices dictionnary holding at least a spectrometer and a SLM
+             - background: the background to be remove of each measurements
              - grating_period: (int) the vertical period (in pixels) of the phase grating
-             - column_increment: (int) the step by which to shift the columns 
-             - column_width: (int) the width (in pixels) of the scanned column
+             - compression_carrier_wavlength: set in the GUI in nm
+             - chirp_step: set in the GUI in fs^2
+             - chrip_max: set in the GUI in fs^2
+             - chirp_min: set in the GUI in fs^2
+             - beam_name: set in the GUI 
+             - beam: disctionnary of all beam attributes
+             - spectral_calibration: pixel to wavelength calibration obtained (polynomial)
+             - demo: is demo or not
         ''' 
         super(ChirpCalibrationMeasurement, self).__init__()
         self.spectrometer = devices['spectrometer']
         self.SLM= devices['SLM']
-        
-        ### i dont know what to do with beam_ position
         
         self.wls = self.spectrometer.get_wavelength()
         self.background = background
         self.spectra = []  # preallocate spec array
         self.terminate = False
         self.acquire_measurement = True
-        self.Chirp=np.arange(chirp_min,chirp_max,chirp_step,dtype=int)
+        self.chirp=np.arange(chirp_min,chirp_max,chirp_step,dtype=int) 
         self.intensities=[]
         self.spectral_calibration_data={
-            'Chirp' : self.Chirp,
+            'Chirp' : self.chirp,
             'wavelengths' : self.wls,
             'intensities' : self.intensities
         }
-        # Configure single beam over which the columns will be scanned
 
-        self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
-
-        self.monobeam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) 
-        self.monobeam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
-        self.monobeam.set_gratingPeriod(grating_period)
-
-        self.chirp_ = np.linspace(chirp_max,chirp_min,num=int((chirp_max-chirp_min)/chirp_step))
         self.isDemo= demo
-        self.beam_ = beam
-        self.beam_.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10])))
-        self.beam_.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
-        self.beam_.set_gratingPeriod(grating_period)
+        self.beam_name = beam_name
+        self.beam = beam
+        if spectral_calibration == None:
+            self.beam.set_pixelToWavelength(Polynomial(1e-9*np.array([compression_carrier_wavelength-100,1/10]))) # arbitrary polynomial spectral calibration
+            logger.warning('%s Arbitrary spectral calibration used'%datetime.datetime.now())
+        self.beam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
+        self.beam.set_gratingPeriod(grating_period)
     
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
                 if self.isDemo:
-                    file_path = os.path.join("src", "Chirp_dataset.txt")
+                    project_folder = Path(__file__).parent.parent.resolve()
+                    file_path = os.path.join(project_folder, "Chirp_dataset.txt")
                     a = np.loadtxt(file_path)
 
                     self.wls = a[-1]
                     self.Chirp_data= a[-2]
+                    f = len(self.Chirp_data)  # default to full length
                     for h in range(len(self.Chirp_data)):
-                        if self.Chirp_data[h]==0:
+                        if self.Chirp_data[h] == 0:
                             f = h
                             break
-                    self.Chirp_data = self.Chirp_data[:f]        
+
+                    self.Chirp_data = self.Chirp_data[:f]   
                     self.data = a[:-3]
                     # Emit the data through signals
 
@@ -384,29 +392,30 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                             self.sendProgress.emit(i/len(self.Chirp_data)*100)
                             self.send_chirp.emit(np.array(self.Chirp_data[:i]), np.array(self.wls), np.array(self.data[:i]))
                 else:
-                    # self.BEAM = self.SLM['beam'][self.beam_]
-                    for i in range(len(self.chirp_)):
-                        if not self.terminate:    
-                            self.monobeam.set_currentPhase(Polynomial([0,0,self.chirp_[i]]),mode='absolute')
-                            image_output=self.monobeam.makeGrating()                
+                    for i in range(len(self.chirp)):
+                        if not self.terminate:
+                            self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
+                            self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                            self.send_beam.emit((self.beam_name, self.beam))
+                            image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)
                             self.take_spectrum(i)
                             self.intensities.append(self.spec)
-                            self.sendProgress.emit(i/len(self.chirp_)*100)
+                            self.sendProgress.emit(i/len(self.chirp)*100)
                             self.Chirp_calibration_data={
-                                'Chirp' : self.chirp_,
+                                'Chirp' : self.chirp,
                                 'wavelengths' : self.wls,
                                 'data' : np.array(self.intensities)
                                 }
                             if i>=1:
-                                self.send_chirp.emit(self.chirp_[:i],self.wls,np.array(self.intensities))
+                                self.send_chirp.emit(self.chirp[:i],self.wls,np.array(self.intensities))
         self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
         print('Temporal Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
-        np.savetxt('chirp.txt', self.chirp_)
-        np.savetxt('wls.txt', self.wls)
-        np.savetxt('intensities.txt', np.array(self.intensities))
+        #np.savetxt('chirp.txt', self.chirp)
+        #np.savetxt('wls.txt', self.wls)
+        #np.savetxt('intensities.txt', np.array(self.intensities))
     def stop(self):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
@@ -415,8 +424,8 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             self.spec = np.array(self.spectrometer.get_intensities())
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
-            self.background_subtraction = self.spec-self.background
-            self.sendSpectrum.emit(self.wls, self.background_subtraction)
+            self.spec = self.spec-self.background
+            self.sendSpectrum.emit(self.wls, self.spec)
 
 class FitTemporalBeamCalibration(QtCore.QThread):
     '''
@@ -426,7 +435,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
     '''
     send_chirp_region = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     send_chirp_fit = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    send_polynomial= QtCore.pyqtSignal(Polynomial)
+    send_polynomial= QtCore.pyqtSignal(np.ndarray, np.ndarray)
     send_chirp_calibration_data = QtCore.pyqtSignal(tuple)
     send_chirp_calibration_fit = QtCore.pyqtSignal(tuple)
 
@@ -451,14 +460,58 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         self.wavelength_array = chirpdata['wavelengths']
         self.data = chirpdata['data']
 
-        noise_level = np.std(self.data)
-        SNR = self.data/noise_level
-        data_filtered = np.where(SNR >= SNR_threshold, self.data, 0) # Replace data with SNR below threshold with 0. 
+        # --- Compute local statistics to characterize the data structure ---
 
-        chirp_array_region = self.chirp_array[5:-5]
+        # Compute a smoothed version of the data using a uniform (mean) filter.
+        # This acts like a moving average over a square region of size `window × window`.
+        # It represents the local average intensity (the "baseline") at each point.
+        local_mean = uniform_filter(self.data, size=10)
+
+        # Compute the local average of the squared data (⟨x²⟩) over the same window.
+        # This is used to estimate the variance in each neighborhood.
+        local_sq_mean = uniform_filter(self.data**2, size=10)
+
+        # Compute the local standard deviation using σ = sqrt(⟨x²⟩ - ⟨x⟩²).
+        # This quantifies local fluctuations (i.e. how noisy or structured the region is).
+        # Avoid small negative values due to rounding
+        variance = local_sq_mean - local_mean**2
+        variance = np.clip(variance, 0, None)
+        local_std = np.sqrt(variance)
+
+        # --- Identify regions likely to be pure noise ---
+
+        # Define a "score" that combines:
+        #   - the absolute local mean (to find near-zero regions)
+        #   - the local standard deviation (to find low-variance regions)
+        # Regions with both low mean and low variance are good candidates for noise-only areas.
+        score = np.abs(local_mean) + local_std
+
+        # Compute a threshold value corresponding to the bottom `frac` percentile of the score distribution.
+        # For example, if frac=0.1, we keep the 10% of points with the smallest (mean + std) scores.
+        threshold = np.percentile(score, 100 * 0.1)
+
+        # Create a boolean mask identifying the pixels (or points) that fall below that threshold.
+        # True → region is considered noise-only
+        # False → region might contain signal
+        mask = score <= threshold
+
+        # --- Compute noise level safely ---
+        finite_mask = np.isfinite(self.data)
+        combined_mask = mask & finite_mask
+
+        if np.any(combined_mask) and np.sum(combined_mask) > 1:
+            noise_level = np.std(self.data[combined_mask])
+        else:
+            noise_level = np.std(self.data[finite_mask])
+
+        # --- Filter based on SNR ---
+        SNR = np.abs(self.data) / noise_level
+        data_filtered = np.where(SNR >= SNR_threshold, self.data, 0)
+
+        chirp_array_region = self.chirp_array[1:-1]
         mask = np.logical_and(self.wavelength_array >= boundaries[0], self.wavelength_array <= boundaries[1])
         wavelength_array_region = self.wavelength_array[mask]
-        data_filtered_region = data_filtered[5:-5, mask]
+        data_filtered_region = data_filtered[1:-1, mask]
 
         self.send_chirp_region.emit(chirp_array_region, wavelength_array_region, data_filtered_region)
         self.temporal_calibration_processed_data={
@@ -487,11 +540,6 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         self.chirp_array = chirp_array
         self.wavelength_array = wavelength_array
         self.data = data
-
-        # Find max in whole data
-        max_pos = np.unravel_index(np.nanargmax(self.data), self.data.shape)
-        max_chirp, max_wavelength = max_pos
-        wavelength_at_max_intensity = self.wavelength_array[max_wavelength]
         
         # Loop through each wavelength 
         max_chirp_values = []
@@ -505,27 +553,20 @@ class FitTemporalBeamCalibration(QtCore.QThread):
             wavelength_values.append(self.wavelength_array[wls])
         max_chirp_values = np.array(max_chirp_values)
         wavelength_values = np.array(wavelength_values)
+        omega_values = 0.5*co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz
 
-        # Convert wavelengts to frequency [Hz]
-        c = 3e8 # speed of light in m/s
-        freqs_values = c / (np.array(wavelength_values) * 1e-9) # Hz
-        #freq_at_max_iintensity = c / (wavelength_at_max_intensity * 1e-9) # Hz
-        carrier_freq_SHG = c / (carrier_wavelength/2 * 1e-9) # Hz
-
-        # Shift frequencies so carrier frequency is at zero
-        #freqs_shifted = freqs_values-freq_at_max_iintensity
-        freqs_shifted = freqs_values-carrier_freq_SHG
-        freqs_shifted_THz = freqs_shifted * 1e-12 # THz
+        # Shifted frequency around the carrier
+        omega_carrier = co.waveToAngFreq(carrier_wavelength * 1e-9) # rad Hz
+        omega_shifted = omega_values-omega_carrier
 
         # Fit a nth order polynimial
-        self.fit_polynomial = Polynomial.fit(freqs_shifted_THz, max_chirp_values, deg)
-        self.send_chirp_fit.emit(freqs_shifted_THz, max_chirp_values)
-        self.send_polynomial.emit(self.fit_polynomial)
+        #self.fit_polynomial = Polynomial.fit(omega_shifted, max_chirp_values, deg)
+        coeffs = np.polyfit(omega_shifted, max_chirp_values, deg)
+        self.fit_polynomial = np.polyval(coeffs, omega_shifted)
+        self.send_chirp_fit.emit(omega_shifted, max_chirp_values)
+        self.send_polynomial.emit(omega_shifted, self.fit_polynomial)
         self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
 
-        # Convert to standard basis
-        standard_poly = self.fit_polynomial.convert(domain=[min(freqs_shifted_THz), max(freqs_shifted_THz)])
-
         # Get the coefficients
-        self.coeffs = standard_poly.coef
+        self.coeffs = coeffs[::-1]
         return self.coeffs
