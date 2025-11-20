@@ -10,9 +10,6 @@ from ctypes import *
 from pathlib import Path
 import logging
 import datetime
-import matplotlib.pyplot as plt
-import numpy as np
-from PIL import Image
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
