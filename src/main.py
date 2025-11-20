@@ -7,11 +7,9 @@ Created on Tue Jan  1 14:34:11 2025
 import sys
 import time
 import re
-import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
-import math
 from numpy.polynomial import Polynomial as P
 from PyQt5 import QtCore, QtWidgets, uic
 import pyqtgraph as pg
