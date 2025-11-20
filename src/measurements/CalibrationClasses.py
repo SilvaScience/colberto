@@ -366,9 +366,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
         if not self.terminate:  # check whether stopping measurement is called
                 if self.isDemo:
                     project_folder = Path(__file__).parent.parent.resolve()
-                    #file_path = os.path.join(project_folder, "Chirp_dataset.txt")
-                    file_path = os.path.join(project_folder, "collcyl_correctoffset_bk7.txt")
-                    #file_path = os.path.join(project_folder, "collcyl_correctoffset_nobk7.txt")
+                    file_path = os.path.join(project_folder, "Chirp_dataset.txt")
                     a = np.loadtxt(file_path)
 
                     self.wls = a[-1]
