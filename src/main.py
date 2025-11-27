@@ -739,30 +739,43 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def save_calibration(self):
         """
-        Save all Beam objects using a file dialog to select HDF5 location.
-        Converts Beam objects to dictionaries safely with prompt definition.
+        Save all Beam objects and calibration data using a file dialog.
+        - Beams are converted to dicts with Beam.beam_to_dict
+        - Calibration is converted safely, including Polynomials
         """
-        # Convert all Beam objects to prompt-safe dictionaries
+        # Convert all Beam objects to safe dictionaries
         beam_dicts = {name: Beam.beam_to_dict(beam) for name, beam in self.DataHandling.beams.items()}
 
-        # Use prompt-based HDF5 save dialog
-        default_filename = f"ChirpParameters_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.h5"
-        HDF5Helper.save_to_hdf5_with_prompt(beam_dicts, default_filename=default_filename)
+        # Convert calibration data to safe dict
+        calibration_dict = DataHandling.calibration_to_dict(self.DataHandling.calibration)
 
+        # Combine beams and calibration into one dict
+        data_to_save = {
+            "beams": beam_dicts,
+            "calibration": calibration_dict
+        }
+
+        # Default filename with timestamp
+        default_filename = f"ChirpParameters_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.h5"
+
+        # Save using HDF5 prompt
+        HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=default_filename)
 
     def load_calibration(self):
         """
-        Load Beam objects from an HDF5 file using a file dialog.
-        Converts nested dictionaries back to Beam objects with correct types.
+        Load beams and calibration from HDF5 file using prompt-based loader.
+        - Beams are reconstructed using Beam.dict_to_beam
+        - Calibration Polynomials are restored automatically
         """
-        # Use prompt-based HDF5 load dialog
-        loaded_beams = HDF5Helper.load_from_hdf5_prompt()
-        if loaded_beams is None:
-            print("No file selected. Load cancelled.")
+        # Load the top-level dictionary from HDF5
+        loaded_data = HDF5Helper.load_from_hdf5_prompt()
+        if loaded_data is None:
+            print("No data loaded.")
             return
 
-        # Convert dictionaries back to Beam objects safely
-        for name, beam_dict in loaded_beams.items():
+        # Load beams
+        beams_loaded = loaded_data.get("beams", {})
+        for name, beam_dict in beams_loaded.items():
             beam_obj = Beam.dict_to_beam(
                 beam_dict=beam_dict,
                 beam_class=Beam,
@@ -770,10 +783,13 @@ class MainInterface(QtWidgets.QMainWindow):
                 slm_height=self.devices['SLM'].get_height()
             )
             self.DataHandling.beams[name] = beam_obj
+            self.DataHandling.set_beam((name, beam_obj))
 
-        # Update GUI / internal references
-        for name, beam in self.DataHandling.beams.items():
-            self.DataHandling.set_beam((name, beam))
+        # Load calibration
+        calibration_loaded = loaded_data.get("calibration", {})
+        self.DataHandling.calibration = DataHandling.dict_to_calibration(calibration_loaded)
+
+        print("Calibration and beams successfully loaded.")
 
 class HDF5Helper:
 
@@ -787,10 +803,6 @@ class HDF5Helper:
         - data (dict): Nested dictionary of data to save.
         - default_filename (str): Suggested default file name.
         """
-        import tkinter as tk
-        from tkinter import filedialog
-        import os
-        import h5py
 
         # Initialize Tkinter root and hide it
         root = tk.Tk()
@@ -828,8 +840,6 @@ class HDF5Helper:
         - filepath (str): Directory where file will be saved.
         - filename (str): File name (with or without extension).
         """
-        import os
-        import h5py
 
         os.makedirs(filepath, exist_ok=True)
 
@@ -873,9 +883,6 @@ class HDF5Helper:
         Returns:
         - dict: Nested dictionary of loaded data.
         """
-        import tkinter as tk
-        from tkinter import filedialog
-        import os
 
         root = tk.Tk()
         root.withdraw()
@@ -904,9 +911,6 @@ class HDF5Helper:
         Returns:
         - dict: Nested dictionary with native Python types for scalars.
         """
-        import os
-        import h5py
-        import numpy as np
 
         base, ext = os.path.splitext(filename)
         if ext == '':
@@ -925,7 +929,6 @@ class HDF5Helper:
         Recursively load data from HDF5 group into nested dictionary,
         converting NumPy scalars to native Python types.
         """
-        import numpy as np
 
         result = {}
         for key, item in h5group.items():
