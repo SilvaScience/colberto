@@ -35,14 +35,18 @@ from GUI.BeamExplorer import BeamExplorer
 import logging
 import datetime
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
+import h5py
+import os
+import tkinter as tk
+from tkinter import filedialog
 
 logger = logging.getLogger(__name__)
 class MainInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainInterface, self).__init__()
-        project_folder = Path(__file__).parent.resolve()
-        uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
+        self.project_folder = Path(__file__).parent.resolve()
+        uic.loadUi(Path(self.project_folder,r'GUI/main_GUI.ui'), self)
         logging.basicConfig(filename='main.log', level=logging.INFO)
         logger.info('%s Started log'%datetime.datetime.now())
         # fancy name
@@ -71,6 +75,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
         self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
         self.show_beam_explorer_pushbutton=self.findChild(QtWidgets.QPushButton,'show_beam_explorer_button')
+        self.save_calibration_pushbutton = self.findChild(QtWidgets.QPushButton,'save_calibration_button')
+        self.load_calibration_pushbutton = self.findChild(QtWidgets.QPushButton,'load_calibration_button')
         # Spatial calibration tab
         ## Vertical calibration tab
         self.spatial_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
@@ -266,6 +272,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
         self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
         self.devices['SLM'].write_image(test_image)
+        # Save/load calibration
+        self.save_calibration_pushbutton.clicked.connect(self.save_calibration)
+        self.load_calibration_pushbutton.clicked.connect(self.load_calibration)
         # run some functions once to define default values
         self.change_filename()
 
@@ -728,6 +737,214 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
         QApplication.closeAllWindows()
 
+    def save_calibration(self):
+        """
+        Save all Beam objects using a file dialog to select HDF5 location.
+        Converts Beam objects to dictionaries safely with prompt definition.
+        """
+        # Convert all Beam objects to prompt-safe dictionaries
+        beam_dicts = {name: Beam.beam_to_dict(beam) for name, beam in self.DataHandling.beams.items()}
+
+        # Use prompt-based HDF5 save dialog
+        default_filename = f"ChirpParameters_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.h5"
+        HDF5Helper.save_to_hdf5_with_prompt(beam_dicts, default_filename=default_filename)
+
+
+    def load_calibration(self):
+        """
+        Load Beam objects from an HDF5 file using a file dialog.
+        Converts nested dictionaries back to Beam objects with correct types.
+        """
+        # Use prompt-based HDF5 load dialog
+        loaded_beams = HDF5Helper.load_from_hdf5_prompt()
+        if loaded_beams is None:
+            print("No file selected. Load cancelled.")
+            return
+
+        # Convert dictionaries back to Beam objects safely
+        for name, beam_dict in loaded_beams.items():
+            beam_obj = Beam.dict_to_beam(
+                beam_dict=beam_dict,
+                beam_class=Beam,
+                slm_width=self.devices['SLM'].get_width(),
+                slm_height=self.devices['SLM'].get_height()
+            )
+            self.DataHandling.beams[name] = beam_obj
+
+        # Update GUI / internal references
+        for name, beam in self.DataHandling.beams.items():
+            self.DataHandling.set_beam((name, beam))
+
+class HDF5Helper:
+
+
+    @staticmethod
+    def save_to_hdf5_with_prompt(data, default_filename="data.h5"):
+        """
+        Open a file dialog to choose filename and save HDF5 file.
+
+        Parameters:
+        - data (dict): Nested dictionary of data to save.
+        - default_filename (str): Suggested default file name.
+        """
+        import tkinter as tk
+        from tkinter import filedialog
+        import os
+        import h5py
+
+        # Initialize Tkinter root and hide it
+        root = tk.Tk()
+        root.withdraw()
+
+        # Ask user for filename and location
+        filepath = filedialog.asksaveasfilename(
+            title="Save HDF5 file as",
+            defaultextension=".hdf5",
+            initialfile=default_filename,
+            filetypes=[("HDF5 files", "*.hdf5 *.h5"), ("All files", "*.*")]
+        )
+
+        if not filepath:
+            print("Save cancelled.")
+            return
+
+        # Remove existing file if present
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+        # Save data recursively
+        with h5py.File(filepath, 'w') as h5f:
+            HDF5Helper._recursively_save(h5f, '', data)
+
+        print(f"Data saved to {filepath}")
+
+    @staticmethod
+    def save_to_hdf5(data, filepath, filename):
+        """
+        Save nested dictionary to HDF5 file at specified location.
+
+        Parameters:
+        - data (dict): Nested dictionary to save.
+        - filepath (str): Directory where file will be saved.
+        - filename (str): File name (with or without extension).
+        """
+        import os
+        import h5py
+
+        os.makedirs(filepath, exist_ok=True)
+
+        # Add extension if missing
+        base, ext = os.path.splitext(filename)
+        if ext == '':
+            ext = '.h5'
+        full_path = os.path.join(filepath, base + ext)
+
+        if os.path.exists(full_path):
+            os.remove(full_path)
+
+        # Save recursively
+        with h5py.File(full_path, 'w') as h5f:
+            HDF5Helper._recursively_save(h5f, '', data)
+
+        print(f"Data saved to {full_path}")
+
+    @staticmethod
+    def _recursively_save(h5file, path, dic):
+        """Recursively save a nested dictionary to HDF5."""
+        import os
+        for key, item in dic.items():
+            key_path = f"{path}/{key}" if path else key
+            if isinstance(item, dict):
+                # Recurse into sub-dictionaries
+                HDF5Helper._recursively_save(h5file, key_path, item)
+            else:
+                # Ensure intermediate group exists
+                group_path = os.path.dirname(key_path)
+                if group_path and group_path not in h5file:
+                    h5file.require_group(group_path)
+                # Save dataset
+                h5file.create_dataset(key_path, data=item)
+
+    @staticmethod
+    def load_from_hdf5_prompt():
+        """
+        Open a file dialog to load an HDF5 file.
+
+        Returns:
+        - dict: Nested dictionary of loaded data.
+        """
+        import tkinter as tk
+        from tkinter import filedialog
+        import os
+
+        root = tk.Tk()
+        root.withdraw()
+
+        full_path = filedialog.askopenfilename(
+            title="Choose HDF5 file to open",
+            filetypes=[("HDF5 files", "*.hdf5 *.h5"), ("All files", "*.*")]
+        )
+
+        if not full_path:
+            print("Load cancelled.")
+            return None
+
+        filepath, filename = os.path.split(full_path)
+        return HDF5Helper.load_from_hdf5(filepath, filename)
+
+    @staticmethod
+    def load_from_hdf5(filepath, filename):
+        """
+        Load HDF5 file as nested dictionary, preserving types.
+
+        Parameters:
+        - filepath (str): Directory where file is located.
+        - filename (str): HDF5 file name.
+
+        Returns:
+        - dict: Nested dictionary with native Python types for scalars.
+        """
+        import os
+        import h5py
+        import numpy as np
+
+        base, ext = os.path.splitext(filename)
+        if ext == '':
+            ext = '.h5'
+        full_path = os.path.join(filepath, base + ext)
+
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"No file found at: {full_path}")
+
+        with h5py.File(full_path, 'r') as h5f:
+            return HDF5Helper._recursively_load(h5f)
+
+    @staticmethod
+    def _recursively_load(h5group):
+        """
+        Recursively load data from HDF5 group into nested dictionary,
+        converting NumPy scalars to native Python types.
+        """
+        import numpy as np
+
+        result = {}
+        for key, item in h5group.items():
+            if isinstance(item, h5py.Group):
+                result[key] = HDF5Helper._recursively_load(item)
+            elif isinstance(item, h5py.Dataset):
+                data = item[()]
+
+                # Convert NumPy scalars to native Python
+                if isinstance(data, (np.generic, np.bool_)):
+                    data = data.item()
+
+                # Decode bytes to string if needed
+                if isinstance(data, bytes):
+                    data = data.decode('utf-8')
+
+                result[key] = data
+        return result
+    
 class UpdateWorker(QtCore.QThread):
 
     new_parameter = QtCore.pyqtSignal(dict)

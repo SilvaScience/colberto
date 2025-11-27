@@ -248,7 +248,7 @@ class Beam:
             mode=self.current_phase_mode
         phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
         if mode=='relative':
-            self.currentPhasePolynomial=self.optimalPhasePolynomial+phasePolynomial
+            self.currentPhasePolynomial = P([a + b for a, b in zip(self.optimalPhasePolynomial.coef, phasePolynomial.coef)])
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
@@ -267,7 +267,7 @@ class Beam:
         if mode is None:
             mode=self.current_phase_mode
         if mode=='relative':
-            returnPolynomial=self.currentPhasePolynomial-self.optimalPhasePolynomial
+            returnPolynomial=P([a - b for a, b in zip(self.currentPhasePolynomial.coef, self.optimalPhasePolynomial.coef)])
         elif mode=='absolute':
             returnPolynomial=self.currentPhasePolynomial
         returnPolynomial = self.TaylorPrefactor(returnPolynomial, TaylorPrefactorFlag)
@@ -442,3 +442,45 @@ class Beam:
         else:
             new_phasePolynomial = phasePolynomial
         return new_phasePolynomial
+    
+    @staticmethod
+    def beam_to_dict(beam):
+        """
+        Convert a Beam object into a serializable dictionary.
+        Polynomials are stored as {'_type': 'Polynomial', 'coef': [...]}.
+        """
+        import numpy as np
+        out = {}
+        for k, v in beam.__dict__.items():
+            if k in ['optimalPhasePolynomial', 'currentPhasePolynomial', 'pixelToWavelength']:
+                # Convert Polynomial to list of coefficients
+                if isinstance(v, P):
+                    coef_list = np.array(v.coef).tolist()
+                elif isinstance(v, (list, np.ndarray)):
+                    coef_list = list(v)
+                else:
+                    coef_list = [float(v)]
+                out[k] = {"_type": "Polynomial", "coef": coef_list}
+            elif isinstance(v, np.ndarray):
+                out[k] = v
+            elif isinstance(v, list):
+                out[k] = v
+            elif isinstance(v, (int, float, str, bool)):
+                out[k] = v
+            else:
+                out[k] = str(v)
+        return out
+
+    @staticmethod
+    def dict_to_beam(beam_dict, beam_class, slm_width, slm_height):
+        """
+        Reconstruct a Beam object from a dictionary, restoring Polynomials
+        and arrays where appropriate.
+        """
+        beam = beam_class(slm_width, slm_height)
+        for k, v in beam_dict.items():
+            if isinstance(v, dict) and v.get("_type") == "Polynomial":
+                setattr(beam, k, P(v["coef"]))
+            else:
+                setattr(beam, k, v)
+        return beam
