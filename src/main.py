@@ -739,9 +739,9 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def save_calibration(self):
         """
-        Save all Beam objects and calibration data using a file dialog.
-        - Beams are converted to dicts with Beam.beam_to_dict
-        - Calibration is converted safely, including Polynomials
+            Save all Beam objects and calibration data using a file dialog.
+            - Beams are converted to dicts with Beam.beam_to_dict
+            - Calibration is converted safely, including Polynomials
         """
         # Convert all Beam objects to safe dictionaries
         beam_dicts = {name: Beam.beam_to_dict(beam) for name, beam in self.DataHandling.beams.items()}
@@ -763,9 +763,9 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def load_calibration(self):
         """
-        Load beams and calibration from HDF5 file using prompt-based loader.
-        - Beams are reconstructed using Beam.dict_to_beam
-        - Calibration Polynomials are restored automatically
+            Load beams and calibration from HDF5 file using prompt-based loader.
+            - Beams are reconstructed using Beam.dict_to_beam
+            - Calibration Polynomials are restored automatically
         """
         # Load the top-level dictionary from HDF5
         loaded_data = HDF5Helper.load_from_hdf5_prompt()
@@ -793,15 +793,14 @@ class MainInterface(QtWidgets.QMainWindow):
 
 class HDF5Helper:
 
-
     @staticmethod
     def save_to_hdf5_with_prompt(data, default_filename="data.h5"):
         """
-        Open a file dialog to choose filename and save HDF5 file.
+            Open a file dialog to choose filename and save HDF5 file.
 
-        Parameters:
-        - data (dict): Nested dictionary of data to save.
-        - default_filename (str): Suggested default file name.
+            Parameters:
+            - data (dict): Nested dictionary of data to save.
+            - default_filename (str): Suggested default file name.
         """
 
         # Initialize Tkinter root and hide it
@@ -833,12 +832,12 @@ class HDF5Helper:
     @staticmethod
     def save_to_hdf5(data, filepath, filename):
         """
-        Save nested dictionary to HDF5 file at specified location.
+            Save nested dictionary to HDF5 file at specified location.
 
-        Parameters:
-        - data (dict): Nested dictionary to save.
-        - filepath (str): Directory where file will be saved.
-        - filename (str): File name (with or without extension).
+            Parameters:
+            - data (dict): Nested dictionary to save.
+            - filepath (str): Directory where file will be saved.
+            - filename (str): File name (with or without extension).
         """
 
         os.makedirs(filepath, exist_ok=True)
@@ -878,10 +877,10 @@ class HDF5Helper:
     @staticmethod
     def load_from_hdf5_prompt():
         """
-        Open a file dialog to load an HDF5 file.
+            Open a file dialog to load an HDF5 file.
 
-        Returns:
-        - dict: Nested dictionary of loaded data.
+            Returns:
+            - dict: Nested dictionary of loaded data.
         """
 
         root = tk.Tk()
@@ -902,14 +901,14 @@ class HDF5Helper:
     @staticmethod
     def load_from_hdf5(filepath, filename):
         """
-        Load HDF5 file as nested dictionary, preserving types.
+            Load HDF5 file as nested dictionary, preserving types.
 
-        Parameters:
-        - filepath (str): Directory where file is located.
-        - filename (str): HDF5 file name.
+            Parameters:
+            - filepath (str): Directory where file is located.
+            - filename (str): HDF5 file name.
 
-        Returns:
-        - dict: Nested dictionary with native Python types for scalars.
+            Returns:
+            - dict: Nested dictionary with native Python types for scalars.
         """
 
         base, ext = os.path.splitext(filename)
@@ -926,8 +925,8 @@ class HDF5Helper:
     @staticmethod
     def _recursively_load(h5group):
         """
-        Recursively load data from HDF5 group into nested dictionary,
-        converting NumPy scalars to native Python types.
+            Recursively load data from HDF5 group into nested dictionary,
+            converting NumPy scalars to native Python types.
         """
 
         result = {}
