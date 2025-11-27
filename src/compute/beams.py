@@ -446,8 +446,8 @@ class Beam:
     @staticmethod
     def beam_to_dict(beam):
         """
-        Convert a Beam object into a serializable dictionary.
-        Polynomials are stored as {'_type': 'Polynomial', 'coef': [...]}.
+            Convert a Beam object into a serializable dictionary.
+            Polynomials are stored as {'_type': 'Polynomial', 'coef': [...]}.
         """
         import numpy as np
         out = {}
@@ -474,8 +474,8 @@ class Beam:
     @staticmethod
     def dict_to_beam(beam_dict, beam_class, slm_width, slm_height):
         """
-        Reconstruct a Beam object from a dictionary, restoring Polynomials
-        and arrays where appropriate.
+            Reconstruct a Beam object from a dictionary, restoring Polynomials
+            and arrays where appropriate.
         """
         beam = beam_class(slm_width, slm_height)
         for k, v in beam_dict.items():
