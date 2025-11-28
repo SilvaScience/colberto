@@ -531,6 +531,18 @@ class MainInterface(QtWidgets.QMainWindow):
         if old in beamDict:
             self.beam_name_box.setCurrentText(old)
 
+        old = self.delay_reference_beam_name_box.currentText()
+        self.delay_reference_beam_name_box.clear()
+        self.delay_reference_beam_name_box.addItems(beamDict)
+        if old in beamDict:
+            self.delay_reference_beam_name_box.setCurrentText(old)
+
+        old = self.delay_second_beam_name_box.currentText()
+        self.delay_second_beam_name_box.clear()
+        self.delay_second_beam_name_box.addItems(beamDict)
+        if old in beamDict:
+            self.delay_second_beam_name_box.setCurrentText(old)
+
     def chirpBackgroundMeasurement(self):
         if not self.measurement_busy:
             self.measurement_busy = True
@@ -695,10 +707,13 @@ class MainInterface(QtWidgets.QMainWindow):
         """
         if not self.measurement_busy:
             self.measurement_busy = True
+            if self.delay_reference_beam_name_box.currentText() == self.delay_second_beam_name_box.currentText():
+                print('Measurement not started, beams need to be different')
+                return
             if self.delay_reference_beam_name_box.currentText() in self.DataHandling.get_beams():
                 refBeam = self.DataHandling.get_beams()[self.delay_reference_beam_name_box.currentText()]
             else:
-                refbeam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+                refBeam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
             if self.delay_second_beam_name_box.currentText() in self.DataHandling.get_beams():
                 secBeam = self.DataHandling.get_beams()[self.delay_second_beam_name_box.currentText()]
             else:
