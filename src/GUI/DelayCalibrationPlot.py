@@ -37,7 +37,7 @@ class DelayCalibrationPlot(QtWidgets.QMainWindow):
         self.plot.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         self.plot.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
         self.plot.setLabel('left', 'Wavelength [nm]', **self.styles)
-        self.plot.setLabel('bottom', 'Chirp [fs²/rad²]', **self.styles)
+        self.plot.setLabel('bottom', 'Delay [fs]', **self.styles)
         #self.imageItem.showGrid(True, True)
         # Clear data to show plot
 
