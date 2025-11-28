@@ -570,3 +570,123 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         # Get the coefficients
         self.coeffs = coeffs[::-1]
         return self.coeffs
+    
+class DelayCalibrationMeasurement(QtCore.QThread):
+    '''
+        Runs a measurement that will scan the delay between two beams
+            - sendProgress: float representing the progress of the measurement.
+            - sendSpectrum: wavelength and intensity detected by the spectrometer.
+            - sendBeam: signal to the beam explorer
+            - sendCrossCorrelation: wavelength, delay and intensity for the Delay_scan_plot
+            - sendCrossCorrelationData: wavelength, delay and intensity for DataHandling calibration
+            - sendCrossCorrelationRegion: delay and intensity (wavelength integrated) for the Delay_fit_plot
+            - sendCrossCorrelationFit: fit of the Delay_fit_plot
+            - sendCrossCorrelationFitData: delay and intensity for DataHandling calibration
+            - sendCrossCorrelationDelay: fitted delay for DataHandling calibration
+    '''
+    sendProgress = QtCore.pyqtSignal(float)
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendBeam = QtCore.pyqtSignal(object)
+    sendCrossCorrelation = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
+    sendCrossCorrelationData = QtCore.pyqtSignal(tuple)
+    sendCrossCorreletionRegion = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendCrossCorrelationFit = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendCrossCorrelationFitData = QtCore.pyqtSignal(tuple)
+    sendCrossCorrelationDelay = QtCore.pyqtSignal(tuple)
+
+    def __init__(self, devices, background, grating_period, delay_carrier_wavelength, delay_step, delay_max, delay_min, refBeamName, secBeamName, refBeam, secBeam, spectral_calibration=None, demo=False):
+        '''
+            Initializes the semporal beam calibration measurement
+            input:
+                - devices: the devices dictionnary holding at least a spectrometer and a SLM
+                - background: the background to be remove of each measurements
+                - grating_period: (int) the vertical period (in pixels) of the phase grating
+                - delay_carrier_wavlength: set in the GUI in nm
+                - delay_step: set in the GUI in fs^2
+                - delay_max: set in the GUI in fs^2
+                - delay_min: set in the GUI in fs^2
+                - refBeamName: set in the GUI
+                - secBeamName: set in the GUI
+                - refBeam: dictionnary of reference beam attributes
+                - secBeam: dictionnary of second beam attributes
+                - spectral_calibration: pixel to wavelength calibration obtained (polynomial)
+                - demo: is demo or not
+        ''' 
+        super(DelayCalibrationMeasurement, self).__init__()
+        self.spectrometer = devices['spectrometer']
+        self.SLM = devices['SLM']
+        
+        self.wls = self.spectrometer.get_wavelength()
+        self.background = background
+        self.spectra = []  # preallocate spec array
+        self.terminate = False
+        self.acquire_measurement = True
+        self.delay = np.arange(delay_min, delay_max, delay_step, dtype=int) 
+        self.intensities = []
+        self.delay_calibration_data={
+            'delay' : self.delay,
+            'wavelengths' : self.wls,
+            'intensities' : self.intensities
+        }
+        self.isDemo = demo
+        
+        # Reference beam
+        self.refBeamName = refBeamName
+        self.refBeam = refBeam
+        self.refBeam.set_delayCarrierWave(delay_carrier_wavelength*1e-9) 
+        self.refBeam.set_gratingPeriod(grating_period)
+        self.refBeam.set_currentPhase(P([0,0]), mode='relative', unit='fs')
+        self.sendBeam.emit((self.refBeamName, self.refBeam))
+        self.ref_image = self.refBeam.makeGrating()
+
+        # Second beam 
+        self.secBeamName = secBeamName
+        self.secBeam = secBeam
+        self.secBeam.set_delayCarrierWave(delay_carrier_wavelength*1e-9)
+        self.secBeam.set_gratingPeriod(grating_period)
+
+        if spectral_calibration == None:
+            self.refBeam.set_pixelToWavelength(Polynomial(1e-9*np.array([delay_carrier_wavelength-100,1/10]))) # arbitrary polynomial spectral calibration
+            self.secBeam.set_pixelToWavelength(Polynomial(1e-9*np.array([delay_carrier_wavelength-100,1/10]))) # arbitrary polynomial spectral calibration
+            logger.warning('%s Arbitrary spectral calibration used'%datetime.datetime.now())
+
+    def run(self):
+        if not self.terminate:  # check whether stopping measurement is called
+                if self.isDemo:
+                    return
+                else:
+                    for i in range(len(self.delay)):
+                        if not self.terminate:
+                            self.coeffs = np.array(np.concatenate(([0], [self.delay[i]])))
+                            self.secBeam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                            self.sendBeam.emit((self.secBeamName, self.secBeam))
+                            self.sec_image = self.secBeam.makeGrating()
+                            image_output = self.ref_image+self.sec_image
+
+                            self.SLM.write_image(image_output)
+                            self.take_spectrum(i)
+                            self.intensities.append(self.spec)
+                            self.sendProgress.emit(i/len(self.delay)*100)
+                            self.delay_calibration_data={
+                                'delay' : self.delay,
+                                'wavelengths' : self.wls,
+                                'data' : np.array(self.intensities)
+                                }
+                            if i>=1:
+                                self.sendCrossCorrelation.emit(self.delay[:i], self.wls, np.array(self.intensities))
+        self.sendCrossCorrelationData.emit(('Delay_calibration_raw_data',self.delay_calibration_data))
+        self.sendProgress.emit(100)
+        self.stop()
+        print('Delay Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
+    
+    def stop(self):
+            self.terminate = True
+            print(time.strftime('%H:%M:%S') + ' Request Stop')
+    
+    def take_spectrum(self, i):
+        if i == 0: 
+            self.spec = np.array(self.spectrometer.get_intensities())
+        self.spec = np.array(self.spectrometer.get_intensities())
+        if not self.isDemo and i>=1:
+            self.spec = self.spec-self.background
+            self.sendSpectrum.emit(self.wls, self.spec)

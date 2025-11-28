@@ -22,11 +22,12 @@ from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
 from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
+from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, DelayFitPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, ChirpAcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, ChirpAcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
@@ -99,10 +100,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
         self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
         self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
-
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
-        ## Temp calibration tab
+        
+        ## Chirp calibration tab
         self.chirp_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'Chirp_calib_demo_mode_checkbox')
         self.beam_name_box = self.findChild(QtWidgets.QComboBox,'Beam_name_box')
         self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit, 'Compression_carrier_wavelength')
@@ -123,6 +124,24 @@ class MainInterface(QtWidgets.QMainWindow):
         self.chirp_assign_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_temporal_calibration_button')
         self.chirp_selection_layout = self.findChild(pg.GraphicsLayoutWidget, 'Chirp_selection')
         self.chirp_fit_layout = self.findChild(pg.PlotWidget, 'Chirp_fit')
+
+        ## Delay calibration tab
+        self.delay_backgroud_button = self.findChild(QtWidgets.QPushButton, 'Delay_background_button')
+        self.delay_acquire_button = self.findChild(QtWidgets.QPushButton, 'Delay_acquire_button')
+        self.delay_demo_mode_checkbox = self.findChild(QtWidgets.QCheckBox, 'Delay_demo_mode_checkbox')
+        self.delay_reference_beam_name_box = self.findChild(QtWidgets.QComboBox,'Delay_reference_beam_name_box')
+        self.delay_second_beam_name_box = self.findChild(QtWidgets.QComboBox,'Delay_second_beam_name_box')
+        self.delay_carrier_wavelength_value = self.findChild(QtWidgets.QLineEdit, 'Delay_carrier_wavelength_value')
+        self.delay_min_group_delay_value = self.findChild(QtWidgets.QLineEdit, 'Delay_min_group_delay_value')
+        self.delay_max_group_delay_value = self.findChild(QtWidgets.QLineEdit, 'Delay_max_group_delay_value')
+        self.delay_step_group_delay_value = self.findChild(QtWidgets.QLineEdit, 'Delay_step_group_delay_value')
+        self.delay_SNR_threshold_value = self.findChild(QtWidgets.QDoubleSpinBox,'Delay_SNR_threshold_value')
+        self.delay_apply_SNR_treshold_button = self.findChild(QtWidgets.QPushButton, 'Delay_apply_SNR_threshold_button')
+        self.delay_min_wavelength_bandwidth_value = self.findChild(QtWidgets.QSpinBox, 'Delay_min_wavelength_bandwidth_value')
+        self.delay_max_wavelength_bandwidth_value = self.findChild(QtWidgets.QSpinBox, 'Delay_max_wavelength_bandwidth_value')
+        self.delay_fit_delay_button = self.findChild(QtWidgets.QPushButton, 'Delay_fit_delay_button')
+        self.delay_scan_plot = self.findChild(pg.GraphicsLayoutWidget, 'Delay_scan_plot')
+        self.delay_fit_plot = self.findChild(pg.PlotWidget, 'Delay_fit_plot')
         
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
@@ -137,7 +156,6 @@ class MainInterface(QtWidgets.QMainWindow):
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
         
-
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
         for device in self.devices.keys():
@@ -162,6 +180,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.ChirpCalibrationPlot= ChirpCalibrationPlot(self.chirp_calibration_image_layout)
         self.ChirpSelectionPlot = ChirpSelectionPlot(self.chirp_selection_layout)
         self.ChirpFitplot = ChirpFitPlot(self.chirp_fit_layout)
+        self.DelayCalibrationPlot = DelayCalibrationPlot(self.delay_scan_plot)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
@@ -261,6 +280,14 @@ class MainInterface(QtWidgets.QMainWindow):
         self.chirp_apply_SNR_button.clicked.connect(self.applySNRthreshold)
         self.chirp_fit_calibration_button.clicked.connect(self.fitChirpMeasurement)
         self.chirp_assign_calibration_button.clicked.connect(self.assignTemporalCalibration)
+        # Delay calibration connect events
+        #self.delay_backgroud_button.clicked.connect(self.delayBackgroundMeasurement)
+        self.delay_acquire_button.clicked.connect(self.delayAcquireMeasurement)
+        #self.delay_SNR_threshold_value.valueChanged.connect(self.delayUpdateFitPlot)
+        #self.delay_apply_SNR_treshold_button.clicked.connect(self.delayApplySNRThreshold)
+        #self.delay_min_wavelength_bandwidth_value.valueChanged.connect(self.delayUpdateFitPlot)
+        #self.delay_max_wavelength_bandwidth_value.valueChanged.connect(self.delayUpdateFitPlot)
+        #self.delay_fit_delay_button.clicked.connect(self.delayFitMeaserement)
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
@@ -546,8 +573,6 @@ class MainInterface(QtWidgets.QMainWindow):
             self.temporalfitting.send_chirp_calibration_fit.connect(self.DataHandling.add_calibration)
             self.measurement.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
             self.measurement.start()
-            #else:
-            #    print('Unexpected error. There should be a spectral_calibration_raw_data key in the calibration dict in Datahandling')
         else:
             print('Measurement not started, devices are busy')
 
@@ -663,6 +688,53 @@ class MainInterface(QtWidgets.QMainWindow):
             beam_dict[key].set_pixelToWavelength(self.DataHandling.calibration['spectral_calibration_fit'])
             beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
             self.DataHandling.set_beam((key,beam_dict[key]))
+
+    def delayAcquireMeasurement(self):
+        """
+            Start a cross correlation measurement between two beams
+        """
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            if self.delay_reference_beam_name_box.currentText() in self.DataHandling.get_beams():
+                refBeam = self.DataHandling.get_beams()[self.delay_reference_beam_name_box.currentText()]
+            else:
+                refbeam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+            if self.delay_second_beam_name_box.currentText() in self.DataHandling.get_beams():
+                secBeam = self.DataHandling.get_beams()[self.delay_second_beam_name_box.currentText()]
+            else:
+                secBeam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+            
+            self.DataHandling.clear_data() 
+            if hasattr(self, 'delaybackground'):
+                delayBackground = self.DataHandling.calibration['delay_background_data']
+                background = delayBackground['spec']
+            else:
+                background = 0
+            
+            try:
+                spectral_calib_dict = self.DataHandling.calibration['spectral_calibration_fit']
+            except:
+                spectral_calib_dict = None
+            
+            self.measurement = DelayCalibrationMeasurement(
+                self.devices, background, self.grating_period_edit.value(), 
+                float(self.delay_carrier_wavelength_value.text()), 
+                float(self.delay_step_group_delay_value.text()), 
+                float(self.delay_max_group_delay_value.text()), 
+                float(self.delay_min_group_delay_value.text()), 
+                self.delay_reference_beam_name_box.currentText(),
+                self.delay_second_beam_name_box.currentText(), 
+                refBeam, secBeam, spectral_calib_dict, 
+                demo=self.chirp_calib_demo_mode_checkbox.isChecked())
+            
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendBeam.connect(self.DataHandling.set_beam)
+            self.measurement.sendCrossCorrelation.connect(self.DelayCalibrationPlot.set_data)
+            self.measurement.sendCrossCorrelationData.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
 
     def stop_measurement(self):
         # stop measurement
