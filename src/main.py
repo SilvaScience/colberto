@@ -740,7 +740,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.delay_reference_beam_name_box.currentText(),
                 self.delay_second_beam_name_box.currentText(), 
                 refBeam, secBeam, spectral_calib_dict, 
-                demo=self.chirp_calib_demo_mode_checkbox.isChecked())
+                demo=self.delay_demo_mode_checkbox.isChecked())
             
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
