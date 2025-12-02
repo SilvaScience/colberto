@@ -394,7 +394,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                 else:
                     for i in range(len(self.chirp)):
                         if not self.terminate:
-                            self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
+                            self.coeffs = np.array([0, 0, self.chirp[i]])
                             self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
                             self.send_beam.emit((self.beam_name, self.beam))
                             image_output = self.beam.makeGrating()                
@@ -635,7 +635,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
         self.refBeam = refBeam
         self.refBeam.set_delayCarrierWave(delay_carrier_wavelength*1e-9) 
         self.refBeam.set_gratingPeriod(grating_period)
-        self.refBeam.set_currentPhase(P([0,0]), mode='relative', unit='fs')
+        self.refBeam.set_currentPhase(P(self.refBeam.get_optimalPhase(units_to_return='fs').coef), mode='absolute', unit='fs')
         self.sendBeam.emit((self.refBeamName, self.refBeam))
         self.ref_image = self.refBeam.makeGrating()
 
@@ -657,8 +657,9 @@ class DelayCalibrationMeasurement(QtCore.QThread):
                 else:
                     for i in range(len(self.delay)):
                         if not self.terminate:
-                            self.coeffs = np.array(np.concatenate(([0], [self.delay[i]])))
+                            self.coeffs = np.array([0, self.delay[i]])
                             self.secBeam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                            #print(self.secBeam.get_currentPhase(mode='absolute').coef)
                             self.sendBeam.emit((self.secBeamName, self.secBeam))
                             self.sec_image = self.secBeam.makeGrating()
                             image_output = self.ref_image+self.sec_image
