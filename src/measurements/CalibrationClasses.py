@@ -659,7 +659,6 @@ class DelayCalibrationMeasurement(QtCore.QThread):
                         if not self.terminate:
                             self.coeffs = np.array([0, self.delay[i]])
                             self.secBeam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
-                            #print(self.secBeam.get_currentPhase(mode='absolute').coef)
                             self.sendBeam.emit((self.secBeamName, self.secBeam))
                             self.sec_image = self.secBeam.makeGrating()
                             image_output = self.ref_image+self.sec_image

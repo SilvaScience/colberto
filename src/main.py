@@ -876,6 +876,7 @@ class MainInterface(QtWidgets.QMainWindow):
         calibration_loaded = loaded_data.get("calibration", {})
         self.DataHandling.calibration = DataHandling.dict_to_calibration(calibration_loaded)
 
+        self.assign_spectral_calibration()
         print("Calibration and beams successfully loaded.")
 
 class HDF5Helper:
