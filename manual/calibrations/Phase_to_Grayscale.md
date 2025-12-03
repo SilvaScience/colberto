@@ -27,4 +27,4 @@ The code does the following:
 - Wrapped phase obtained through ArcCos (raw & smoothed phase)
 - Unwrapped phase fit a fifth order polynomial
 4. The plots above display the phase unwrapping method followed for one wavelength. The next art of the code has a loop that will complete phase unwrapping for all wavelengths. The plots feature can be turned on or off usinghte do_plots input (True or False)
-5. Finally, an csv file with the wavelengths and corresponding coefficients for a fifth-order polynomial is saved 
+5. Finally, an csv file with the wavelengths and corresponding coefficients for a fifth-order polynomial is saved
