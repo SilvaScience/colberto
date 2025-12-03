@@ -16,15 +16,15 @@ This calibration is not performed regularly, so the analysis of the measurement 
 
 To generate the phase2gray normalization coefficients file locate `/samples/compute/Phase2Grey_Anlaysis`.
 
-The Data_Files folder has the spectral data acquired from the measurement described above. These are the files we will analyze using 'Unwrap_Phase.py'. 
+The Data_Files folder has the spectral data acquired from the measurement described above. These are the files we will analyze using `Unwrap_Phase.py`. 
 
 The code does the following:
 1. Loads the data
 2. Plots the data in two ways: wavelength vs intensity for each grayscale value & grayscale vs intensity for each wavelength
 3. For a single wavelength:
-- plots intensity vs grayscale
-- intensity vs grayscale (with peaks & troughs designated on the plot)
-- Wrapped phase obtained through ArcCos (raw & smoothed phase)
-- Unwrapped phase fit a fifth order polynomial
+  - plots intensity vs grayscale
+  - intensity vs grayscale (with peaks & troughs designated on the plot)
+  - Wrapped phase obtained through ArcCos (raw & smoothed phase)
+  - Unwrapped phase fit a fifth order polynomial
 4. The plots above display the phase unwrapping method followed for one wavelength. The next art of the code has a loop that will complete phase unwrapping for all wavelengths. The plots feature can be turned on or off usinghte do_plots input (True or False)
 5. Finally, an csv file with the wavelengths and corresponding coefficients for a fifth-order polynomial is saved
