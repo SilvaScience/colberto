@@ -22,6 +22,7 @@ import os
 import math
 import datetime
 from scipy.ndimage import uniform_filter
+from scipy.optimize import curve_fit
 
 logger = logging.getLogger(__name__)
 
@@ -267,7 +268,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.send_polynomial.emit(self.fit_polynomial)
         self.send_spectral_calibration_fit.emit(('spectral_calibration_fit',self.fit_polynomial))
         
-class ChirpAcquireBackground(QtCore.QThread):
+class AcquireBackground(QtCore.QThread):
     """
         Class implementing the background acquisition for chirp scans.
         Signals are:
@@ -280,7 +281,7 @@ class ChirpAcquireBackground(QtCore.QThread):
 
     def __init__(self, devices):
         
-        super(ChirpAcquireBackground, self).__init__()
+        super(AcquireBackground, self).__init__()
         self.terminate = False
         self.acquire_measurement = True
         self.spectrometer = devices['spectrometer']
@@ -295,7 +296,7 @@ class ChirpAcquireBackground(QtCore.QThread):
                                 'spec' : self.background,
                                 'wavelengths' : self.wls,
                                 }
-        self.send_background.emit(('chirp_background_data', self.background_data))
+        self.send_background.emit(('background_data', self.background_data))
         self.sendSpectrum.emit(self.wls, self.background)
         logger.info(time.strftime('%H:%M:%S') + ' Finished')
         self.sendProgress.emit(100)
@@ -394,7 +395,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                 else:
                     for i in range(len(self.chirp)):
                         if not self.terminate:
-                            self.coeffs = np.array(np.concatenate(([0, 0], [self.chirp[i]])))
+                            self.coeffs = np.array([0, 0, self.chirp[i]])
                             self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
                             self.send_beam.emit((self.beam_name, self.beam))
                             image_output = self.beam.makeGrating()                
@@ -407,8 +408,8 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                                 'wavelengths' : self.wls,
                                 'data' : np.array(self.intensities)
                                 }
-                            if i>=1:
-                                self.send_chirp.emit(self.chirp[:i],self.wls,np.array(self.intensities))
+                            if i>=3:
+                                self.send_chirp.emit(self.chirp[3:i],self.wls,np.array(self.intensities)[3:i, :])
         self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
@@ -570,3 +571,228 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         # Get the coefficients
         self.coeffs = coeffs[::-1]
         return self.coeffs
+    
+class DelayCalibrationMeasurement(QtCore.QThread):
+    '''
+        Runs a measurement that will scan the delay between two beams
+            - sendProgress: float representing the progress of the measurement.
+            - sendSpectrum: wavelength and intensity detected by the spectrometer.
+            - sendBeam: signal to the beam explorer
+            - sendCrossCorrelation: wavelength, delay and intensity for the Delay_scan_plot
+            - sendCrossCorrelationData: wavelength, delay and intensity for DataHandling calibration
+            - sendCrossCorrelationRegion: delay and intensity (wavelength integrated) for the Delay_fit_plot
+            - sendCrossCorrelationFit: fit of the Delay_fit_plot
+            - sendCrossCorrelationFitData: delay and intensity for DataHandling calibration
+            - sendCrossCorrelationDelay: fitted delay for DataHandling calibration
+    '''
+    sendProgress = QtCore.pyqtSignal(float)
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendBeam = QtCore.pyqtSignal(object)
+    sendCrossCorrelation = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
+    sendCrossCorrelationData = QtCore.pyqtSignal(tuple)
+    sendCrossCorreletionRegion = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendCrossCorrelationRegionData = QtCore.pyqtSignal(tuple)
+    sendCrossCorrelationRegionFit = QtCore.pyqtSignal(np.ndarray, np.ndarray, float)
+    sendCrossCorrelationRegionFitData = QtCore.pyqtSignal(tuple)
+
+    def __init__(self, devices, background, grating_period, delay_carrier_wavelength, delay_step, delay_max, delay_min, refBeamName, secBeamName, refBeam, secBeam, spectral_calibration=None, demo=False):
+        '''
+            Initializes the semporal beam calibration measurement
+            input:
+                - devices: the devices dictionnary holding at least a spectrometer and a SLM
+                - background: the background to be remove of each measurements
+                - grating_period: (int) the vertical period (in pixels) of the phase grating
+                - delay_carrier_wavlength: set in the GUI in nm
+                - delay_step: set in the GUI in fs^2
+                - delay_max: set in the GUI in fs^2
+                - delay_min: set in the GUI in fs^2
+                - refBeamName: set in the GUI
+                - secBeamName: set in the GUI
+                - refBeam: dictionnary of reference beam attributes
+                - secBeam: dictionnary of second beam attributes
+                - spectral_calibration: pixel to wavelength calibration obtained (polynomial)
+                - demo: is demo or not
+        ''' 
+        super(DelayCalibrationMeasurement, self).__init__()
+        self.spectrometer = devices['spectrometer']
+        self.SLM = devices['SLM']
+        
+        self.wls = self.spectrometer.get_wavelength()
+        self.background = background
+        self.spectra = []  # preallocate spec array
+        self.terminate = False
+        self.acquire_measurement = True
+        self.delay = np.arange(delay_min, delay_max, delay_step, dtype=int) 
+        self.intensities = []
+        self.delay_calibration_data={
+            'delay' : self.delay,
+            'wavelengths' : self.wls,
+            'intensities' : self.intensities
+        }
+        self.isDemo = demo
+        
+        # Reference beam
+        self.refBeamName = refBeamName
+        self.refBeam = refBeam
+        self.refBeam.set_delayCarrierWave(delay_carrier_wavelength*1e-9) 
+        self.refBeam.set_gratingPeriod(grating_period)
+        self.refBeam.set_currentPhase(P(self.refBeam.get_optimalPhase(units_to_return='fs').coef), mode='absolute', unit='fs')
+        self.sendBeam.emit((self.refBeamName, self.refBeam))
+        self.ref_image = self.refBeam.makeGrating()
+
+        # Second beam 
+        self.secBeamName = secBeamName
+        self.secBeam = secBeam
+        self.secBeam.set_delayCarrierWave(delay_carrier_wavelength*1e-9)
+        self.secBeam.set_gratingPeriod(grating_period)
+
+        if spectral_calibration == None:
+            self.refBeam.set_pixelToWavelength(Polynomial(1e-9*np.array([delay_carrier_wavelength-100,1/10]))) # arbitrary polynomial spectral calibration
+            self.secBeam.set_pixelToWavelength(Polynomial(1e-9*np.array([delay_carrier_wavelength-100,1/10]))) # arbitrary polynomial spectral calibration
+            logger.warning('%s Arbitrary spectral calibration used'%datetime.datetime.now())
+
+    def run(self):
+        if not self.terminate:  # check whether stopping measurement is called
+                if self.isDemo:
+                    return
+                else:
+                    for i in range(len(self.delay)):
+                        if not self.terminate:
+                            self.coeffs = np.array([0, self.delay[i]])
+                            self.secBeam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                            self.sendBeam.emit((self.secBeamName, self.secBeam))
+                            self.sec_image = self.secBeam.makeGrating()
+                            image_output = self.ref_image+self.sec_image
+
+                            self.SLM.write_image(image_output)
+                            self.take_spectrum(i)
+                            self.intensities.append(self.spec)
+                            self.sendProgress.emit(i/len(self.delay)*100)
+                            self.delay_calibration_data={
+                                'delay' : self.delay,
+                                'wavelengths' : self.wls,
+                                'data' : np.array(self.intensities)
+                                }
+                            if i>=3:
+                                self.sendCrossCorrelation.emit(self.delay[3:i], self.wls, np.array(self.intensities)[3:i, :])
+        self.sendCrossCorrelationData.emit(('Delay_calibration_raw_data',self.delay_calibration_data))
+        self.sendProgress.emit(100)
+        self.stop()
+        print('Delay Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
+    
+    def stop(self):
+            self.terminate = True
+            print(time.strftime('%H:%M:%S') + ' Request Stop')
+    
+    def take_spectrum(self, i):
+        if i == 0: 
+            self.spec = np.array(self.spectrometer.get_intensities())
+        self.spec = np.array(self.spectrometer.get_intensities())
+        if not self.isDemo and i>=1:
+            self.spec = self.spec-self.background
+            self.sendSpectrum.emit(self.wls, self.spec)
+
+    def set_SNR(self, delaydata, SNR_threshold, boundaries):
+        '''
+            Method to remove data below a given SNR:
+                - SNR: (int) Minimal signal to noise ratio.
+        '''
+        self.SNR = SNR_threshold
+        self.boundaries = boundaries
+        self.delay_array = delaydata['delay']
+        self.wavelength_array = delaydata['wavelengths']
+        self.data = delaydata['data']
+
+        # --- Compute local statistics to characterize the data structure ---
+
+        # Compute a smoothed version of the data using a uniform (mean) filter.
+        # This acts like a moving average over a square region of size `window × window`.
+        # It represents the local average intensity (the "baseline") at each point.
+        local_mean = uniform_filter(self.data, size=10)
+
+        # Compute the local average of the squared data (⟨x²⟩) over the same window.
+        # This is used to estimate the variance in each neighborhood.
+        local_sq_mean = uniform_filter(self.data**2, size=10)
+
+        # Compute the local standard deviation using σ = sqrt(⟨x²⟩ - ⟨x⟩²).
+        # This quantifies local fluctuations (i.e. how noisy or structured the region is).
+        # Avoid small negative values due to rounding
+        variance = local_sq_mean - local_mean**2
+        variance = np.clip(variance, 0, None)
+        local_std = np.sqrt(variance)
+
+        # --- Identify regions likely to be pure noise ---
+
+        # Define a "score" that combines:
+        #   - the absolute local mean (to find near-zero regions)
+        #   - the local standard deviation (to find low-variance regions)
+        # Regions with both low mean and low variance are good candidates for noise-only areas.
+        score = np.abs(local_mean) + local_std
+
+        # Compute a threshold value corresponding to the bottom `frac` percentile of the score distribution.
+        # For example, if frac=0.1, we keep the 10% of points with the smallest (mean + std) scores.
+        threshold = np.percentile(score, 100 * 0.1)
+
+        # Create a boolean mask identifying the pixels (or points) that fall below that threshold.
+        # True → region is considered noise-only
+        # False → region might contain signal
+        mask = score <= threshold
+
+        # --- Compute noise level safely ---
+        finite_mask = np.isfinite(self.data)
+        combined_mask = mask & finite_mask
+
+        if np.any(combined_mask) and np.sum(combined_mask) > 1:
+            noise_level = np.std(self.data[combined_mask])
+        else:
+            noise_level = np.std(self.data[finite_mask])
+
+        # --- Filter based on SNR ---
+        SNR = np.abs(self.data) / noise_level
+        data_filtered = np.where(SNR >= SNR_threshold, self.data, 0)
+
+        delay_array_region = self.delay_array[1:-1]
+        mask = np.logical_and(self.wavelength_array >= boundaries[0], self.wavelength_array <= boundaries[1])
+        wavelength_array_region = self.wavelength_array[mask]
+        data_filtered_region = data_filtered[1:-1, mask]
+        data_integrated = np.sum(data_filtered_region, axis=1)
+        data_integrated_normalized = data_integrated/np.max(data_integrated)
+
+        self.sendCrossCorreletionRegion.emit(delay_array_region, data_integrated_normalized)
+        self.delay_calibration_processed_data={
+            'delay': delay_array_region,
+            'wavelength': wavelength_array_region,
+            'data': data_integrated_normalized
+        }
+        self.sendCrossCorrelationRegionData.emit(('delay_calibration_processed_data', self.delay_calibration_processed_data))
+
+    def get_fit(self, delay_data, normalized_intensity_data):
+        '''
+            Compute a gaussian fit on the processed delay calibration data
+                - delay_data: vector of the delays [fs]
+                - normalized_intensity_data: vector of data normalized
+        '''
+        self.delay = delay_data
+        self.intensity = normalized_intensity_data
+
+        A0 = np.max(self.intensity) - np.min(self.intensity)
+        mu0 = self.delay[np.argmax(self.intensity)]
+        sigma0 = (self.delay[-1] - self.delay[0]) / 10   # rough width guess
+        C0 = np.min(self.intensity)
+
+        p0 = [A0, mu0, sigma0, C0]
+        popt, pcov = curve_fit(lambda x, A, mu, sigma, C: A * np.exp(-(x - mu)**2 / (2 * sigma**2)) + C, self.delay, self.intensity, p0=p0)
+        A, mu, sigma, C = popt
+        self.fitted_intensity = (A * np.exp(-(self.delay - mu)**2 / (2 * sigma**2)) + C)
+        self.sendCrossCorrelationRegionFit.emit(self.delay, self.fitted_intensity, mu)
+
+        self.gaussian_fit_params = {
+            "A": A,
+            "mu": mu,
+            "sigma": sigma,
+            "C": C,
+            "covariance": pcov,
+            "delay": self.delay,
+            "intensity": self.fitted_intensity
+        }
+        self.sendCrossCorrelationRegionFitData.emit(('delay_calibration_processed_data_fit', self.gaussian_fit_params))

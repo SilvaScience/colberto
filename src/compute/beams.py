@@ -12,6 +12,7 @@ from scipy.signal import sawtooth
 from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
+from itertools import zip_longest
 import logging
 
 logger = logging.getLogger(__name__)
@@ -248,7 +249,7 @@ class Beam:
             mode=self.current_phase_mode
         phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
         if mode=='relative':
-            self.currentPhasePolynomial = P([a + b for a, b in zip(self.optimalPhasePolynomial.coef, phasePolynomial.coef)])
+            self.currentPhasePolynomial = P([a + b for a, b in zip_longest(self.optimalPhasePolynomial.coef, phasePolynomial.coef, fillvalue=0)])
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
@@ -446,8 +447,8 @@ class Beam:
     @staticmethod
     def beam_to_dict(beam):
         """
-        Convert a Beam object into a serializable dictionary.
-        Polynomials are stored as {'_type': 'Polynomial', 'coef': [...]}.
+            Convert a Beam object into a serializable dictionary.
+            Polynomials are stored as {'_type': 'Polynomial', 'coef': [...]}.
         """
         import numpy as np
         out = {}
@@ -474,8 +475,8 @@ class Beam:
     @staticmethod
     def dict_to_beam(beam_dict, beam_class, slm_width, slm_height):
         """
-        Reconstruct a Beam object from a dictionary, restoring Polynomials
-        and arrays where appropriate.
+            Reconstruct a Beam object from a dictionary, restoring Polynomials
+            and arrays where appropriate.
         """
         beam = beam_class(slm_width, slm_height)
         for k, v in beam_dict.items():

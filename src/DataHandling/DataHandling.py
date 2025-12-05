@@ -268,7 +268,12 @@ class DataHandling(QtCore.QThread):
             elif isinstance(v, dict):
                 safe_dict[k] = DataHandling.calibration_to_dict(v)  # recurse
             elif isinstance(v, P):  # Polynomial
-                safe_dict[k] = {"_type": "Polynomial", "coef": list(v.coef)}
+                safe_dict[k] = {
+                    "_type": "Polynomial",
+                    "coef": v.coef,       # numpy array, no .tolist()
+                    "domain": v.domain,   # numpy array, no .tolist()
+                    "window": v.window    # numpy array, no .tolist()
+                    }
             else:
                 safe_dict[k] = str(v)
         return safe_dict
@@ -276,13 +281,17 @@ class DataHandling(QtCore.QThread):
     def dict_to_calibration(saved_dict):
         """
             Convert HDF5-loaded calibration dict back to proper types.
-            - Polynomials are reconstructed
+            - Polynomials are reconstructed with coef, domain, window
             - Arrays, scalars, and nested dicts are preserved
         """
         restored = {}
         for k, v in saved_dict.items():
             if isinstance(v, dict) and v.get("_type") == "Polynomial":
-                restored[k] = P(v["coef"])
+                restored[k] = P(
+                    coef=v["coef"],
+                    domain=v["domain"],
+                    window=v["window"]
+                )
             elif isinstance(v, dict):
                 restored[k] = DataHandling.dict_to_calibration(v)
             else:
