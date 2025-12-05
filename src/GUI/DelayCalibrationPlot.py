@@ -154,8 +154,8 @@ class DelayFitPlot(QtWidgets.QMainWindow):
         # plot data: x, y values
         self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         self.graphWidget.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
-        self.graphWidget.setLabel('left', 'Chirp at max intensity [fs²/rad²]', **self.styles)
-        self.graphWidget.setLabel('bottom', 'Frequency relative [Hz]', **self.styles)
+        self.graphWidget.setLabel('left', 'Norm. int.', **self.styles)
+        self.graphWidget.setLabel('bottom', 'Delay [fs]', **self.styles)
         self.graphWidget.showGrid(True, True)
         # Clear data to show plot
         self.clear_plot()
@@ -178,7 +178,7 @@ class DelayFitPlot(QtWidgets.QMainWindow):
         self.graphWidget.clear()
         self.graphWidget.plot(x_array,y_array,symbol='o')
 
-    def set_fit(self, x_array, y_array_fit):
+    def set_fit(self, x_array, y_array_fit, delay_mu):
         '''
             Displays the latest fit on the plot
             input:
@@ -187,3 +187,13 @@ class DelayFitPlot(QtWidgets.QMainWindow):
         self.y_array_fit = y_array_fit
         self.set_data(self.x_array, self.y_array)
         self.graphWidget.plot(self.x_array, self.y_array_fit)
+
+        text = pg.TextItem(f"μ = {delay_mu:.3f} fs", anchor=(0, 1), color='w')
+        self.graphWidget.addItem(text)
+
+        # Position in the upper-left corner
+        vb = self.graphWidget.getPlotItem().getViewBox()
+        x_min, x_max = vb.viewRange()[0]
+        y_min, y_max = vb.viewRange()[1]
+
+        text.setPos(x_min, (y_min + y_max) / 2)
