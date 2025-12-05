@@ -793,7 +793,7 @@ class MainInterface(QtWidgets.QMainWindow):
             old_coeff = beam.get_optimalPhase(units_to_return='fs').coef
             old_coeff[1] += Add_or_Remove*mu
             beam.set_optimalPhase(P(old_coeff))
-            self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
+            self.DataHandling.set_beam((self.delay_second_beam_name_box.currentText(), beam))
         else:
             logger.warning('%s Delay calibration fit has not been processed. Processed the calibration fit first'%datetime.datetime.now())
 
