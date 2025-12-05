@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1411</width>
+    <width>1112</width>
     <height>1002</height>
    </rect>
   </property>
@@ -295,28 +295,43 @@ p, li { white-space: pre-wrap; }
           <string>View</string>
          </property>
         </widget>
-        <widget class="QWidget" name="horizontalLayoutWidget">
-         <property name="geometry">
-          <rect>
-           <x>530</x>
-           <y>10</y>
-           <width>321</width>
-           <height>41</height>
-          </rect>
-         </property>
-         <layout class="QHBoxLayout" name="set_power_layout"/>
-        </widget>
         <widget class="QPushButton" name="show_beam_explorer_button">
          <property name="geometry">
           <rect>
-           <x>330</x>
+           <x>670</x>
            <y>20</y>
-           <width>171</width>
+           <width>111</width>
            <height>23</height>
           </rect>
          </property>
          <property name="text">
           <string>Show Beam Explorer</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="save_calibration_button">
+         <property name="geometry">
+          <rect>
+           <x>450</x>
+           <y>20</y>
+           <width>101</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Save calibration</string>
+         </property>
+        </widget>
+        <widget class="QPushButton" name="load_calibration_button">
+         <property name="geometry">
+          <rect>
+           <x>560</x>
+           <y>20</y>
+           <width>101</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Load calibration</string>
          </property>
         </widget>
        </widget>
@@ -1902,7 +1917,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1411</width>
+     <width>1112</width>
      <height>21</height>
     </rect>
    </property>
