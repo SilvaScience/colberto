@@ -178,7 +178,7 @@ class DelayFitPlot(QtWidgets.QMainWindow):
         self.graphWidget.clear()
         self.graphWidget.plot(x_array,y_array,symbol='o')
 
-    def set_fit(self, x_array, y_array_fit, delay_mu):
+    def set_fit(self, x_array, y_array_fit, mu, sigma):
         '''
             Displays the latest fit on the plot
             input:
@@ -188,12 +188,17 @@ class DelayFitPlot(QtWidgets.QMainWindow):
         self.set_data(self.x_array, self.y_array)
         self.graphWidget.plot(self.x_array, self.y_array_fit)
 
-        text = pg.TextItem(f"μ = {delay_mu:.3f} fs", anchor=(0, 1), color='w')
+        FWHM = 2 * np.sqrt(2 * np.log(2)) * sigma   # sigma from Gaussian fit
+
+        text = pg.TextItem(
+            f"μ = {mu:.3f} fs\nFWHM = {FWHM:.3f} fs",
+            anchor=(0, 0.5),
+            color='w'
+        )
         self.graphWidget.addItem(text)
 
-        # Position in the upper-left corner
+        # Position the text vertically centered on the left
         vb = self.graphWidget.getPlotItem().getViewBox()
-        x_min, x_max = vb.viewRange()[0]
-        y_min, y_max = vb.viewRange()[1]
+        (x_min, x_max), (y_min, y_max) = vb.viewRange()
 
         text.setPos(x_min, (y_min + y_max) / 2)

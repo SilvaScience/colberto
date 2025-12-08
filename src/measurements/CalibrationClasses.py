@@ -592,7 +592,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
     sendCrossCorrelationData = QtCore.pyqtSignal(tuple)
     sendCrossCorreletionRegion = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendCrossCorrelationRegionData = QtCore.pyqtSignal(tuple)
-    sendCrossCorrelationRegionFit = QtCore.pyqtSignal(np.ndarray, np.ndarray, float)
+    sendCrossCorrelationRegionFit = QtCore.pyqtSignal(np.ndarray, np.ndarray, float, float)
     sendCrossCorrelationRegionFitData = QtCore.pyqtSignal(tuple)
 
     def __init__(self, devices, background, grating_period, delay_carrier_wavelength, delay_step, delay_max, delay_min, refBeamName, secBeamName, refBeam, secBeam, spectral_calibration=None, demo=False):
@@ -784,7 +784,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
         popt, pcov = curve_fit(lambda x, A, mu, sigma, C: A * np.exp(-(x - mu)**2 / (2 * sigma**2)) + C, self.delay, self.intensity, p0=p0)
         A, mu, sigma, C = popt
         self.fitted_intensity = (A * np.exp(-(self.delay - mu)**2 / (2 * sigma**2)) + C)
-        self.sendCrossCorrelationRegionFit.emit(self.delay, self.fitted_intensity, mu)
+        self.sendCrossCorrelationRegionFit.emit(self.delay, self.fitted_intensity, mu, sigma)
 
         self.gaussian_fit_params = {
             "A": A,
