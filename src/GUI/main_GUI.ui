@@ -2059,7 +2059,7 @@ p, li { white-space: pre-wrap; }
          <attribute name="title">
           <string>Measurement</string>
          </attribute>
-         <widget class="QGroupBox" name="Delay_scan_groupbox_2">
+         <widget class="QGroupBox" name="Boxcar_geometry_groupbox">
           <property name="geometry">
            <rect>
             <x>20</x>
@@ -2374,7 +2374,7 @@ p, li { white-space: pre-wrap; }
             <string>Acquire</string>
            </property>
           </widget>
-          <widget class="QCheckBox" name="Measurement_demo_mode_checkbox_2">
+          <widget class="QCheckBox" name="Measurement_phase_cycling_checkbox">
            <property name="geometry">
             <rect>
              <x>360</x>
