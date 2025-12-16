@@ -953,18 +953,18 @@ class MainInterface(QtWidgets.QMainWindow):
             "calibration": calibration_dict
         }
 
-        # Create filename ONCE, reuse on later saves
-        if not hasattr(self, "_cached_filename") or self._cached_filename is None:
-            timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-            self._cached_filename = f"{filename_prefix}_{timestamp}.h5"
-
-        default_filename = self._cached_filename
-
         if use_prompt:
             HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=default_filename)
         else:
             if save_dir is None:
                 raise ValueError("save_dir must be provided if use_prompt=False")
+            
+            # Create filename ONCE, reuse on later saves
+            if not hasattr(self, "_cached_filename") or self._cached_filename is None:
+                timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                self._cached_filename = f"{filename_prefix}_{timestamp}.h5"
+
+            default_filename = self._cached_filename
 
             HDF5Helper.save_to_hdf5(data_to_save, save_dir, default_filename)
 
