@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 
-class ChirpCalibrationPlot(QtWidgets.QMainWindow):
+class DelayCalibrationPlot(QtWidgets.QMainWindow):
 
 
     def __init__(self, graphLayoutWidget, *args, **kwargs):
@@ -13,7 +13,7 @@ class ChirpCalibrationPlot(QtWidgets.QMainWindow):
             input:
                 - imageItem: (pyqtgraph.ImageItem) the image Item where the 2D data will be plotted
         '''
-        super(ChirpCalibrationPlot, self).__init__(*args, **kwargs)
+        super(DelayCalibrationPlot, self).__init__(*args, **kwargs)
 
         # create Widgets for plot
         self.graphLayoutWidget= graphLayoutWidget 
@@ -37,7 +37,7 @@ class ChirpCalibrationPlot(QtWidgets.QMainWindow):
         self.plot.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         self.plot.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
         self.plot.setLabel('left', 'Wavelength [nm]', **self.styles)
-        self.plot.setLabel('bottom', 'Chirp [fs²/rad²]', **self.styles)
+        self.plot.setLabel('bottom', 'Delay [fs]', **self.styles)
         #self.imageItem.showGrid(True, True)
         # Clear data to show plot
 
@@ -72,7 +72,7 @@ class ChirpCalibrationPlot(QtWidgets.QMainWindow):
             self.ydata=None
             self.data=None
 
-class ChirpSelectionPlot(QtWidgets.QMainWindow):
+class DelaySelectionPlot(QtWidgets.QMainWindow):
 
     def __init__(self, graphLayoutWidget, *args, **kwargs):
         '''
@@ -80,7 +80,7 @@ class ChirpSelectionPlot(QtWidgets.QMainWindow):
             input:
                 - imageItem: (pyqtgraph.ImageItem) the image Item where the 2D data will be plotted
         '''
-        super(ChirpSelectionPlot, self).__init__(*args, **kwargs)
+        super(DelaySelectionPlot, self).__init__(*args, **kwargs)
 
         # create Widgets for plot
         self.graphLayoutWidget= graphLayoutWidget 
@@ -131,7 +131,7 @@ class ChirpSelectionPlot(QtWidgets.QMainWindow):
             self.ydata=None
             self.data=None
 
-class ChirpFitPlot(QtWidgets.QMainWindow):
+class DelayFitPlot(QtWidgets.QMainWindow):
 
     def __init__(self, plotWidget, *args, **kwargs):
         '''
@@ -140,7 +140,7 @@ class ChirpFitPlot(QtWidgets.QMainWindow):
             - plotWidget: the pyqtgraph plotwidget where the data should be plotted
             - isResidual: (bool) If true, the graph is set up to display the fit residual
         '''
-        super(ChirpFitPlot, self).__init__(*args, **kwargs)
+        super(DelayFitPlot, self).__init__(*args, **kwargs)
 
         # create Widgets for plot
         self.graphWidget = plotWidget
@@ -154,8 +154,8 @@ class ChirpFitPlot(QtWidgets.QMainWindow):
         # plot data: x, y values
         self.graphWidget.getAxis('left').setStyle(tickFont=self.fontForTickValues)
         self.graphWidget.getAxis('bottom').setStyle(tickFont=self.fontForTickValues)
-        self.graphWidget.setLabel('left', 'Chirp at max intensity [fs²/rad²]', **self.styles)
-        self.graphWidget.setLabel('bottom', 'Frequency relative [Hz]', **self.styles)
+        self.graphWidget.setLabel('left', 'Norm. int.', **self.styles)
+        self.graphWidget.setLabel('bottom', 'Delay [fs]', **self.styles)
         self.graphWidget.showGrid(True, True)
         # Clear data to show plot
         self.clear_plot()
@@ -178,7 +178,7 @@ class ChirpFitPlot(QtWidgets.QMainWindow):
         self.graphWidget.clear()
         self.graphWidget.plot(x_array,y_array,symbol='o')
 
-    def set_fit(self, x_array, y_array_fit):
+    def set_fit(self, x_array, y_array_fit, mu, sigma):
         '''
             Displays the latest fit on the plot
             input:
@@ -187,3 +187,18 @@ class ChirpFitPlot(QtWidgets.QMainWindow):
         self.y_array_fit = y_array_fit
         self.set_data(self.x_array, self.y_array)
         self.graphWidget.plot(self.x_array, self.y_array_fit)
+
+        FWHM = 2 * np.sqrt(2 * np.log(2)) * sigma   # sigma from Gaussian fit
+
+        text = pg.TextItem(
+            f"μ = {mu:.3f} fs\nFWHM = {FWHM:.3f} fs",
+            anchor=(0, 0.5),
+            color='w'
+        )
+        self.graphWidget.addItem(text)
+
+        # Position the text vertically centered on the left
+        vb = self.graphWidget.getPlotItem().getViewBox()
+        (x_min, x_max), (y_min, y_max) = vb.viewRange()
+
+        text.setPos(x_min, (y_min + y_max) / 2)

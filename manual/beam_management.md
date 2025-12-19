@@ -33,6 +33,14 @@ The status of all beams is mirrored in the Beam Explorer, implemented in `BeamEx
 Every time a beam object is emitted from DataHandling, the Beam Explorer gets a copy of those and updates the display accordingly.
 All attributes of a beam can be modified from the beam explorer. 
 The parameters are update only when the APPLY BEAMS button is pressed.
+IMPORTANT NOTE: the parameters in Beam Explorer correspond to the phase order:
+    - CEP :         Carrier-envelope phase
+    - GD (fS) :     Group delay 
+    - GDD (fs^2) :  Group delay dispersion
+    - TOD (fs^3) :  Third-order dispersion
+    - FOD (fs^4) :  Fourth-order dispersion
+    - HOD (fs^H) :  Higher-order dispersion, 5OD (fs^5), 6OD (fs^6), etc.
+The Taylor series prefactor 1/n! ARE NOT included in those phase parameters. However, when the `make_grating` is use, the SLM received the right phase including the prefactors. 
 The Relative checkbox sets wether the coefficients displayed in the Current row of the phase table are relative to the optimal row or not.
 A plot shows the phase profile of the beam.
 Checking Plot Relative plots only the phase profile applied relative to the optimal phase profile.

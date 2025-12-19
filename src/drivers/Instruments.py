@@ -60,8 +60,11 @@ def load_instruments():
     # initialize StresingDemo
     stresing_params={
         'pixel_size_mm':24e-3,
-        'num_pixels':1024,
-        'calibrated': False
+        'num_pixels':1010,
+        'calibrated': False,
+        'calibrationThirdOrder': -3e-5,
+        'calibrationSlope': 0.9891,
+        'calibrationOffset': -51.163
     }
 
     spectrometers = {}

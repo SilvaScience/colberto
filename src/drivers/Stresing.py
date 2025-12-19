@@ -43,26 +43,20 @@ class StresingCamera(QtCore.QThread):
         # This is the hardware parameters dictionnary. It is provided by hardware-specific configurations and are not changed in operation
         self.hardware_params=hardware_params
         self.monochromator=None#By default, no spectrometer is attached
-
-        # Define spectral range
-        self.spec_length = self.hardware_params.get('num_pixels', 1024)
-        self.spec_range = np.r_[0:self.spec_length]
-        
         # Path to the DLL file
         folder_path_dll = Path(__file__).resolve().parent #add or remove parent based on the file location
         path_dll = folder_path_dll / "stresing" / "ESLSCDLL.dll"
         path_dll = str(path_dll)
 
-        path_config = Path(r"C:\Program Files\Stresing\Escam\config.ini")
+        path_config = Path(r"C:\Program Files\Stresing\Escam\config_UdeM.ini")
 
         # Create a ConfigParser object
-        config = configparser.ConfigParser()
+        config = CaseInsensitiveConfig()
         # Read the INI file
         config.read(path_config)
 
         # Intitalize stresing camera 
-        #self.CAM = stresing(path_config, path_dll, path_dll2)
-        self.driver = init_driver(self, path_dll, path_config) # type: ignore
+        self.driver = init_driver(self, path_dll, config) # type: ignore
 
         # preallocate arrays
         self.spectrum = np.ndarray([])
@@ -70,19 +64,19 @@ class StresingCamera(QtCore.QThread):
         # Parameters. Defines parameters that are required for by the interface
         self.sample = int(config.get("General","nos"))
         self.block = int(config.get("General","nob"))
-        self.adc_gain = int(config.get("board0","adcGain"))
-        self.channel0 = int(config.get("board0","dacCameraChannel0"))
-        self.channel1 = int(config.get("board0","dacCameraChannel1"))
-        self.channel2 = int(config.get("board0","dacCameraChannel2"))
-        self.channel3 = int(config.get("board0","dacCameraChannel3"))
-        self.channel4 = int(config.get("board0","dacCameraChannel4"))
-        self.channel5 = int(config.get("board0","dacCameraChannel5"))
-        self.channel6 = int(config.get("board0","dacCameraChannel6"))
-        self.channel7 = int(config.get("board0","dacCameraChannel7"))
-        self.bti = int(config.get("board0","bti"))
-        self.sti = int(config.get("board0","sti"))
-        self.btimer = int(float(config.get("board0","btimer")))
-        self.stimer = int(config.get("board0","stimer"))
+        self.adc_gain = int(config.get("Board0","adcGain"))
+        self.channel0 = int(config.get("Board0","dacCameraChannel0"))
+        self.channel1 = int(config.get("Board0","dacCameraChannel1"))
+        self.channel2 = int(config.get("Board0","dacCameraChannel2"))
+        self.channel3 = int(config.get("Board0","dacCameraChannel3"))
+        self.channel4 = int(config.get("Board0","dacCameraChannel4"))
+        self.channel5 = int(config.get("Board0","dacCameraChannel5"))
+        self.channel6 = int(config.get("Board0","dacCameraChannel6"))
+        self.channel7 = int(config.get("Board0","dacCameraChannel7"))
+        self.bti = int(config.get("Board0","bti"))
+        self.sti = int(config.get("Board0","sti"))
+        self.btimer = int(config.get("Board0","btimer"))
+        self.stimer = int(config.get("Board0","stimer"))
         self.new_spectrum = False
 
         # set parameter dict
@@ -297,16 +291,8 @@ class StresingCamera(QtCore.QThread):
 
                 # Wavelength at each pixel
                 self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-
-                # New calibration for screw set at 0 and center wavelength at 650nm
-                # Here you can find the data to retreive the linear fit parameters (nm)
-                # Theoretical   Measured
-                # 365.02        422.30
-                # 404.66        463.70
-                # 435.83        495.90
-                # 546.07        611.90
-                # 1013.98       1111.80
-                self.wavelengths = 0.9402*self.wavelengths-30.864
+                # Refine the calibration using a mercury spectral lamp
+                self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + self.hardware_params['calibrationSlope']*self.wavelengths + self.hardware_params['calibrationOffset']
         else:
             self.wavelengths= self.hardware_params['num_pixels']
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength'%datetime.datetime.now())
@@ -321,6 +307,9 @@ class StresingCamera(QtCore.QThread):
         self.type='Spectrometer'
         self.hardware_params.update(self.monochromator.get_hardware_parameters())
 
+    def get_num_pixel(self):
+        return self.hardware_params['num_pixels']
+
     def get_wavelength(self):
         """
             Returns the wavelengths corresponding to each pixel of the camera
@@ -334,8 +323,8 @@ class StresingCamera(QtCore.QThread):
         while not self.new_spectrum:
             time.sleep(0.01)
             self.new_spectrum = False
-        self.spec = np.array(self.spectrum)
-        self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
+        self.spec = np.array(self.spectrum[13:-1])
+        #self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
         return self.spec
 
 class StresingWorker(QtCore.QThread):
@@ -348,11 +337,7 @@ class StresingWorker(QtCore.QThread):
 
     def __init__(self):
         super(StresingWorker, self).__init__() # Elevates this thread to be independent.
-        
         self.new_spectrum = False
-        self.spec_length = 1024
-
-        self.spec_range = np.r_[0:self.spec_length]
 
     def run(self):
         while True:
@@ -367,3 +352,41 @@ class StresingWorker(QtCore.QThread):
         self.spectrum = measure(self, use_blocking_call) # type: ignore
         self.new_spectrum = True
         return self.spectrum
+    
+class CaseInsensitiveConfig(configparser.ConfigParser):
+    """ This class extends Python’s built-in configparser.ConfigParser to make both section names and option names case-insensitive.
+    Normally, ConfigParser is only case-insensitive for option names, not section names, so this subclass enforces lowercase normalization for both. """
+
+    def __init__(self, *args, **kwargs):
+        """
+            Initialize the parent ConfigParser. By inheriting from it, your class gets all the functionality of ConfigParser — things like: 
+                Reading .ini files
+                Parsing sections and options
+                Providing .get(), .set(), .items(), etc.
+            Then you can override or extend parts of that functionality to make it case-insensitive.
+        """
+        super().__init__(*args, **kwargs)
+
+        # Force all option (key) names to be lowercase when stored internally
+        # This makes option lookups case-insensitive
+        self.optionxform = str.lower
+
+    def read(self, filenames, encoding=None):
+        """
+            Use the parent class's read method to load the config file(s)
+        """
+        super().read(filenames, encoding)
+
+        # Convert all section names and their corresponding option names to lowercase
+        # This ensures that both sections and options are case-insensitive
+        self._sections = {
+            k.lower(): {kk.lower(): vv for kk, vv in v.items()}
+            for k, v in self._sections.items()
+        }
+
+    def get(self, section, option, **kwargs):
+        """
+            Override the default .get() method so that lookups are case-insensitive
+        """
+        # Both section and option names are converted to lowercase before lookup
+        return super().get(section.lower(), option.lower(), **kwargs)

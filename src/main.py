@@ -7,7 +7,6 @@ Created on Tue Jan  1 14:34:11 2025
 import sys
 import time
 import re
-import os
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
@@ -23,11 +22,12 @@ from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.VerticalCalibPlot import VerticalCalibPlot 
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
 from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
+from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, DelayFitPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, ChirpAcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration
+from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, AcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
@@ -36,23 +36,26 @@ from GUI.BeamExplorer import BeamExplorer
 import logging
 import datetime
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
+import h5py
+import os
+import tkinter as tk
+from tkinter import filedialog
 
 logger = logging.getLogger(__name__)
 class MainInterface(QtWidgets.QMainWindow):
 
     def __init__(self):
         super(MainInterface, self).__init__()
-        project_folder = Path(__file__).parent.resolve()
-        uic.loadUi(Path(project_folder,r'GUI/main_GUI.ui'), self)
+        self.project_folder = Path(__file__).parent.resolve()
+        uic.loadUi(Path(self.project_folder,r'GUI/main_GUI.ui'), self)
         logging.basicConfig(filename='main.log', level=logging.INFO)
         logger.info('%s Started log'%datetime.datetime.now())
         # fancy name
         self.setWindowTitle('COLBERTo')
 
         
-        self.devices, self.spectrometers = load_instruments()
+        self.devices = load_instruments()
 
-        
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
         self.spectro_tab = self.findChild(QtWidgets.QWidget, 'spectro_tab')
@@ -73,6 +76,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.bg_select_box = self.findChild(QtWidgets.QPushButton, 'select_bg_pushButton')
         self.grating_period_edit=self.findChild(QtWidgets.QSpinBox,'grating_period_spin_box')
         self.show_beam_explorer_pushbutton=self.findChild(QtWidgets.QPushButton,'show_beam_explorer_button')
+        self.save_calibration_pushbutton = self.findChild(QtWidgets.QPushButton,'save_calibration_button')
+        self.load_calibration_pushbutton = self.findChild(QtWidgets.QPushButton,'load_calibration_button')
         # Spatial calibration tab
         ## Vertical calibration tab
         self.spatial_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'spatial_calib_demo_mode_checkbox')
@@ -95,12 +100,12 @@ class MainInterface(QtWidgets.QMainWindow):
         self.spectral_calibration_fit_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_plot_layout')
         self.spectral_calibration_fit_residual_plot_layout=self.findChild(pg.PlotWidget,'spectral_calib_fit_residual_plot_layout')
         self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
-
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
-        ## Temp calibration tab
+        
+        ## Chirp calibration tab
         self.chirp_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'Chirp_calib_demo_mode_checkbox')
-        self.beam_spinbox=self.findChild(QtWidgets.QSpinBox,'Beam_spin_box')
+        self.beam_name_box = self.findChild(QtWidgets.QComboBox,'Beam_name_box')
         self.compression_carrier_wavelength_Qline = self.findChild(QtWidgets.QLineEdit, 'Compression_carrier_wavelength')
         self.chirp_step_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_step')
         self.chirp_max_Qline = self.findChild(QtWidgets.QLineEdit, 'Chirp_max')
@@ -109,7 +114,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.acquire_chirp_data_runButton = self.findChild(QtWidgets.QPushButton, 'Acquire_data_temp_calibration')
         self.chirp_calibration_image_layout=self.findChild(pg.GraphicsLayoutWidget,'Chirp_plot_layout')
         
-        self.chirp_SNR_threshold_value = self.findChild(QtWidgets.QSpinBox,'SNR_threshold_value')
+        self.chirp_SNR_threshold_value = self.findChild(QtWidgets.QDoubleSpinBox,'SNR_threshold_value')
         self.chirp_apply_SNR_button = self.findChild(QtWidgets.QPushButton, 'SNR_temporal_calibration_button')
         self.chirp_min_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_minimum_value')
         self.chirp_max_wavelength_value = self.findChild(QtWidgets.QSpinBox, 'Wavelength_maximum_value')
@@ -117,8 +122,29 @@ class MainInterface(QtWidgets.QMainWindow):
         self.chirp_fit_calibration_button = self.findChild(QtWidgets.QPushButton, 'fit_temporal_calibration_button')
         self.chirp_coeff = self.findChild(QtWidgets.QTextEdit, 'Chirp_fitted_coefficients')
         self.chirp_assign_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_temporal_calibration_button')
+        self.chirp_remove_calibration_button = self.findChild(QtWidgets.QPushButton, 'remove_temporal_calibration_button')
         self.chirp_selection_layout = self.findChild(pg.GraphicsLayoutWidget, 'Chirp_selection')
         self.chirp_fit_layout = self.findChild(pg.PlotWidget, 'Chirp_fit')
+
+        ## Delay calibration tab
+        self.delay_backgroud_button = self.findChild(QtWidgets.QPushButton, 'Delay_background_button')
+        self.delay_acquire_button = self.findChild(QtWidgets.QPushButton, 'Delay_acquire_button')
+        self.delay_demo_mode_checkbox = self.findChild(QtWidgets.QCheckBox, 'Delay_demo_mode_checkbox')
+        self.delay_reference_beam_name_box = self.findChild(QtWidgets.QComboBox,'Delay_reference_beam_name_box')
+        self.delay_second_beam_name_box = self.findChild(QtWidgets.QComboBox,'Delay_second_beam_name_box')
+        self.delay_carrier_wavelength_value = self.findChild(QtWidgets.QLineEdit, 'Delay_carrier_wavelength_value')
+        self.delay_min_group_delay_value = self.findChild(QtWidgets.QLineEdit, 'Delay_min_group_delay_value')
+        self.delay_max_group_delay_value = self.findChild(QtWidgets.QLineEdit, 'Delay_max_group_delay_value')
+        self.delay_step_group_delay_value = self.findChild(QtWidgets.QLineEdit, 'Delay_step_group_delay_value')
+        self.delay_SNR_threshold_value = self.findChild(QtWidgets.QDoubleSpinBox,'Delay_SNR_threshold_value')
+        self.delay_apply_SNR_treshold_button = self.findChild(QtWidgets.QPushButton, 'Delay_apply_SNR_threshold_button')
+        self.delay_min_wavelength_bandwidth_value = self.findChild(QtWidgets.QSpinBox, 'Delay_min_wavelength_bandwidth_value')
+        self.delay_max_wavelength_bandwidth_value = self.findChild(QtWidgets.QSpinBox, 'Delay_max_wavelength_bandwidth_value')
+        self.delay_fit_delay_button = self.findChild(QtWidgets.QPushButton, 'Delay_fit_delay_button')
+        self.delay_apply_delay_button = self.findChild(QtWidgets.QPushButton, 'Delay_apply_delay_button')
+        self.delay_remove_delay_button = self.findChild(QtWidgets.QPushButton, 'Delay_remove_delay_button')
+        self.delay_scan_plot = self.findChild(pg.GraphicsLayoutWidget, 'Delay_scan_plot')
+        self.delay_fit_plot = self.findChild(pg.PlotWidget, 'Delay_fit_plot')
         
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
@@ -133,33 +159,6 @@ class MainInterface(QtWidgets.QMainWindow):
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
         
-        #Spectrometer Selection
-        self.spectrometer_select = self.findChild(QtWidgets.QComboBox, 'spec_selection_comboBox')
-        # print('Spec Select', self.spectrometer_select)
-
-        if self.spectrometer_select is not None:
-            logger.info(f"Available spectrometers: {list(self.spectrometers.keys())}")
-            # print("Available spectrometers:", self.spectrometers)
-            self.spectrometer_select.addItems(self.spectrometers.keys())
-
-            # Determine default spectrometer
-            default_name = self.devices.get('spectrometer_name', 'Ocean')  # fallback to 'Ocean' or 'Demo'
-            if default_name not in self.spectrometers:
-                default_name = next(iter(self.spectrometers))  # pick first available
-
-            # Set default spectrometer in both dropdown and device dict
-            self.spectrometer_select.setCurrentText(default_name)
-            self.active_spectrometer = self.spectrometers[default_name]
-            self.devices['spectrometer'] = self.active_spectrometer
-            self.spec_length = getattr(self.active_spectrometer, 'spec_length', 2048)
-
-            # Connect handler for when selection changes
-            self.spectrometer_select.currentTextChanged.connect(self.on_spectrometer_changed)
-
-        self.active_spectrometer = self.devices['spectrometer']
-        logger.info(f"Available Devices: {list(self.devices.keys())}")
-        # print('Available devices:', self.devices)
-
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
         for device in self.devices.keys():
@@ -184,6 +183,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.ChirpCalibrationPlot= ChirpCalibrationPlot(self.chirp_calibration_image_layout)
         self.ChirpSelectionPlot = ChirpSelectionPlot(self.chirp_selection_layout)
         self.ChirpFitplot = ChirpFitPlot(self.chirp_fit_layout)
+        self.DelayCalibrationPlot = DelayCalibrationPlot(self.delay_scan_plot)
+        self.DelayFitPlot = DelayFitPlot(self.delay_fit_plot)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
@@ -223,13 +224,14 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
 
         # start DataHandling
-        #self.spec_length = 1024
+        self.spec_length = self.devices['spectrometer'].get_num_pixel()
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
 
         #start Beam explorer
+        self.beam_explorer = BeamExplorer(self.DataHandling.get_beams())
         self.show_beam_explorer()
 
         # start Updater to update device read parameters
@@ -274,24 +276,39 @@ class MainInterface(QtWidgets.QMainWindow):
         self.generate_LUT_calib_button.clicked.connect(
         self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
         # Chirp calibration connect events
-        self.background_chirp_data_runbutton.clicked.connect(self.chirpBackgroundMeasurement)
+        self.background_chirp_data_runbutton.clicked.connect(self.BackgroundMeasurement)
         self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
         self.chirp_SNR_threshold_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
         self.chirp_min_wavelength_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
         self.chirp_max_wavelength_value.valueChanged.connect(self.update_temporal_calibration_boundaries)
         self.chirp_apply_SNR_button.clicked.connect(self.applySNRthreshold)
         self.chirp_fit_calibration_button.clicked.connect(self.fitChirpMeasurement)
-        self.chirp_assign_calibration_button.clicked.connect(self.assignTemporalCalibration)
+        self.chirp_assign_calibration_button.clicked.connect(lambda: self.assignTemporalCalibration(1))
+        self.chirp_remove_calibration_button.clicked.connect(lambda: self.assignTemporalCalibration(-1))
+        # Delay calibration connect events
+        self.delay_backgroud_button.clicked.connect(self.BackgroundMeasurement)
+        self.delay_acquire_button.clicked.connect(self.delayAcquireMeasurement)
+        self.delay_SNR_threshold_value.valueChanged.connect(self.delayApplySNRThreshold)
+        self.delay_apply_SNR_treshold_button.clicked.connect(self.delayApplySNRThreshold)
+        self.delay_min_wavelength_bandwidth_value.valueChanged.connect(self.delayApplySNRThreshold)
+        self.delay_max_wavelength_bandwidth_value.valueChanged.connect(self.delayApplySNRThreshold)
+        self.delay_fit_delay_button.clicked.connect(self.delayFitMeaserement)
+        self.delay_apply_delay_button.clicked.connect(lambda: self.assignDelayCalibration(1))
+        self.delay_remove_delay_button.clicked.connect(lambda: self.assignDelayCalibration(-1))
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
         # Beam update connection
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
+        self.DataHandling.sendBeams.connect(self.update_beam_name_list)
         #Beam Explorer related
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
         self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
         self.devices['SLM'].write_image(test_image)
+        # Save/load calibration
+        self.save_calibration_pushbutton.clicked.connect(self.save_calibration)
+        self.load_calibration_pushbutton.clicked.connect(self.load_calibration)
         # run some functions once to define default values
         self.change_filename()
 
@@ -300,24 +317,6 @@ class MainInterface(QtWidgets.QMainWindow):
 
     ##### General functions #####
 
-    def on_spectrometer_changed(self, new_name):
-        if new_name not in self.spectrometers:
-            logger.warning(f"Unknown spectrometer selected: {new_name}")
-            return
-
-        # Switch spectrometer object
-        self.active_spectrometer = self.spectrometers[new_name]
-        self.devices['spectrometer'] = self.active_spectrometer
-        self.devices['spectrometer_name'] = new_name
-
-        # Get new speclength
-        self.spec_length = getattr(self.active_spectrometer, 'spec_length', 2048)
-        #print(self.spec_length)
-
-        self.DataHandling.update_spec_length(self.spec_length)  # for Stresing
-
-        logger.info(f"Switched to spectrometer: {new_name} with spec_length={self.spec_length}")
-    
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
         self.parameter = {}
@@ -516,15 +515,49 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.VerticalCalibPlot.draw_regions(regions)
             except ValueError:
                 table.setItem(row_index,col_index,None)
+
+    def assign_vertical_beam_calibration(self):
+        '''
+            Saves the current vertical beam calibration to the DataHandling
+        '''
+        table=self.beam_vertical_delimiters_table
+        for row in range(table.rowCount()):
+            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
+            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
+            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
+            if all([label is not None, bottom_index is not None, top_index is not None]):
+                beam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+                beam.set_beamVerticalDelimiters([top_index,bottom_index])
+                beam.set_gratingPeriod(self.grating_period_edit.value())
+                self.DataHandling.set_beam((label,beam))
                 
-    def chirpBackgroundMeasurement(self):
+    def update_beam_name_list(self, beamDict):
+        old = self.beam_name_box.currentText()
+        self.beam_name_box.clear()
+        self.beam_name_box.addItems(beamDict)
+        if old in beamDict:
+            self.beam_name_box.setCurrentText(old)
+
+        old = self.delay_reference_beam_name_box.currentText()
+        self.delay_reference_beam_name_box.clear()
+        self.delay_reference_beam_name_box.addItems(beamDict)
+        if old in beamDict:
+            self.delay_reference_beam_name_box.setCurrentText(old)
+
+        old = self.delay_second_beam_name_box.currentText()
+        self.delay_second_beam_name_box.clear()
+        self.delay_second_beam_name_box.addItems(beamDict)
+        if old in beamDict:
+            self.delay_second_beam_name_box.setCurrentText(old)
+
+    def BackgroundMeasurement(self):
         if not self.measurement_busy:
             self.measurement_busy = True
-            self.chirpbackground = ChirpAcquireBackground(self.devices)
-            self.chirpbackground.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            self.chirpbackground.send_background.connect(self.DataHandling.add_calibration)
-            self.chirpbackground.sendProgress.connect(self.set_progress)
-            self.chirpbackground.start()
+            self.background = AcquireBackground(self.devices)
+            self.background.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.background.send_background.connect(self.DataHandling.add_calibration)
+            self.background.sendProgress.connect(self.set_progress)
+            self.background.start()
     
     def chirpCalibrationMeasurement(self):
         '''
@@ -532,21 +565,26 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         if not self.measurement_busy:
             self.measurement_busy = True
-            if 'ALL' in self.DataHandling.get_beams():
-                beam_= self.DataHandling.get_beams()['ALL']
+            if self.beam_name_box.currentText() in self.DataHandling.get_beams():
+                beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
             else:
-                beam_=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+                beam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
             self.DataHandling.clear_data() 
-            if hasattr(self, 'chirpbackground'):
-                chirpbackground = self.DataHandling.calibration['chirp_background_data']
+            if hasattr(self, 'background'):
+                chirpbackground = self.DataHandling.calibration['background_data']
                 background = chirpbackground['spec']
             else:
                 background = 0
-            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), self.beam_spinbox.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), demo=self.chirp_calib_demo_mode_checkbox.isChecked(), beam=beam_)
+            try:
+                spectral_calib_dict = self.DataHandling.calibration['spectral_calibration_fit']
+            except:
+                spectral_calib_dict = None
+            self.measurement = ChirpCalibrationMeasurement(self.devices, background, self.grating_period_edit.value(), float(self.compression_carrier_wavelength_Qline.text()), float(self.chirp_step_Qline.text()), float(self.chirp_max_Qline.text()), float(self.chirp_min_Qline.text()), self.beam_name_box.currentText(), beam, spectral_calib_dict, demo=self.chirp_calib_demo_mode_checkbox.isChecked())
             self.temporalfitting = FitTemporalBeamCalibration(boundaries=[self.chirp_min_wavelength_value.value(),self.chirp_max_wavelength_value.value()])
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_chirp.connect(self.ChirpCalibrationPlot.set_data)
+            self.measurement.send_beam.connect(self.DataHandling.set_beam)
             self.temporalfitting.send_chirp_calibration_data.connect(self.DataHandling.add_calibration)
             self.temporalfitting.send_chirp_region.connect(self.ChirpSelectionPlot.set_data)
             self.temporalfitting.send_chirp_fit.connect(self.ChirpFitplot.set_data)
@@ -563,7 +601,7 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
-            self.temporalfitting.set_SNR(temporal_calib_dict, self.chirp_SNR_threshold_value.value()/10)
+            self.temporalfitting.set_SNR(temporal_calib_dict, self.chirp_SNR_threshold_value.value())
     
     def update_temporal_calibration_boundaries(self):
         '''
@@ -572,7 +610,7 @@ class MainInterface(QtWidgets.QMainWindow):
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
             try: 
-                self.temporalfitting.set_boundaries(temporal_calib_dict, [self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value()/10)
+                self.temporalfitting.set_boundaries(temporal_calib_dict, [self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value())
             except KeyError:
                 print('Unexpected error. There should be a temporal_calibration_raw_data key in the calibration dict in Datahandling')
 
@@ -583,31 +621,30 @@ class MainInterface(QtWidgets.QMainWindow):
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
             coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
-            poly_eq = " + ".join(f"c{i}" if i == 0 else f"c{i} * x^{i}" for i in range(len(coeffs)))
-            lines = [f"Equation: {poly_eq}", ""] + [f"c{i} = {v:.2f} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs)]
+            coeffs_scaled = [coeffs[i] * (10**15)**i for i in range(len(coeffs))]
+            # Generate names dynamically
+            names = ["GDD" if i == 0 else "TOD" if i == 1 else "FOD" if i == 2 else f"{i+2}OD" for i in range(len(coeffs))]
+            # Polynomial string using the same names list
+            poly_eq = " + ".join(names[i] + ("" if i == 0 else " * x" if i == 1 else f" * x^{i}") for i in range(len(coeffs)))
+            # Lines with coefficients using the same names
+            lines = [f"Equation: {poly_eq}", ""] + [f"{names[i]} = {v:.2e} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs_scaled)]
             self.chirp_coeff.setText('\n'.join(lines))
+            self.last_temp_fit_coeffs = np.array(np.concatenate(([0, 0], coeffs_scaled)))
 
-    def assignTemporalCalibration(self):
+    def assignTemporalCalibration(self, Add_or_Remove):
         '''
             Assign the polynomial calibration to the beam.
-            TO BE DONE LATER
         ''' 
-        return
-
-    def assign_vertical_beam_calibration(self):
-        '''
-            Saves the current vertical beam calibration to the DataHandling
-        '''
-        table=self.beam_vertical_delimiters_table
-        for row in range(table.rowCount()):
-            top_index=int(table.item(row,1).text()) if table.item(row,1) is not None else None
-            bottom_index=int(table.item(row,2).text()) if table.item(row,2) is not None else None
-            label=table.item(row,0).text() if table.item(row,0).text() is not None else None
-            if all([label is not None, bottom_index is not None, top_index is not None]):
-                beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
-                beam.set_beamVerticalDelimiters([top_index,bottom_index])
-                beam.set_gratingPeriod(self.grating_period_edit.value())
-                self.DataHandling.set_beam((label,beam))
+        beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
+        beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
+        self.last_temp_fit_coeffs = np.rint(self.last_temp_fit_coeffs).astype(int)
+        old_coeff = beam.get_optimalPhase(units_to_return='fs').coef
+        if len(self.last_temp_fit_coeffs) < len(old_coeff):
+            self.last_temp_fit_coeffs = np.pad(self.last_temp_fit_coeffs, (0, len(old_coeff) - len(self.last_temp_fit_coeffs)), 'constant', constant_values=0)
+        elif len(old_coeff) < len(self.last_temp_fit_coeffs):
+            old_coeff = np.pad(old_coeff, (0, len(self.last_temp_fit_coeffs) - len(old_coeff)), 'constant', constant_values=0)
+        beam.set_optimalPhase(P(Add_or_Remove*self.last_temp_fit_coeffs+old_coeff))
+        self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 
     def spectralBeamCalibrationMeasurement(self):
         '''
@@ -670,6 +707,96 @@ class MainInterface(QtWidgets.QMainWindow):
             beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
             self.DataHandling.set_beam((key,beam_dict[key]))
 
+    def delayAcquireMeasurement(self):
+        """
+            Start a cross correlation measurement between two beams
+        """
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            if self.delay_reference_beam_name_box.currentText() == self.delay_second_beam_name_box.currentText():
+                print('Measurement not started, beams need to be different')
+                return
+            if self.delay_reference_beam_name_box.currentText() in self.DataHandling.get_beams():
+                refBeam = self.DataHandling.get_beams()[self.delay_reference_beam_name_box.currentText()]
+            else:
+                refBeam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+            if self.delay_second_beam_name_box.currentText() in self.DataHandling.get_beams():
+                secBeam = self.DataHandling.get_beams()[self.delay_second_beam_name_box.currentText()]
+            else:
+                secBeam = Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+            
+            self.DataHandling.clear_data() 
+            if hasattr(self, 'background'):
+                delayBackground = self.DataHandling.calibration['background_data']
+                background = delayBackground['spec']
+            else:
+                background = 0
+            
+            try:
+                spectral_calib_dict = self.DataHandling.calibration['spectral_calibration_fit']
+            except:
+                spectral_calib_dict = None
+            
+            self.measurement = DelayCalibrationMeasurement(
+                self.devices, background, self.grating_period_edit.value(), 
+                float(self.delay_carrier_wavelength_value.text()), 
+                float(self.delay_step_group_delay_value.text()), 
+                float(self.delay_max_group_delay_value.text()), 
+                float(self.delay_min_group_delay_value.text()), 
+                self.delay_reference_beam_name_box.currentText(),
+                self.delay_second_beam_name_box.currentText(), 
+                refBeam, secBeam, spectral_calib_dict, 
+                demo=self.delay_demo_mode_checkbox.isChecked())
+            
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendBeam.connect(self.DataHandling.set_beam)
+            self.measurement.sendCrossCorrelation.connect(self.DelayCalibrationPlot.set_data)
+            self.measurement.sendCrossCorrelationData.connect(self.DataHandling.add_calibration)
+            self.measurement.sendCrossCorreletionRegion.connect(self.DelayFitPlot.set_data)
+            self.measurement.sendCrossCorrelationRegionData.connect(self.DataHandling.add_calibration)
+            self.measurement.sendCrossCorrelationRegionFit.connect(self.DelayFitPlot.set_fit)
+            self.measurement.sendCrossCorrelationRegionFitData.connect(self.DataHandling.add_calibration)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def delayApplySNRThreshold(self):
+        '''
+            Apply the SNR on the chirp scan and show the desired wavelength bandwidth.
+        '''
+        if 'Delay_calibration_raw_data' in self.DataHandling.calibration:
+            delay_calib_dict = self.DataHandling.calibration['Delay_calibration_raw_data']
+            self.measurement.set_SNR(delay_calib_dict, self.delay_SNR_threshold_value.value(), [self.delay_min_wavelength_bandwidth_value.value(), self.delay_max_wavelength_bandwidth_value.value()])
+        else:
+            logger.warning('%s Delay calibration data has not been taken. Run a delay beam calibration measurement first'%datetime.datetime.now())
+
+    def delayFitMeaserement(self):
+        '''
+            Fits the last delay beam calibration data using the displayed valued and updates the result in the Datahandling thread.
+        '''
+        if 'delay_calibration_processed_data' in self.DataHandling.calibration:
+            delay_calib_processed_dict = self.DataHandling.calibration['delay_calibration_processed_data']
+            self.measurement.get_fit(delay_calib_processed_dict['delay'], delay_calib_processed_dict['data'])
+        else:
+            logger.warning('%s Delay calibration data has not been processed. Processed the calibration measurement first'%datetime.datetime.now())
+
+    def assignDelayCalibration(self, Add_or_Remove):
+        '''
+            Assign the delay calibration to the beam.
+        ''' 
+        if 'delay_calibration_processed_data_fit' in self.DataHandling.calibration:
+            delay_calib_processed_fit_dict = self.DataHandling.calibration['delay_calibration_processed_data_fit']
+            mu = delay_calib_processed_fit_dict['mu']
+            beam = self.DataHandling.get_beams()[self.delay_second_beam_name_box.currentText()]
+            beam.set_delayCarrierWave(float(self.delay_carrier_wavelength_value.text()) * 10**(-9))
+            old_coeff = beam.get_optimalPhase(units_to_return='fs').coef
+            old_coeff[1] += Add_or_Remove*mu
+            beam.set_optimalPhase(P(old_coeff))
+            self.DataHandling.set_beam((self.delay_second_beam_name_box.currentText(), beam))
+        else:
+            logger.warning('%s Delay calibration fit has not been processed. Processed the calibration fit first'%datetime.datetime.now())
+
     def stop_measurement(self):
         # stop measurement
         self.measurement.stop()
@@ -715,20 +842,245 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
             #print('Measurement not started, devices are busy')
-    
     def show_beam_explorer(self):
         """
             Shows the beam explorer if it is not already shown
         """
-        self.beam_explorer= BeamExplorer(self.DataHandling.get_beams())
+        logger.info('%s'%self.beam_explorer)
         self.beam_explorer.show()
-        
+    
+    def assign_demo_beams(self):
+        """
+            Assigns some beams to the DataHandling to test the BeamExplorer
+        """
+        labels=['LO','A','B','C']
+        demo_beam_dict={}
+        for i,label in enumerate(labels):
+            demo_beam=Beam(self.devices['SLM'].get_width(),self.devices['SLM'].get_height())
+            demo_beam.set_optimalPhase(P([0,100,2000,3000,-400]))
+            demo_beam.set_gratingPeriod(25)
+            demo_beam.set_beamVerticalDelimiters([i*300,(i+1)*300-1])
+            demo_beam_dict[label]=demo_beam
+        [self.DataHandling.set_beam((beamname,beam)) for beamname,beam in demo_beam_dict.items()]
+
+
     def closeEvent(self,event):
         '''
             Closes all windows when the main window is closed.
         '''
         QApplication.closeAllWindows()
 
+    def save_calibration(self):
+        """
+            Save all Beam objects and calibration data using a file dialog.
+            - Beams are converted to dicts with Beam.beam_to_dict
+            - Calibration is converted safely, including Polynomials
+        """
+        # Convert all Beam objects to safe dictionaries
+        beam_dicts = {name: Beam.beam_to_dict(beam) for name, beam in self.DataHandling.beams.items()}
+
+        # Convert calibration data to safe dict
+        calibration_dict = DataHandling.calibration_to_dict(self.DataHandling.calibration)
+
+        # Combine beams and calibration into one dict
+        data_to_save = {
+            "beams": beam_dicts,
+            "calibration": calibration_dict
+        }
+
+        # Default filename with timestamp
+        default_filename = f"ChirpParameters_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.h5"
+
+        # Save using HDF5 prompt
+        HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=default_filename)
+
+    def load_calibration(self):
+        """
+            Load beams and calibration from HDF5 file using prompt-based loader.
+            - Beams are reconstructed using Beam.dict_to_beam
+            - Calibration Polynomials are restored automatically
+        """
+        # Load the top-level dictionary from HDF5
+        loaded_data = HDF5Helper.load_from_hdf5_prompt()
+        if loaded_data is None:
+            print("No data loaded.")
+            return
+
+        # Load beams
+        beams_loaded = loaded_data.get("beams", {})
+        for name, beam_dict in beams_loaded.items():
+            beam_obj = Beam.dict_to_beam(
+                beam_dict=beam_dict,
+                beam_class=Beam,
+                slm_width=self.devices['SLM'].get_width(),
+                slm_height=self.devices['SLM'].get_height()
+            )
+            self.DataHandling.beams[name] = beam_obj
+            self.DataHandling.set_beam((name, beam_obj))
+
+        # Load calibration
+        calibration_loaded = loaded_data.get("calibration", {})
+        self.DataHandling.calibration = DataHandling.dict_to_calibration(calibration_loaded)
+
+        self.assign_spectral_calibration()
+        print("Calibration and beams successfully loaded.")
+
+class HDF5Helper:
+
+    @staticmethod
+    def save_to_hdf5_with_prompt(data, default_filename="data.h5"):
+        """
+            Open a file dialog to choose filename and save HDF5 file.
+
+            Parameters:
+            - data (dict): Nested dictionary of data to save.
+            - default_filename (str): Suggested default file name.
+        """
+
+        # Initialize Tkinter root and hide it
+        root = tk.Tk()
+        root.withdraw()
+
+        # Ask user for filename and location
+        filepath = filedialog.asksaveasfilename(
+            title="Save HDF5 file as",
+            defaultextension=".hdf5",
+            initialfile=default_filename,
+            filetypes=[("HDF5 files", "*.hdf5 *.h5"), ("All files", "*.*")]
+        )
+
+        if not filepath:
+            print("Save cancelled.")
+            return
+
+        # Remove existing file if present
+        if os.path.exists(filepath):
+            os.remove(filepath)
+
+        # Save data recursively
+        with h5py.File(filepath, 'w') as h5f:
+            HDF5Helper._recursively_save(h5f, '', data)
+
+        print(f"Data saved to {filepath}")
+
+    @staticmethod
+    def save_to_hdf5(data, filepath, filename):
+        """
+            Save nested dictionary to HDF5 file at specified location.
+
+            Parameters:
+            - data (dict): Nested dictionary to save.
+            - filepath (str): Directory where file will be saved.
+            - filename (str): File name (with or without extension).
+        """
+
+        os.makedirs(filepath, exist_ok=True)
+
+        # Add extension if missing
+        base, ext = os.path.splitext(filename)
+        if ext == '':
+            ext = '.h5'
+        full_path = os.path.join(filepath, base + ext)
+
+        if os.path.exists(full_path):
+            os.remove(full_path)
+
+        # Save recursively
+        with h5py.File(full_path, 'w') as h5f:
+            HDF5Helper._recursively_save(h5f, '', data)
+
+        print(f"Data saved to {full_path}")
+
+    @staticmethod
+    def _recursively_save(h5file, path, dic):
+        """Recursively save a nested dictionary to HDF5."""
+        import os
+        for key, item in dic.items():
+            key_path = f"{path}/{key}" if path else key
+            if isinstance(item, dict):
+                # Recurse into sub-dictionaries
+                HDF5Helper._recursively_save(h5file, key_path, item)
+            else:
+                # Ensure intermediate group exists
+                group_path = os.path.dirname(key_path)
+                if group_path and group_path not in h5file:
+                    h5file.require_group(group_path)
+                # Save dataset
+                h5file.create_dataset(key_path, data=item)
+
+    @staticmethod
+    def load_from_hdf5_prompt():
+        """
+            Open a file dialog to load an HDF5 file.
+
+            Returns:
+            - dict: Nested dictionary of loaded data.
+        """
+
+        root = tk.Tk()
+        root.withdraw()
+
+        full_path = filedialog.askopenfilename(
+            title="Choose HDF5 file to open",
+            filetypes=[("HDF5 files", "*.hdf5 *.h5"), ("All files", "*.*")]
+        )
+
+        if not full_path:
+            print("Load cancelled.")
+            return None
+
+        filepath, filename = os.path.split(full_path)
+        return HDF5Helper.load_from_hdf5(filepath, filename)
+
+    @staticmethod
+    def load_from_hdf5(filepath, filename):
+        """
+            Load HDF5 file as nested dictionary, preserving types.
+
+            Parameters:
+            - filepath (str): Directory where file is located.
+            - filename (str): HDF5 file name.
+
+            Returns:
+            - dict: Nested dictionary with native Python types for scalars.
+        """
+
+        base, ext = os.path.splitext(filename)
+        if ext == '':
+            ext = '.h5'
+        full_path = os.path.join(filepath, base + ext)
+
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"No file found at: {full_path}")
+
+        with h5py.File(full_path, 'r') as h5f:
+            return HDF5Helper._recursively_load(h5f)
+
+    @staticmethod
+    def _recursively_load(h5group):
+        """
+            Recursively load data from HDF5 group into nested dictionary,
+            converting NumPy scalars to native Python types.
+        """
+
+        result = {}
+        for key, item in h5group.items():
+            if isinstance(item, h5py.Group):
+                result[key] = HDF5Helper._recursively_load(item)
+            elif isinstance(item, h5py.Dataset):
+                data = item[()]
+
+                # Convert NumPy scalars to native Python
+                if isinstance(data, (np.generic, np.bool_)):
+                    data = data.item()
+
+                # Decode bytes to string if needed
+                if isinstance(data, bytes):
+                    data = data.decode('utf-8')
+
+                result[key] = data
+        return result
+    
 class UpdateWorker(QtCore.QThread):
 
     new_parameter = QtCore.pyqtSignal(dict)
@@ -743,23 +1095,13 @@ class UpdateWorker(QtCore.QThread):
 
     def run(self):
         while not self.stop:
-            self.updated_param = {}
-
-            for name, device in self.devices.items():
-                # Skip anything that is not a real device object
-                if not hasattr(device, "parameter_dict"):
-                    continue
-
-                # Loop through parameters safely
-                for param in device.parameter_dict.keys():
+            i = 0
+            for devices in self.devices.keys():
+                for param in self.devices[devices].parameter_dict.keys():
                     if param in self.read_only:
-                        self.updated_param[param] = device.parameter_dict[param]
-
-            # Emit update only once per cycle
-            self.new_parameter.emit(self.updated_param)
-
+                        self.updated_param[param] = self.devices[devices].parameter_dict[param]
+                self.new_parameter.emit(self.updated_param)
             time.sleep(self.update_interval)
-
 
 app = QtWidgets.QApplication(sys.argv)
 window = MainInterface()
