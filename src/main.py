@@ -23,7 +23,7 @@ from GUI.VerticalCalibPlot import VerticalCalibPlot
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
 from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
 from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, DelayFitPlot
-from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot
+from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeasurementFourierPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
@@ -163,6 +163,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.MDCS_acquire_button = self.findChild(QtWidgets.QPushButton, 'Measurement_acquire_button')
         self.MDCS_LO_plot = self.findChild(pg.PlotWidget, 'Local_oscillator_plot')
         self.MDCS_2D_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_plot')
+        self.MDCS_Fourier_real_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_result_real_plot')
+        self.MDCS_Fourier_imag_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_result_imaginary_plot')
 
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
@@ -205,6 +207,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DelayFitPlot = DelayFitPlot(self.delay_fit_plot)
         self.LOspectrumPlot = LOmeasurementPlot(self.MDCS_LO_plot)
         self.MDCSplot = MDCSmeasurementPlot(self.MDCS_2D_plot)
+        self.MDCSFourierRealPlot = MDCSmeasurementFourierPlot(self.MDCS_Fourier_real_plot)
+        self.MDCSFourierImagPlot = MDCSmeasurementFourierPlot(self.MDCS_Fourier_imag_plot)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
@@ -858,8 +862,9 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.measurement.sendBeam.connect(self.DataHandling.set_multiple_beams)
                 self.measurement.sendMDCSPlot.connect(self.MDCSplot.set_data)
                 self.measurement.sendMDCSRaw.connect(self.DataHandling.add_calibration)
-                print(self.filename)
                 self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
+                self.measurement.sendFourierReal.connect(self.MDCSFourierRealPlot.set_data)
+                self.measurement.sendFourierImag.connect(self.MDCSFourierImagPlot.set_data)
                 self.measurement.start()
             else:
                 logger.warning('%s Get the local oscillotor plot before running an acquisition.'%datetime.datetime.now())
@@ -954,7 +959,7 @@ class MainInterface(QtWidgets.QMainWindow):
         }
 
         if use_prompt:
-            HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=default_filename)
+            HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=filename_prefix)
         else:
             if save_dir is None:
                 raise ValueError("save_dir must be provided if use_prompt=False")
