@@ -159,7 +159,7 @@ class MainInterface(QtWidgets.QMainWindow):
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
         
-         # Spectrometer Selection
+        # Spectrometer Selection
         self.spectrometer_select = self.findChild(QtWidgets.QComboBox, 'spec_selection_comboBox')
         # print('Spec Select', self.spectrometer_select)
 
@@ -193,7 +193,6 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # build flat parameter dict (Not building the UI only creating the DATA structure)
         self.parameter = {}
-        print(self.parameter)
         for device in self.parameter_dic:
             for param in self.parameter_dic[device]:
                 self.parameter[param] = self.parameter_dic[device][param]['val']
