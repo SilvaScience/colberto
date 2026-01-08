@@ -260,6 +260,51 @@ class DataHandling(QtCore.QThread):
         # not used currently, to be implemented to continue aborted measurements/ after software crash
         pass
 
+        def calibration_to_dict(calib_dict):
+        """
+            Convert calibration dict to HDF5-safe dict.
+            - Polynomials are converted to {'_type': 'Polynomial', 'coef': [...]}
+            - Other dicts, arrays, lists, and scalars are preserved.
+        """
+        safe_dict = {}
+        for k, v in calib_dict.items():
+            if isinstance(v, np.ndarray):
+                safe_dict[k] = v
+            elif isinstance(v, (int, float, str, bool)):
+                safe_dict[k] = v
+            elif isinstance(v, dict):
+                safe_dict[k] = DataHandling.calibration_to_dict(v)  # recurse
+            elif isinstance(v, P):  # Polynomial
+                safe_dict[k] = {
+                    "_type": "Polynomial",
+                    "coef": v.coef,  # numpy array, no .tolist()
+                    "domain": v.domain,  # numpy array, no .tolist()
+                    "window": v.window  # numpy array, no .tolist()
+                }
+            else:
+                safe_dict[k] = str(v)
+        return safe_dict
+
+    def dict_to_calibration(saved_dict):
+        """
+            Convert HDF5-loaded calibration dict back to proper types.
+            - Polynomials are reconstructed with coef, domain, window
+            - Arrays, scalars, and nested dicts are preserved
+        """
+        restored = {}
+        for k, v in saved_dict.items():
+            if isinstance(v, dict) and v.get("_type") == "Polynomial":
+                restored[k] = P(
+                    coef=v["coef"],
+                    domain=v["domain"],
+                    window=v["window"]
+                )
+            elif isinstance(v, dict):
+                restored[k] = DataHandling.dict_to_calibration(v)
+            else:
+                restored[k] = v
+        return restored
+        
     def update_spec_length(self, new_length):
         """
         Update the spectrometer buffer length and reset data buffers.
