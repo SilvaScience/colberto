@@ -260,7 +260,7 @@ class DataHandling(QtCore.QThread):
         # not used currently, to be implemented to continue aborted measurements/ after software crash
         pass
 
-        def calibration_to_dict(calib_dict):
+    def calibration_to_dict(calib_dict):
         """
             Convert calibration dict to HDF5-safe dict.
             - Polynomials are converted to {'_type': 'Polynomial', 'coef': [...]}
