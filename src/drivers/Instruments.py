@@ -67,7 +67,7 @@ def load_instruments():
         'calibrationOffset': -51.163
     }
 
-    spectrometers = {}
+spectrometers = {}
 
     try:
         camera= StresingCamera(stresing_params)
