@@ -43,6 +43,11 @@ class StresingCamera(QtCore.QThread):
         # This is the hardware parameters dictionnary. It is provided by hardware-specific configurations and are not changed in operation
         self.hardware_params=hardware_params
         self.monochromator=None#By default, no spectrometer is attached
+        
+        # Define spectral range
+        self.spec_length = self.hardware_params.get('num_pixels', 1024)
+        self.spec_range = np.r_[0:self.spec_length]
+        
         # Path to the DLL file
         folder_path_dll = Path(__file__).resolve().parent #add or remove parent based on the file location
         path_dll = folder_path_dll / "stresing" / "ESLSCDLL.dll"
