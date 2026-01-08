@@ -72,7 +72,7 @@ class measurement_settings(ctypes.Structure):
 	("cont_pause_in_microseconds", ctypes.c_uint32),
 	("camera_settings", camera_settings * 5)]
 
-def init_driver(self, path_dll, path_config):
+def init_driver(self, path_dll, config):
 
     # Always use board 0. There is only one PCIe board.
     self.drvno = 0
@@ -89,11 +89,6 @@ def init_driver(self, path_dll, path_config):
     ptr_settings = ctypes.pointer(self.settings)
     # Init all settings to its default value
     self.dll.DLLInitSettingsStruct(ptr_settings)
-
-    # Create a ConfigParser object
-    config = configparser.ConfigParser()
-    # Read the INI file
-    config.read(path_config)
 
     # Set all settings that are needed for the measurement. 
     self.settings.board_sel = int(config.get("General","boardSel")) # Controls which boards are used for the measurement.
