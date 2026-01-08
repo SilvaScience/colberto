@@ -54,6 +54,7 @@ class StresingCamera(QtCore.QThread):
         path_dll = str(path_dll)
 
         path_config = Path(r"C:\Program Files\Stresing\Escam\config_UdeM.ini")
+        path_config = Path(r"C:\Program Files\Stresing\Escam\config.ini") # WFU path
 
         # Create a ConfigParser object
         config = CaseInsensitiveConfig()
@@ -80,7 +81,7 @@ class StresingCamera(QtCore.QThread):
         self.channel7 = int(config.get("Board0","dacCameraChannel7"))
         self.bti = int(config.get("Board0","bti"))
         self.sti = int(config.get("Board0","sti"))
-        self.btimer = int(config.get("Board0","btimer"))
+        self.btimer = int(float(config.get("Board0","btimer")))
         self.stimer = int(config.get("Board0","stimer"))
         self.new_spectrum = False
 
