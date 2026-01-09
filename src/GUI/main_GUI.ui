@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1112</width>
+    <width>1286</width>
     <height>1002</height>
    </rect>
   </property>
@@ -339,7 +339,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>4</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -353,12 +353,64 @@ p, li { white-space: pre-wrap; }
          <widget class="GraphicsLayoutWidget" name="slm_display" native="true">
           <property name="geometry">
            <rect>
-            <x>10</x>
-            <y>10</y>
+            <x>20</x>
+            <y>140</y>
             <width>640</width>
             <height>400</height>
            </rect>
           </property>
+         </widget>
+         <widget class="QGroupBox" name="groupBox_9">
+          <property name="geometry">
+           <rect>
+            <x>20</x>
+            <y>10</y>
+            <width>641</width>
+            <height>111</height>
+           </rect>
+          </property>
+          <property name="title">
+           <string>Calibration Files</string>
+          </property>
+          <widget class="QLineEdit" name="SLM_Calibration_Data_file_lineEdit">
+           <property name="geometry">
+            <rect>
+             <x>200</x>
+             <y>30</y>
+             <width>431</width>
+             <height>25</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Data_File</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="select_SLM_Calibration_Data_file_pushButton">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>30</y>
+             <width>161</width>
+             <height>23</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Select Calibration LUT File</string>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="Test_Phase2Gray_pushButton">
+           <property name="geometry">
+            <rect>
+             <x>440</x>
+             <y>70</y>
+             <width>191</width>
+             <height>23</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Test Phase2Gray Normalization</string>
+           </property>
+          </widget>
          </widget>
         </widget>
         <widget class="QWidget" name="spatial_tab">
@@ -2255,7 +2307,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
             <x>10</x>
             <y>300</y>
             <width>851</width>
-            <height>281</height>
+            <height>201</height>
            </rect>
           </property>
           <property name="font">
@@ -2297,7 +2349,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
              <x>280</x>
              <y>10</y>
              <width>551</width>
-             <height>251</height>
+             <height>171</height>
             </rect>
            </property>
           </widget>
@@ -2409,45 +2461,6 @@ Start:Stepnumber:Stop  Start:Stepnum...
             <number>2</number>
            </property>
           </widget>
-          <widget class="QLineEdit" name="LUT_Data_file_lineEdit">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>190</y>
-             <width>101</width>
-             <height>25</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Data_File</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="generate_LUT_calib">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>230</y>
-             <width>231</width>
-             <height>27</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Generate LUT File - Phase2Grey Calibration</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="select_LUT_Data_file_pushButton">
-           <property name="geometry">
-            <rect>
-             <x>130</x>
-             <y>190</y>
-             <width>111</width>
-             <height>23</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Select Data File</string>
-           </property>
-          </widget>
          </widget>
          <widget class="QLabel" name="label_vertical_calibration_box_2">
           <property name="geometry">
@@ -2479,7 +2492,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1112</width>
+     <width>1286</width>
      <height>21</height>
     </rect>
    </property>
