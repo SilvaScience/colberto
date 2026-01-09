@@ -255,7 +255,9 @@ class SLMWorker(QtCore.QThread):
         try:
             # 1) Connect to the SDK
             self.slm = self.create_slm_sdk()
-            self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
+            #self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
+            #self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\slm6977_at785.lut")
+            self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\slm6977_at532.lut")
             logger.info('%s SLM Worker initialization success.'%datetime.datetime.now())
         except Exception as e:
             # En cas d'erreur, émettre un signal

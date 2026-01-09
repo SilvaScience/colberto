@@ -92,6 +92,9 @@ class SpectrometerDemo(QtCore.QThread):
             self.spectrum = spec
             self.new_spectrum = True
 
+    def get_num_pixel(self):
+        return self.spec_length
+    
     def get_wavelength(self):
         """This simply returns the wavelength. In Colbert this needs to be adapted if the calibration
          changes. This function will be accessible from MeasurementClasses. """
