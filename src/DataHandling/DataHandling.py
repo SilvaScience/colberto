@@ -320,12 +320,12 @@ class DataHandling(QtCore.QThread):
         # preallocate data arrays depending on data dimension (1D or 2D).
         if self.data_dim == 1:
             self.spec = np.empty([self.speclength, 0])
-            #print('1D', self.spec)
+
             self.background = np.empty([self.speclength, 1])
             self.wls = np.empty([self.speclength, 1])
         else:
             self.spec = np.empty([0, self.speclength[0], self.speclength[1]])
-            #print('2D', self.spec)
+
             self.background = np.empty([0, self.speclength[0], self.speclength[1]])
             self.wls = np.empty([self.speclength[1], 1])
 
