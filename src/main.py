@@ -416,7 +416,7 @@ class MainInterface(QtWidgets.QMainWindow):
         except:
             logger.warning('%s Lecture of kinetic interval failed'%datetime.datetime.now())
 
-        def load_SLM_Calibration_Data_file(self):
+    def load_SLM_Calibration_Data_file(self):
         # open background file and set as background
         SLM_Calib_Coeff_DataFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select SLM Calibration File (.txt)')
         print('complete')
