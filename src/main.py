@@ -161,11 +161,10 @@ class MainInterface(QtWidgets.QMainWindow):
         
         # Spectrometer Selection
         self.spectrometer_select = self.findChild(QtWidgets.QComboBox, 'spec_selection_comboBox')
-        # print('Spec Select', self.spectrometer_select)
 
         if self.spectrometer_select is not None:
             logger.info(f"Available spectrometers: {list(self.spectrometers.keys())}")
-            # print("Available spectrometers:", self.spectrometers)
+
             self.spectrometer_select.addItems(self.spectrometers.keys())
 
             # Determine default spectrometer
@@ -184,7 +183,6 @@ class MainInterface(QtWidgets.QMainWindow):
 
         self.active_spectrometer = self.devices['spectrometer']
         logger.info(f"Available Devices: {list(self.devices.keys())}")
-        # print('Available devices:', self.devices)
 
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
