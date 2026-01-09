@@ -119,11 +119,7 @@ class DataHandling(QtCore.QThread):
         self.wls = wls
         if self.data_dim == 1:
             if self.correct_background:
-                # print('spec shape before bg subtraction', np.shape(spec))
                 spec = spec - self.background.ravel()
-                # print('bg shape', np.shape(self.background))
-                # print('spec shape', np.shape(spec))
-
             self.spec = np.c_[self.spec, spec]
 
         else:
