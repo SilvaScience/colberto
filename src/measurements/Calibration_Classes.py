@@ -35,7 +35,7 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
     sendProgress = QtCore.pyqtSignal(float)
     sendParameter = QtCore.pyqtSignal(str, float)
 
-    def __init__(self, devices, parameter, int_time, spectra_number, scan_number):
+    def __init__(self, devices, parameter, spectra_number, scan_number):
         '''
          Initializes the LUT file measurement
          input:
@@ -47,7 +47,7 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
 
         self.spectrometer = devices['spectrometer']
         self.SLM= devices['SLM']
-        self.int_time = int_time
+        # self.int_time = int_time
         self.spectra_number = spectra_number
         self.scan_number = scan_number
         self.GreyScale_Vals = np.arange(0,256,1) #255
@@ -70,7 +70,7 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
                 #print(self.GreyScale_Vals[n])
                 if not self.terminate:  # check whether stopping measurement is called
                     self.sendParameter.emit('greyscale_val', self.GreyScale_Vals[n])
-                    self.sendParameter.emit('int_time', self.int_time)
+                    # self.sendParameter.emit('int_time', self.int_time)
 
                     image = self.generate_calibibration_image(n)  # Generate Image for SLM
 
