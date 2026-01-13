@@ -136,6 +136,8 @@ class OceanSpectrometer(QtCore.QThread):
                 self.binned_spec[i] = np.sum(spectrum[i - self.binning + 1:i + self.binning])
         return self.binned_spec/(2*(self.binning-1) + 1)/self.avg_scan
 
+    def get_num_pixel(self):
+        return 2048
 
 class OceanSpectrometerWorker(QtCore.QThread):
     # worker to continously receive spectra from spectrometer. Pauses acquisition when settings are changed.
@@ -185,3 +187,4 @@ class OceanSpectrometerWorker(QtCore.QThread):
     def set_int_time(self, int_time):
         self.change_int_time = True
         self.int_time = int_time
+
