@@ -146,7 +146,7 @@ class MainInterface(QtWidgets.QMainWindow):
         
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
-        self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
+        # self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
         self.LUT_calib_spectra_avg_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_spectra_avg_spinBox')
         self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
         self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout')
@@ -154,6 +154,7 @@ class MainInterface(QtWidgets.QMainWindow):
         # self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
         # self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
         # self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+        
         # SLM Tab Related
         self.slm_display = self.findChild(pg.GraphicsLayoutWidget, 'slm_display')
         self.select_SLM_Calibration_Data_file_button = self.findChild(QtWidgets.QPushButton,
@@ -842,7 +843,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
             self.measurement_busy = True
             self.DataHandling.clear_data()
-            self.measurement = Measure_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_int_time_box.value(),
+            self.measurement = Measure_LUT_PhasetoGreyscale(self.devices, self.parameter,
                                                             self.LUT_calib_spectra_avg_box.value(),
                                                             self.LUT_calib_scans_number_box.value())
             self.measurement.sendProgress.connect(self.set_progress)
