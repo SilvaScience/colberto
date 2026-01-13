@@ -164,3 +164,11 @@ class MDCSmeasurementFourierPlot(QtWidgets.QMainWindow):
             self.xdata = None
             self.ydata = None
             self.data = None
+
+        vb = self.plot.getViewBox()
+
+        # get current y-axis limits
+        (_, _), (ymin, ymax) = vb.viewRange()
+
+        # set x-axis limits to match y-axis limits
+        vb.setXRange(abs(ymin), abs(ymax), padding=0)

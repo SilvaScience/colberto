@@ -859,6 +859,7 @@ class MainInterface(QtWidgets.QMainWindow):
                     demo=self.MDCS_demo_mode_checkbox.isChecked())
                 self.measurement.sendProgress.connect(self.set_progress)
                 self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+                self.measurement.sendPhaseCycling.connect(self.LOspectrumPlot.set_data)
                 self.measurement.sendBeam.connect(self.DataHandling.set_multiple_beams)
                 self.measurement.sendMDCSPlot.connect(self.MDCSplot.set_data)
                 self.measurement.sendMDCSRaw.connect(self.DataHandling.add_calibration)

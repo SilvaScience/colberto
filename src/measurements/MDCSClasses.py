@@ -85,6 +85,7 @@ class BoxcarGeometry(QtCore.QThread):
     '''
     sendProgress = QtCore.pyqtSignal(float)
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendPhaseCycling = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendBeam = QtCore.pyqtSignal(object)
     sendMDCSPlot = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     sendMDCSRaw = QtCore.pyqtSignal(tuple)
@@ -157,13 +158,13 @@ class BoxcarGeometry(QtCore.QThread):
                             't_secondary' : self.t_secondary,
                             'wavelengths' : self.wls,
                             'LO_spectrum' : self.LO_spectrum,
-                            'intensities' : self.intensities
+                            'intensities' : np.array(self.intensities)
                         }
                         self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j+1], np.array(self.intensities[i]).T)
                         self.sendMDCSRaw.emit(('MDCS_raw_data', self.measurement_data))
                         self.sendProgress.emit(((i * len(self.t_scanned)) + (j + 1)) / (len(self.t_secondary) * len(self.t_scanned)) * 100)
                 self.sendSave.emit()
-                self.twoDmaps(self.wls, self.LO_spectrum, self.intensities[i], self.t_scanned, self.t_LO)
+                self.twoDmaps(self.wls, self.LO_spectrum, np.array(self.intensities[i]), self.t_scanned, self.t_LO, pad=10000)
         self.sendProgress.emit(100)
         self.stop()
         print(self.measurement_type+' measurement '+time.strftime('%H:%M:%S')+' finished')
@@ -236,13 +237,12 @@ class BoxcarGeometry(QtCore.QThread):
             self.SLM.write_image(image_output)
             if not self.isDemo:
                 self.flag = 0
+                print(i)
                 self.take_spectrum()
             else:
                 self.fake_spectrum()
-            #print('operation=', i, self.spec)
             self.intensity += operations[i]*self.spec
-            #print('operation=', i, self.intensity)
-
+        self.sendPhaseCycling.emit(self.wls, self.intensity)
     
     def take_spectrum(self, max_iter=10):
         '''
@@ -252,17 +252,17 @@ class BoxcarGeometry(QtCore.QThread):
         count = 0
         while self.flag == 0 and count < max_iter:
             self.spec = np.array(self.spectrometer.get_intensities())
-            print(self.spec)
-            #self.check_spectrum()   # updates self.flag
+            time.sleep(0.1)
+            self.sendPhaseCycling.emit(self.wls, self.spec)
+            self.check_spectrum()   # updates self.flag
             count += 1
-            self.flag = 1
         if count == max_iter:
             logger.info('%s Measurement background changes over the tolerance threshold'%datetime.datetime.now())
             return
         if not self.isDemo:
             self.sendSpectrum.emit(self.wls, self.spec)
 
-    def check_spectrum(self, saturation=16000, tolerance=0.01):
+    def check_spectrum(self, saturation=16000, tolerance=0.005):
         '''
             Check if the spectrum is chnaging too much between different acquisitions.
                 - saturation: saturation count for the camera (16000 for stresing)
@@ -302,12 +302,16 @@ class BoxcarGeometry(QtCore.QThread):
         spec = scaling * (noise + gaussian - 50)
         self.spec = spec.astype(float)
 
-    def twoDmaps(self, wls, LO_spectrum, data_2D, t_scanned, t_LO, pad):
+    def twoDmaps(self, wls, LO_spectrum, data_2D, t_scanned, t_LO, pad=10000):
         carrier = self.beam['LO'].get_compressionCarrier(unit='wavelength')
+        print(carrier)
+        data_2D = data_2D[:,0:-60]
+        LO_spectrum = LO_spectrum[0:-60]
+        wls = wls[0:-60]
         [c_spectra, freq] = self.heterodyne_filter(wls, LO_spectrum, data_2D, carrier, t_LO)
         [freq_FT, FT_spectra] = self.Fourier_transform(t_scanned, c_spectra, pad)
-        self.sendFourierReal.emit(co.angFreqToeV(freq), co.angFreqToeV(freq_FT-co.waveToAngFreq(carrier*1e-9)), np.real(FT_spectra))
-        self.sendFourierImag.emit(co.angFreqToeV(freq), co.angFreqToeV(freq_FT-co.waveToAngFreq(carrier*1e-9)), np.imag(FT_spectra))
+        self.sendFourierReal.emit(co.angFreqToeV(freq), co.angFreqToeV(freq_FT), np.abs(FT_spectra))
+        self.sendFourierImag.emit(co.angFreqToeV(freq), co.angFreqToeV(freq_FT), np.real(FT_spectra))
 
     @staticmethod
     def heterodyne_filter(wls, LO_spectrum, data_2D, carrier, t_LO):
