@@ -339,7 +339,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>6</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -2327,19 +2327,6 @@ Start:Stepnumber:Stop  Start:Stepnum...
           <property name="checked">
            <bool>false</bool>
           </property>
-          <widget class="QLabel" name="LUT_calib_label_int_time">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>30</y>
-             <width>131</width>
-             <height>19</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Integration Time (ms)</string>
-           </property>
-          </widget>
           <widget class="PlotWidget" name="LUT_calib_plot_layout" native="true">
            <property name="enabled">
             <bool>true</bool>
@@ -2357,7 +2344,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>150</y>
+             <y>140</y>
              <width>231</width>
              <height>27</height>
             </rect>
@@ -2366,33 +2353,11 @@ Start:Stepnumber:Stop  Start:Stepnum...
             <string>Measure Spectrum - Phase2Grey Calibration</string>
            </property>
           </widget>
-          <widget class="QDoubleSpinBox" name="LUT_int_time_doubleSpinBox">
-           <property name="geometry">
-            <rect>
-             <x>140</x>
-             <y>30</y>
-             <width>91</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 255, 255);</string>
-           </property>
-           <property name="suffix">
-            <string> ms</string>
-           </property>
-           <property name="maximum">
-            <double>10000.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>10.000000000000000</double>
-           </property>
-          </widget>
           <widget class="QLabel" name="LUT_calib_label_num_spectra">
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>70</y>
+             <y>40</y>
              <width>111</width>
              <height>21</height>
             </rect>
@@ -2405,7 +2370,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
            <property name="geometry">
             <rect>
              <x>140</x>
-             <y>70</y>
+             <y>40</y>
              <width>101</width>
              <height>22</height>
             </rect>
@@ -2427,7 +2392,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
            <property name="geometry">
             <rect>
              <x>10</x>
-             <y>110</y>
+             <y>90</y>
              <width>111</width>
              <height>21</height>
             </rect>
@@ -2440,7 +2405,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
            <property name="geometry">
             <rect>
              <x>140</x>
-             <y>110</y>
+             <y>90</y>
              <width>101</width>
              <height>22</height>
             </rect>
