@@ -123,7 +123,7 @@ def init_driver(self, path_dll, config):
     #   7 - S1&S2 chopper
     self.settings.camera_settings[self.drvno].bti_mode = int(config.get("Board0","bti"))
     if self.settings.camera_settings[self.drvno].bti_mode == 4:
-        self.settings.camera_settings[self.drvno].btime_in_microsec = int(config.get("Board0","btimer"))
+        self.settings.camera_settings[self.drvno].btime_in_microsec = int(float(config.get("Board0","btimer")))
 
     # Sensor type should match the sensor type of your camera :
     #   4 - HSVIS - High speed sensor for visible light. (sensor S14290)

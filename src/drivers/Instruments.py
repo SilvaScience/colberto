@@ -66,7 +66,17 @@ def load_instruments():
         'calibrationSlope': 0.9891,
         'calibrationOffset': -51.163
     }
-    try: 
+
+    # from drivers.OceanSpectrometer_SR6 import OceanSpectrometer
+    # spectrometer = OceanSpectrometer()
+    # spectrometer.start()
+    # spec_length = spectrometer.speclength
+    # devices['spectrometer'] = spectrometer
+    # logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
+    #
+    # return devices
+
+    try:
         camera= StresingCamera(stresing_params)
         camera.attach_to_monochromator(Monochrom)
         devices['spectrometer'] = camera
@@ -74,6 +84,7 @@ def load_instruments():
     except:
         try:
             from drivers.OceanSpectrometer import OceanSpectrometer
+            #from drivers.OceanSpectrometer_SR6 import OceanSpectrometer
             spectrometer = OceanSpectrometer()
             spectrometer.start()
             spec_length = spectrometer.spec_length

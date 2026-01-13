@@ -152,3 +152,4 @@ class BackgroundMeasurement(QtCore.QThread):
     def stop(self):
         self.terminate = True
         print(time.strftime('%H:%M:%S') + ' Request Stop')
+
