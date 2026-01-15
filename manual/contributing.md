@@ -65,3 +65,7 @@ To calibrate the SLM for various wavelengths, one needs to create a Phase to Gra
 This is done in two steps:
 1. Measure_LUT_PhasetoGreyscale: Displays a pattern on the SLM where half of the SLM is set to a grayscale value of zero, and the other half of the SLM scans through the grayscale values (0-255). The spectrum of the beam is taken after each pattern. 
 2. Generate_LUT_PhasetoGreyscale: Analyzes the measured spectrum to determine the phase shift from the reference (where both sides of the SLM are at a greyscale value of zero). This is done by taking a Fourier transform of the spectrum and calculating the phase difference using the real and imaginary components. 
+
+### Spectrometer Selection 
+
+This feature allows multiple spectrometers to be stored within a dictionary class, 'spectrometers', so that the user can switch between the active spectrometer. There is a drop down menu on the quick control section of the GUI. When a different spectrometer is selected from the dropdown menu, it updates the device dictionary with the active spectrometer and changes the associated spectral length (aka pixel number) is updated. One thing to note is that you should not switch spectrometers when the devices are busy. 

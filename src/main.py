@@ -54,7 +54,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.setWindowTitle('COLBERTo')
 
         
-        self.devices = load_instruments()
+        self.devices, self.spectrometers = load_instruments()
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -159,13 +159,44 @@ class MainInterface(QtWidgets.QMainWindow):
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
         
+        # Spectrometer Selection
+        self.spectrometer_select = self.findChild(QtWidgets.QComboBox, 'spec_selection_comboBox')
+
+        if self.spectrometer_select is not None:
+            logger.info(f"Available spectrometers: {list(self.spectrometers.keys())}")
+
+            self.spectrometer_select.addItems(self.spectrometers.keys())
+
+            # Determine default spectrometer
+            default_name = self.devices.get('spectrometer_name', 'Ocean')  # fallback to 'Ocean' or 'Demo'
+            if default_name not in self.spectrometers:
+                default_name = next(iter(self.spectrometers))  # pick first available
+
+            # Set default spectrometer in both dropdown and device dict
+            self.spectrometer_select.setCurrentText(default_name)
+            self.active_spectrometer = self.spectrometers[default_name]
+            self.devices['spectrometer'] = self.active_spectrometer
+            self.spec_length = getattr(self.active_spectrometer, 'spec_length', 2048)
+
+            # Connect handler for when selection changes
+            self.spectrometer_select.currentTextChanged.connect(self.on_spectrometer_changed)
+
+        self.active_spectrometer = self.devices['spectrometer']
+        logger.info(f"Available Devices: {list(self.devices.keys())}")
+
         # initial parameter values, retrieved from devices
         self.parameter_dic = defaultdict(lambda: defaultdict(dict))
         for device in self.devices.keys():
             self.parameter_dic[device] = self.devices[device].parameter_display_dict
 
+        # build flat parameter dict (Not building the UI only creating the DATA structure)
+        self.parameter = {}
+        for device in self.parameter_dic:
+            for param in self.parameter_dic[device]:
+                self.parameter[param] = self.parameter_dic[device][param]['val']
+
         # create parameter array for easy access
-        self.create_parameter_array()
+        # self.create_parameter_array()
 
         # add items to GUI
         self.SpectrometerPlot = SpectrometerPlot()
@@ -224,7 +255,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
 
         # start DataHandling
-        self.spec_length = self.devices['spectrometer'].get_num_pixel()
+        # self.spec_length = self.devices['spectrometer'].get_num_pixel()
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
@@ -316,13 +347,90 @@ class MainInterface(QtWidgets.QMainWindow):
         self.show()
 
     ##### General functions #####
+    def on_spectrometer_changed(self, new_name):
+        if new_name not in self.spectrometers:
+            logger.warning(f"Unknown spectrometer selected: {new_name}")
+            return
 
+        # Switch spectrometer object
+        self.active_spectrometer_name = new_name
+        self.active_spectrometer = self.spectrometers[new_name]
+        self.devices['spectrometer'] = self.active_spectrometer
+
+        # Update spectral length
+        self.spec_length = getattr(self.active_spectrometer, 'spec_length', 2048)
+        self.DataHandling.update_spec_length(self.spec_length)
+
+        # Rebuild parameter dictionary safely
+        self.parameter_dic = defaultdict(lambda: defaultdict(dict))
+        for name, dev in self.devices.items():
+            if hasattr(dev, 'parameter_display_dict'):
+                self.parameter_dic[name] = dev.parameter_display_dict
+
+        # ---- CLEAR OLD WIDGET REFERENCES (CRITICAL) ----
+        self.parameter_widgets.clear()
+        self.readonly_parameter.clear()
+        self.writeonly_parameter.clear()
+
+        # Rebuild parameter tree UI (existing code)
+        self.create_parameter_array()
+
+        logger.info(
+            f"Switched to spectrometer: {new_name} "
+            f"(spec_length={self.spec_length})"
+        )    
+        
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
+
+        # ---- CLEAR EVERYTHING ONCE ----
+        self.parameter_tree.clear()
         self.parameter = {}
-        for devices in self.devices.keys():
-            for param in self.devices[devices].parameter_dict.keys():
-                self.parameter[param] = self.devices[devices].parameter_dict[param]
+        self.parameter_widgets = {}
+        self.readonly_parameter = []
+        self.writeonly_parameter = []
+
+        # ---- FLATTEN PARAMETERS (if still needed elsewhere) ----
+        for device in self.parameter_dic.keys():
+            for param in self.parameter_dic[device].keys():
+                self.parameter[param] = self.parameter_dic[device][param]['val']
+
+        for device in self.parameter_dic.keys():
+            item = QtWidgets.QTreeWidgetItem([device.capitalize()])
+            self.parameter_tree.addTopLevelItem(item)
+
+            for param in self.parameter_dic[device].keys():
+                child = QtWidgets.QTreeWidgetItem()
+                item.addChild(child)
+
+                name_widget = QtWidgets.QLabel(param)
+                spin = QtWidgets.QDoubleSpinBox()
+                self.parameter_widgets[param] = spin
+
+                spin.setReadOnly(self.parameter_dic[device][param]['read'])
+
+                try:
+                    spin.setSuffix(self.parameter_dic[device][param]['unit'])
+                    spin.setMaximum(self.parameter_dic[device][param]['max'])
+                except Exception:
+                    pass
+
+                try:
+                    spin.setMinimum(self.parameter_dic[device][param]['min'])
+                except Exception:
+                    pass
+
+                if self.parameter_dic[device][param]['read']:
+                    self.readonly_parameter.append(param)
+                else:
+                    spin.setValue(self.parameter_dic[device][param]['val'])
+                    spin.editingFinished.connect(
+                        partial(self.set_parameter, param)
+                    )
+                    self.writeonly_parameter.append(param)
+
+                self.parameter_tree.setItemWidget(child, 0, name_widget)
+                self.parameter_tree.setItemWidget(child, 1, spin)
 
     def update_read_parameter(self, new_parameter):
         # update all read parameters
