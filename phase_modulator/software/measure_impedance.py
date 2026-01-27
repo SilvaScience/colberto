@@ -44,7 +44,7 @@ awg.outputOn()
 #Prepare scope
 data_in_out=[]
 times=[]
-freqs=np.logspace(1,8,5)
+freqs=np.logspace(1,8,75)
 print("Voltage Protection is set to maximum: {}V Amplitude (assumes 0V offset)".format(awg.queryVoltageProtection()))
 for freq in freqs:
     print(freq)
