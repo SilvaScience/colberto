@@ -102,6 +102,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.assign_spectral_calibration_button = self.findChild(QtWidgets.QPushButton, 'assign_spectral_calibration_button')
         self.kinetic_lineEdit = self.findChild(QtWidgets.QLineEdit, 'kinetic_lineEdit')
         self.kinetic_run_button = self.findChild(QtWidgets.QPushButton, 'kinetic_run_pushButton')
+        self.SpecCalib_min_wavelength = self.findChild(QtWidgets.QSpinBox, 'SpecCalib_Wave_minimum_value')
+        self.SpecCalib_max_wavelength = self.findChild(QtWidgets.QSpinBox, 'SpecCalib_Wave_maximum_value')                
+
         
         ## Chirp calibration tab
         self.chirp_calib_demo_mode_checkbox=self.findChild(QtWidgets.QCheckBox, 'Chirp_calib_demo_mode_checkbox')
@@ -757,12 +760,18 @@ class MainInterface(QtWidgets.QMainWindow):
     def spectralBeamCalibrationMeasurement(self):
         '''
              Sets up and starts a spectral Beam Calibration.
-        ''' 
+        '''
         if not self.measurement_busy:
             self.measurement_busy = True
             self.DataHandling.clear_data()
             self.measurement= SpectralBeamCalibrationMeasurement(self.devices,self.grating_period_edit.value(),self.column_increment_spinbox.value(),self.column_width_spinbox.value(),demo=self.spatial_calib_demo_mode_checkbox.isChecked())
             self.spectralfitting=FitSpectralBeamCalibration(boundaries=[self.shortest_fitting_wave_spin_box.value(),self.longest_fitting_wave_spin_box.value()],increment=self.column_increment_spinbox.value())
+
+            self.spectralfitting.spec_wl_bounds = (
+                self.SpecCalib_min_wavelength.value(),
+                self.SpecCalib_max_wavelength.value()
+            )
+
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.send_intensities.connect(self.SpectralCalibDataPlot.set_data)
