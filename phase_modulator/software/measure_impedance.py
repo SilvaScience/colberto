@@ -14,7 +14,7 @@ args = parser.parse_args()
 
 ### Experimental parameters of impedance sweep
 resistance=100
-filename="47kresistor_"+strftime("%H:%M", localtime())+"_impedance_measurement.h5"
+filename="piezo_sandwhich_"+strftime("%H_%M", localtime())+"_impedance_measurement.h5"
 
 
 
@@ -44,7 +44,7 @@ awg.outputOn()
 #Prepare scope
 data_in_out=[]
 times=[]
-freqs=np.logspace(1,8,75)
+freqs=np.logspace(4,7,100)
 print("Voltage Protection is set to maximum: {}V Amplitude (assumes 0V offset)".format(awg.queryVoltageProtection()))
 for freq in freqs:
     print(freq)

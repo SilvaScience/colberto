@@ -34,7 +34,7 @@ def sinusoid(x,a,b,c,d):
     '''
     return a*np.sin(2*np.pi*b*x+c)+d
 if __name__=="__main__":
-    times,voltages_in,voltages_out,freqs,resistance=load_freqsweep('/home/thouin/Documents/Repo/colberto/47kresistor_17:03_impedance_measurement.h5')
+    times,voltages_in,voltages_out,freqs,resistance=load_freqsweep('/home/thouin/Documents/Repo/colberto/piezo_18:37_impedance_measurement.h5')
     impedances=[]
     for index,freq in enumerate(freqs):
         print(freqs[index])
@@ -60,6 +60,16 @@ if __name__=="__main__":
     plt.semilogx(freqs,np.imag(impedances),label='imag')
     plt.xlabel('Frequency [Hz]')
     plt.ylabel('Impedance [Ohms]')
+    plt.legend()
+    fig,axs=plt.subplots(2,1,sharex='col')
+    axs[0].plot(freqs,np.abs(impedances))
+    axs[0].set_ylabel('R (V)')
+    axs[1].plot(freqs,np.angle(impedances,deg=True))
+    axs[1].set_ylabel('$\phi$')
+    axs[1].set_xlabel('Frequency (Hz)')
+    axs[0].set_xscale('log')
+    [ax.grid(which='Major', linestyle='-') for ax in axs]
+    [ax.grid(which='Minor', linestyle=':') for ax in axs]
     plt.legend()
     plt.show()
 
