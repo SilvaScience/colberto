@@ -26,7 +26,7 @@ The spectral calibration of the SLM is performed by sweeping a vertical grating 
 
 This measurement is performed by pressing the `measure_spectral_calibration` button after specifying the width of the stripe in `column_width_spin_box` and the increment by which to step its location in `column_increment_spin_box`. The measurements are updated in the `spectral_calib_plot_layout` where a `SpectralCalibDataPlot` is instantiated. The measurements are also stored in DataHandling under `calibration['spectral_calibration_raw_data']`.
 
-As the data is acquired the maximum for every strip position is plotted in `spectral_calib_fit_plot_layout` where a `SpectralCalibFitPlot` is instantiated.Processed data is stored in DataHandling under `calibration['spectral_calibration_processed_data']`.
+As the data is acquired, the maximum for every strip position is plotted in `spectral_calib_fit_plot_layout` where a `SpectralCalibFitPlot` is instantiated. The user can define a wavelength range, for which the maximum value is extracted. This is helpful in case of saturated pixels or scattered light. To define the wavelength range, adjust the values in the 'SpecCalib_Wave_minimum_value' and 'SpecCalib_Wave_maximum_value' spinboxes. Processed data is stored in DataHandling under `calibration['spectral_calibration_processed_data']`.
 
 The range of wavelengths to be considered by the spectral calibration can be adjusted in the `shortest_fitting_wave_spin_box` and `longest_fitting_wave_spin_box` and instantly updates the analysis. This will also restrain the beam on the SLM, always turning off the columns outside this range.
 
