@@ -120,7 +120,15 @@ class BoxcarGeometry(QtCore.QThread):
         self.t_scanned = t_scanned
         self.t_secondary = t_secondary
         self.LO_spectrum = LO_spectrum
-        self.intensities = [[] for _ in range(len(self.t_secondary))]
+        #self.intensities = [[] for _ in range(len(self.t_secondary))]
+
+        # replaces: self.intensities = [[] for _ in range(len(self.t_secondary))]
+        self.intensities = np.full(
+            (len(self.t_secondary), len(self.t_scanned), len(self.wls)),
+            np.nan,
+            dtype=float
+        )
+        
         self.measurement_data={
             'type' : self.measurement_type,
             't_LO' : self.t_LO,
@@ -140,7 +148,7 @@ class BoxcarGeometry(QtCore.QThread):
         logger.info(filename[:filename.rfind('/') + 1] + 'MDCS')
         self.comments = comments
 
-    def run(self):
+ def run(self):
         '''
             Runs the MDCS measurement and send the data in DataHandling after each iterations.
         '''
@@ -150,7 +158,10 @@ class BoxcarGeometry(QtCore.QThread):
                 for j in range(len(self.t_scanned)):
                     if not self.terminate:
                         self.phase_cycling(j)
-                        self.intensities[i].append(self.intensity)
+
+                        self.intensities[i, j, :] = self.intensity #self.intensities[i].append(self.intensity)
+                        #print(self.intensities)
+
                         self.measurement_data = {
                             'type' : self.measurement_type,
                             't_LO' : self.t_LO,
@@ -158,9 +169,11 @@ class BoxcarGeometry(QtCore.QThread):
                             't_secondary' : self.t_secondary,
                             'wavelengths' : self.wls,
                             'LO_spectrum' : self.LO_spectrum,
-                            'intensities' : np.array(self.intensities)
+                            'intensities' : self.intensities #np.array(self.intensities)
                         }
-                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j+1], np.array(self.intensities[i]).T)
+                        #self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j+1], np.array(self.intensities[i]).T)
+                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], self.intensities[i, :j + 1, :].T)
+
                         self.sendMDCSRaw.emit(('MDCS_raw_data', self.measurement_data))
                         self.sendProgress.emit(((i * len(self.t_scanned)) + (j + 1)) / (len(self.t_secondary) * len(self.t_scanned)) * 100)
                 self.sendSave.emit()
