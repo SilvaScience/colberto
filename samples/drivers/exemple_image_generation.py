@@ -5,7 +5,6 @@ sys.path.append(str(path_root))
 from src.compute.beams import Beam
 from src.compute.calibration import Calibration
 from src.compute.SLMBogus import SLM2 
-from src.drivers.Slm_Meadowlark_optics import SLM
 from matplotlib import pyplot as plt
 from scipy.constants import pi
 from numpy.polynomial import Polynomial as P

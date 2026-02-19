@@ -24,7 +24,6 @@ import os
 
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
-from src.drivers.Slm_Meadowlark_optics import SLM
 import logging
 import datetime
 
@@ -87,7 +86,6 @@ class Slm(QtCore.QThread):
 
         # set parameters
         self.amplitude = 5
-        self.amplitude = 5
         self.temperature = 300
         self.greyscale_val = 0
 
@@ -95,7 +93,6 @@ class Slm(QtCore.QThread):
         self.parameter_dict = {}
         for key in self.parameter_display_dict.keys():
             self.parameter_dict[key] = self.parameter_display_dict[key]['val']
-
 
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
@@ -173,7 +170,8 @@ class SLMWorker(QtCore.QThread):
     errorSignal = QtCore.pyqtSignal(str)
     slmParamsSignal = QtCore.pyqtSignal(int, int, int, int, int)
     slmParamsTemperature = QtCore.pyqtSignal(int)
-    imageSLM=QtCore.pyqtSignal(np.ndarray)
+    imageSLM = QtCore.pyqtSignal(np.ndarray)
+    
 
     def __init__(self):
         super(SLMWorker, self).__init__() # Elevates this thread to be independent.
@@ -206,14 +204,15 @@ class SLMWorker(QtCore.QThread):
         try:
             # 1) Connect to the SDK
             self.slm = self.create_slm_sdk()
-            #self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\19x12_8bit_linearVoltage.lut")
-            #self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\slm6977_at785.lut")
-            self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\slm6977_at532.lut")
+            # IMPORTANT: These lines only need to be run once to store the LUT to nonvolatile memory. If you want to change the LUT file, it's preferable to use the BlinkHDMI software directly. 
+            #self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\slm6977_at532_10bit.lut")
+            #self.store_lut(0) # Used to store the currently applied global LUT file to non-volatile memory
             logger.info('%s SLM Worker initialization success.'%datetime.datetime.now())
         except Exception as e:
             # En cas d'erreur, émettre un signal
             logger.error('%s SLM initialization failed at worker startup. Error type %s'%(datetime.datetime.now(),str(e)))
             self.errorSignal.emit(str(e))
+            raise
         # 2) Get the slm parameter 
         self.get_parameter()
         self.get_temperature()
@@ -231,10 +230,10 @@ class SLMWorker(QtCore.QThread):
                         self.new_image_available=False
                     except Exception as e:
                         logger.error('Error when displaying image at the SLM %s'%e)
+                        raise
                 else:
                     self.get_temperature()
                     self.start_time = time.time()
-
                 
     def change_image(self,image,imagetype='phase'):
         """
@@ -255,6 +254,7 @@ class SLMWorker(QtCore.QThread):
         """
             Instantiate the SLM driver and create the SDK
         """
+        from src.drivers.Slm_Meadowlark_optics_10bit import SLM
         slm = SLM()
         slm.create_sdk()
         return slm
@@ -290,7 +290,11 @@ class SLMWorker(QtCore.QThread):
                 image: (nd.array of uint8) The digital image (0 to 255 uint 8 3 channel RGB)
         '''
         self.imageSLM.emit(self.current_image)
-        self.slm.write_image(self.current_image.reshape(-1),c_uint(1))
+        if self.depth == 10:
+            image_bgra = self.phase_to_bgra(self.current_image)
+            self.slm.write_image_10bit(image_bgra)
+        else:
+            self.slm.write_image(self.current_image.reshape(-1), c_uint(1))
     
     def load_lut(self, lut_path):
         """ Load lut file in the SDK Meadowlark."""
@@ -298,14 +302,18 @@ class SLMWorker(QtCore.QThread):
             self.slm.load_lut(lut_path)
         else:
             logger.error('%s  Lut file not found.'%datetime.datetime.now())
-        
+    
     def normalize_phase_image(self,image, max_phase=2 * np.pi):
         """
-        Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
+            Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
         """
         image = np.clip(image, 0, max_phase)  # safety
-        norm_img = (image / max_phase) * 255
-        return norm_img.astype(np.uint8)
+        if self.depth == 10:
+            norm_img = (image / max_phase) * 1023
+            return norm_img.astype(np.uint16)
+        else:
+            norm_img = (image / max_phase) * 255
+            return norm_img.astype(np.uint8)
 
     def close(self):
         """
@@ -313,6 +321,27 @@ class SLMWorker(QtCore.QThread):
         """
         if self.slm is not None:
             self.slm.delete_sdk()
+
+    @staticmethod 
+    def phase_to_bgra(phase_uint10):
+        """
+            Convert 2D uint8 phase image to BGRA image for cv2 fullscreen display.
+        """
+
+        H, W = phase_uint10.shape
+
+        # Create 4-channel image
+        rgba = np.zeros((H, W, 4), dtype=np.uint8)
+
+        # Fill the array with the right information
+        rgba[:, :, 0] = (phase_uint10 >> 2).astype(np.uint8)            # Red = upper 8 bits
+        # rgba[:, :, 1] # Green channel is ignored
+        rgba[:, :, 2] = ((phase_uint10 & 0b11) << 6).astype(np.uint8)   # Blue = lower 2 bits in MSBs
+        rgba[:, :, 3] = 255                                             # Alpha without transparency to avoid corruption between phase pattern
+
+        # Reshape arrays and reorder columns for BGRA for cv2 image writing, OpenCV expects B,G,R,A
+        bgra = rgba[:, :, [2, 1, 0, 3]]
+        return bgra
 
 
 
