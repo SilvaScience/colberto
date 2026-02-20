@@ -21,7 +21,8 @@ from ctypes import *
 import time
 import sys
 import os
-
+import configparser
+import importlib
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
 import logging
@@ -49,10 +50,10 @@ class Slm(QtCore.QThread):
         """ Set up the parameter dict. 
         Here, all properties of parameters to be handled by the parameter dict are defined."""
         self.parameter_display_dict = defaultdict(dict)
-        self.parameter_display_dict['temperature']['val'] = 300
-        self.parameter_display_dict['temperature']['unit'] = ' K'
-        self.parameter_display_dict['temperature']['max'] = 10000
-        self.parameter_display_dict['temperature']['read'] = True
+        self.parameter_display_dict['Temperature']['val'] = 300
+        self.parameter_display_dict['Temperature']['unit'] = ' K'
+        self.parameter_display_dict['Temperature']['max'] = 10000
+        self.parameter_display_dict['Temperature']['read'] = True
 
         self.parameter_display_dict['Height']['val'] = 0
         self.parameter_display_dict['Height']['unit'] = ' px'
@@ -134,8 +135,8 @@ class Slm(QtCore.QThread):
     '''
 
     def handle_slm_temperature(self, temperature):
-        self.parameter_display_dict['temperature']['val'] = temperature
-        self.parameter_dict['temperature'] = temperature
+        self.parameter_display_dict['Temperature']['val'] = temperature
+        self.parameter_dict['Temperature'] = temperature
     
     def handle_slm_params(self, height, width, depth, rgb, is8bit):
        
@@ -163,8 +164,6 @@ class Slm(QtCore.QThread):
         logger.info('Just received an image of %d by %d'%image.shape)
         self.slm_worker.change_image(image,imagetype=imagetype)
 
-
-
 class SLMWorker(QtCore.QThread):
     """Worker thread that host the SLM instantiation."""
     errorSignal = QtCore.pyqtSignal(str)
@@ -172,22 +171,32 @@ class SLMWorker(QtCore.QThread):
     slmParamsTemperature = QtCore.pyqtSignal(int)
     imageSLM = QtCore.pyqtSignal(np.ndarray)
     
-
     def __init__(self):
         super(SLMWorker, self).__init__() # Elevates this thread to be independent.
 
+        path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
+
+        # Create a ConfigParser object
+        config = CaseInsensitiveConfig()
+        # Read the INI file
+        config.read(path_config)
+    
         #parameter 
         self.terminate= False
-        self.isEightBitImage = True
         self.target_fps = 30
-        self.slm=None 
-        self.rgb = True
-        self.is_eight_bit = 1
-        self.height = 1 
-        self.width = 1
-        self.depth = 1
-        self.current_image= np.zeros((self.width,self.height,3))
-        self.new_image_available= False 
+        self.slm = None
+        self.driver_name = config.get("SLM0","driverName")
+        self.c_wrapper = config.get("SLM0","cWrapper")
+        self.image_Gen = config.get("SLM0","imageGen")
+        self.lut_File = config.get("SLM0","lutFile")
+        self.rgb = int(config.get("SLM0","rgb"))
+        self.is_eight_bit_image = int(config.get("SLM0","isEightBitImage"))
+        self.height = int(config.get("SLM0","height")) 
+        self.width = int(config.get("SLM0","width"))
+        self.depth = int(config.get("SLM0","depth"))
+        self.bytes_per_pixel = int(config.get("SLM0","bytesPerPixel"))
+        self.current_image = np.zeros((self.width,self.height,3))
+        self.new_image_available = False 
         self.frame_duration = 1/self.target_fps
 
     def run(self):
@@ -203,11 +212,13 @@ class SLMWorker(QtCore.QThread):
         '''
         try:
             # 1) Connect to the SDK
+            print('Connecting the SLM...')
             self.slm = self.create_slm_sdk()
+            print('Importing the LUT file...')
             # IMPORTANT: These lines only need to be run once to store the LUT to nonvolatile memory. If you want to change the LUT file, it's preferable to use the BlinkHDMI software directly. 
-            #self.load_lut(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\LUT Files\slm6977_at532_10bit.lut")
-            #self.store_lut(0) # Used to store the currently applied global LUT file to non-volatile memory
+            self.load_lut(self.lut_File)
             logger.info('%s SLM Worker initialization success.'%datetime.datetime.now())
+            print('SLM conneted')
         except Exception as e:
             # En cas d'erreur, émettre un signal
             logger.error('%s SLM initialization failed at worker startup. Error type %s'%(datetime.datetime.now(),str(e)))
@@ -244,7 +255,7 @@ class SLMWorker(QtCore.QThread):
         """
 
         if imagetype=='phase':
-            digital_image=self.normalize_phase_image(image)
+            digital_image=self.slm.normalize_phase_image(image)
         if imagetype=='raw':
             digital_image=image
         self.current_image=digital_image
@@ -254,10 +265,10 @@ class SLMWorker(QtCore.QThread):
         """
             Instantiate the SLM driver and create the SDK
         """
-        from src.drivers.Slm_Meadowlark_optics_10bit import SLM
-        slm = SLM()
-        slm.create_sdk()
-        return slm
+        module = importlib.import_module(f"src.drivers.{self.driver_name}")
+        self.slm = module.SLM()
+        self.slm.create_sdk()
+        return self.slm
     
     def get_parameter(self):
         """
@@ -268,12 +279,12 @@ class SLMWorker(QtCore.QThread):
         self.width = w
         self.depth = d
         self.rgb = rgbCtype.value     # ctypes.c_uint -> int
-        self.is_eight_bit = bitCtype.value
+        self.is_eight_bit_image = bitCtype.value
 
         # Emit a signal to the interface that update the dictonnary.
         #This is done only 1 time at the beginning, because this parameter doesn't change 
         self.slmParamsSignal.emit(self.height, self.width, self.depth,
-                                    self.rgb, self.is_eight_bit)
+                                    self.rgb, self.is_eight_bit_image)
         return h, w, d, rgbCtype, bitCtype
     
     def get_temperature(self):
@@ -281,7 +292,7 @@ class SLMWorker(QtCore.QThread):
             Queries the temperature from the SLM driver and emits the signal
         """
         self.temperature=self.slm.get_slm_temp()
-        self.slmParamsTemperature.emit(self.temperature)
+        self.slmParamsTemperature.emit(int(self.temperature))
     
     def write_image_slm(self):
         '''
@@ -290,11 +301,7 @@ class SLMWorker(QtCore.QThread):
                 image: (nd.array of uint8) The digital image (0 to 255 uint 8 3 channel RGB)
         '''
         self.imageSLM.emit(self.current_image)
-        if self.depth == 10:
-            image_bgra = self.phase_to_bgra(self.current_image)
-            self.slm.write_image_10bit(image_bgra)
-        else:
-            self.slm.write_image(self.current_image.reshape(-1), c_uint(1))
+        self.slm.write_image(self.current_image)
     
     def load_lut(self, lut_path):
         """ Load lut file in the SDK Meadowlark."""
@@ -303,18 +310,6 @@ class SLMWorker(QtCore.QThread):
         else:
             logger.error('%s  Lut file not found.'%datetime.datetime.now())
     
-    def normalize_phase_image(self,image, max_phase=2 * np.pi):
-        """
-            Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
-        """
-        image = np.clip(image, 0, max_phase)  # safety
-        if self.depth == 10:
-            norm_img = (image / max_phase) * 1023
-            return norm_img.astype(np.uint16)
-        else:
-            norm_img = (image / max_phase) * 255
-            return norm_img.astype(np.uint8)
-
     def close(self):
         """
             Shutdown routine for the SLM Worker and SLM
@@ -322,50 +317,40 @@ class SLMWorker(QtCore.QThread):
         if self.slm is not None:
             self.slm.delete_sdk()
 
-    @staticmethod 
-    def phase_to_bgra(phase_uint10):
+class CaseInsensitiveConfig(configparser.ConfigParser):
+    """ This class extends Python’s built-in configparser.ConfigParser to make both section names and option names case-insensitive.
+    Normally, ConfigParser is only case-insensitive for option names, not section names, so this subclass enforces lowercase normalization for both. """
+
+    def __init__(self, *args, **kwargs):
         """
-        Convert 2D uint8 phase image to BGRA image for cv2 fullscreen display.
-        input:
-            phase_uint10: image array that range from 0 to 1023
+            Initialize the parent ConfigParser. By inheriting from it, your class gets all the functionality of ConfigParser — things like: 
+                Reading .ini files
+                Parsing sections and options
+                Providing .get(), .set(), .items(), etc.
+            Then you can override or extend parts of that functionality to make it case-insensitive.
         """
+        super().__init__(*args, **kwargs)
 
-        H, W = phase_uint10.shape
+        # Force all option (key) names to be lowercase when stored internally
+        # This makes option lookups case-insensitive
+        self.optionxform = str.lower
 
-        # Create 4-channel image
-        rgba = np.zeros((H, W, 4), dtype=np.uint8)
+    def read(self, filenames, encoding=None):
+        """
+            Use the parent class's read method to load the config file(s)
+        """
+        super().read(filenames, encoding)
 
-        # Fill the array with the right information
-        rgba[:, :, 0] = (phase_uint10 >> 2).astype(np.uint8)            # Red = upper 8 bits
-        # rgba[:, :, 1] # Green channel is ignored
-        rgba[:, :, 2] = ((phase_uint10 & 0b11) << 6).astype(np.uint8)   # Blue = lower 2 bits in MSBs
-        rgba[:, :, 3] = 255                                             # Alpha without transparency to avoid corruption between phase pattern
+        # Convert all section names and their corresponding option names to lowercase
+        # This ensures that both sections and options are case-insensitive
+        self._sections = {
+            k.lower(): {kk.lower(): vv for kk, vv in v.items()}
+            for k, v in self._sections.items()
+        }
 
-        # Reshape arrays and reorder columns for BGRA for cv2 image writing, OpenCV expects B,G,R,A
-        bgra = rgba[:, :, [2, 1, 0, 3]]
-        return bgra
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-            
-
-
-   
-
-
-
+    def get(self, section, option, **kwargs):
+        """
+            Override the default .get() method so that lookups are case-insensitive
+        """
+        # Both section and option names are converted to lowercase before lookup
+        return super().get(section.lower(), option.lower(), **kwargs)

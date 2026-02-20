@@ -10,6 +10,7 @@ from ctypes import *
 from pathlib import Path
 import logging
 import datetime
+import numpy as np
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
@@ -144,7 +145,7 @@ class SLM:
         """Graciously closes the communication with the SLM"""
         self.blink_dll.Delete_SDK()
 
-    def write_image(self, image_data, is_8_bit):
+    def write_image(self, image_data):
         """
         Writes an image to the SLM.
         input:
@@ -154,7 +155,7 @@ class SLM:
                 the array size will match the SLM dimensions
             - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
         """
-        self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
+        self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), c_uint(1))
 
     def load_lut(self, file_path):
         """
@@ -215,6 +216,15 @@ class SLM:
         width=SLM.get_width(self)
         height=SLM.get_height(self)
         return width,height
+    
+    @staticmethod
+    def normalize_phase_image(image, max_phase=2 * np.pi):
+        """
+            Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
+        """
+        image = np.clip(image, 0, max_phase)  # safety
+        norm_img = (image / max_phase) * 255
+        return norm_img.astype(np.uint8)
 
 
 class ImageGen:

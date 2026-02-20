@@ -10,6 +10,8 @@ from ctypes import *
 from pathlib import Path
 import logging
 import datetime
+import numpy as np
+import configparser
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
@@ -28,17 +30,8 @@ errorCode = ctypes.windll.shcore.SetProcessDpiAwareness(2)
 success = ctypes.windll.user32.SetProcessDPIAware()
 # behaviour on later OSes is undefined, although when I run it on my Windows 10 machine, it seems to work with effects identical to SetProcessDpiAwareness(1)
 
-
 ########### Path to the DLL file ############
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
-
-# Path to the DLL file
-#path_blink_c_wrapper = Path(r'C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_Wrapper.dll')
-path_blink_c_wrapper = Path(r'C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_wrapper.dll') # New dll file
-path_image_gen = Path(r'C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen.dll')
-path_blink_c_wrapper = str(path_blink_c_wrapper)
-path_image_gen = str(path_image_gen)
-
 
 # Definition of the SLM class
 class SLM:
@@ -119,6 +112,20 @@ class SLM:
 '''
 
     def __init__(self):
+
+        path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
+
+        # Create a ConfigParser object
+        config = CaseInsensitiveConfig()
+        # Read the INI file
+        config.read(path_config)
+
+        # Path to the DLL file
+        path_blink_c_wrapper = Path(config.get("SLM0","cWrapper")) # New dll file
+        path_image_gen = Path(config.get("SLM0","imageGen"))
+        path_blink_c_wrapper = str(path_blink_c_wrapper)
+        path_image_gen = str(path_image_gen)
+
         # Chargement de la DLL
         # Loading the DLL
         self.blink_dll = ctypes.CDLL(path_blink_c_wrapper)
@@ -149,23 +156,7 @@ class SLM:
         """Graciously closes the communication with the SLM"""
         self.blink_dll.Delete_SDK()
 
-    def write_image(self, image_data, is_8_bit):
-        """
-        WARNING: THIS FUNCTION IS NOT WORKING FOR AN 8-BIT SLM 
-        Writes an image to the SLM. 
-        input:
-            - image_data (uint8 np.array): either a 1D 8-bit array of image data that has 1920*1152 or 1920*1200 elements or can be an RGB 1D 8-bit
-                array that has 1920x1152*3 elements or 1920*1200*3. RGB data is expected as follows: pixel 0 Red, pixel
-                0 green, pixel 0 blue, pixel 1 red, pixel 1 green, pixel 1 blue, and so on. It is expected through the SDK that
-                the array size will match the SLM dimensions
-            - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
-        """
-        #self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit)
-        if self.blink_dll.GetRenderWindowStatus(0) == 0:
-            self.blink_dll.CreateRenderWindow(0)
-        self.blink_dll.Write_image(0, image_data.ctypes.data_as(POINTER(c_ubyte)), is_8_bit) # Need to put a 0 as first argument in the new DLL.
-
-    def write_image_10bit(self, image_data):
+    def write_image(self, image_data):
         """
         Writes an image to the SLM.
         input:
@@ -176,11 +167,12 @@ class SLM:
         
         monitor = get_monitors()[1]
         monitor_width = monitor.width
+        image_bgra = self.phase_to_bgra(image_data)
 
         cv2.namedWindow("SLM", cv2.WINDOW_NORMAL)
         cv2.moveWindow("SLM", monitor_width, 0)
         cv2.setWindowProperty("SLM", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-        cv2.imshow("SLM", image_data)
+        cv2.imshow("SLM", image_bgra)
         cv2.waitKey(30)
 
     def load_lut(self, file_path):
@@ -193,7 +185,8 @@ class SLM:
                 types of: *.blt, *.lut, and *.txt.
         """
         logger.info('%s LoadLUT Successful'%(datetime.datetime.now()))
-        return self.blink_dll.Load_lut(0, file_path.encode()) # Need to put a 0 as first argument in the new DLL.
+        self.blink_dll.Load_lut(0, file_path.encode()) # Need to put a 0 as first argument in the new DLL.
+        self.store_lut() # Used to store the currently applied global LUT file to non-volatile memory
     
     def store_lut(self):
         """
@@ -213,7 +206,8 @@ class SLM:
 
     def get_slm_temp(self):
         #return self.blink_dll.Get_SLMTemp()
-        return self.blink_dll.Get_SLMTemp(0) # Needs the argument 0 in the new dll file
+        temp = self.blink_dll.Get_SLMTemp(0)
+        return temp # Needs the argument 0 in the new dll file
 
     def get_slm_vcom(self):
         return self.blink_dll.Get_SLMVCom()
@@ -253,6 +247,38 @@ class SLM:
         width=SLM.get_width(self)
         height=SLM.get_height(self)
         return width,height
+    
+    @staticmethod
+    def normalize_phase_image(image, max_phase=2 * np.pi):
+        """
+            Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
+        """
+        image = np.clip(image, 0, max_phase)  # safety
+        norm_img = (image / max_phase) * 1023
+        return norm_img.astype(np.uint16)
+    
+    @staticmethod 
+    def phase_to_bgra(phase_uint10):
+        """
+        Convert 2D uint10 phase image to BGRA image for cv2 fullscreen display.
+        input:
+            phase_uint10: image array that range from 0 to 1023
+        """
+
+        H, W = phase_uint10.shape
+
+        # Create 4-channel image
+        rgba = np.zeros((H, W, 4), dtype=np.uint8)
+
+        # Fill the array with the right information
+        rgba[:, :, 0] = (phase_uint10 >> 2).astype(np.uint8)            # Red = upper 8 bits
+        # rgba[:, :, 1] # Green channel is ignored
+        rgba[:, :, 2] = ((phase_uint10 & 0b11) << 6).astype(np.uint8)   # Blue = lower 2 bits in MSBs
+        rgba[:, :, 3] = 255                                             # Alpha without transparency to avoid corruption between phase pattern
+
+        # Reshape arrays and reorder columns for BGRA for cv2 image writing, OpenCV expects B,G,R,A
+        bgra = rgba[:, :, [2, 1, 0, 3]]
+        return bgra
 
 
 class ImageGen:
@@ -375,3 +401,41 @@ class ImageGen:
     
     def generate_best_rings(self, array, wfc, width, height, depth, center_x, center_y, s, rgb):
         self.image_gen_dll.Generate_BESTRings(array, wfc, width, height, depth, center_x, center_y, s, rgb)
+
+class CaseInsensitiveConfig(configparser.ConfigParser):
+    """ This class extends Python’s built-in configparser.ConfigParser to make both section names and option names case-insensitive.
+    Normally, ConfigParser is only case-insensitive for option names, not section names, so this subclass enforces lowercase normalization for both. """
+
+    def __init__(self, *args, **kwargs):
+        """
+            Initialize the parent ConfigParser. By inheriting from it, your class gets all the functionality of ConfigParser — things like: 
+                Reading .ini files
+                Parsing sections and options
+                Providing .get(), .set(), .items(), etc.
+            Then you can override or extend parts of that functionality to make it case-insensitive.
+        """
+        super().__init__(*args, **kwargs)
+
+        # Force all option (key) names to be lowercase when stored internally
+        # This makes option lookups case-insensitive
+        self.optionxform = str.lower
+
+    def read(self, filenames, encoding=None):
+        """
+            Use the parent class's read method to load the config file(s)
+        """
+        super().read(filenames, encoding)
+
+        # Convert all section names and their corresponding option names to lowercase
+        # This ensures that both sections and options are case-insensitive
+        self._sections = {
+            k.lower(): {kk.lower(): vv for kk, vv in v.items()}
+            for k, v in self._sections.items()
+        }
+
+    def get(self, section, option, **kwargs):
+        """
+            Override the default .get() method so that lookups are case-insensitive
+        """
+        # Both section and option names are converted to lowercase before lookup
+        return super().get(section.lower(), option.lower(), **kwargs)

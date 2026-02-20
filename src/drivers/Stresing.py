@@ -54,7 +54,7 @@ class StresingCamera(QtCore.QThread):
         path_dll = str(path_dll)
 
         path_config = Path(r"C:\Program Files\Stresing\Escam\config_UdeM.ini")
-        path_config = Path(r"C:\Program Files\Stresing\Escam\config.ini") # WFU path
+        #path_config = Path(r"C:\Program Files\Stresing\Escam\config.ini") # WFU path
 
         # Create a ConfigParser object
         config = CaseInsensitiveConfig()
