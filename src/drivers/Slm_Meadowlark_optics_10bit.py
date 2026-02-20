@@ -196,6 +196,10 @@ class SLM:
         return self.blink_dll.Load_lut(0, file_path.encode()) # Need to put a 0 as first argument in the new DLL.
     
     def store_lut(self):
+        """
+        Stores the currently applied global LUT file to non-volatile memory. The function will return true if the LUT was successfully stored, or false 
+        if it failed.
+        """
         return self.blink_dll.Store_lut(0)
 
     def set_post_ramp_slope(self, postRampSlope):

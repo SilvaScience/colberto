@@ -325,7 +325,9 @@ class SLMWorker(QtCore.QThread):
     @staticmethod 
     def phase_to_bgra(phase_uint10):
         """
-            Convert 2D uint8 phase image to BGRA image for cv2 fullscreen display.
+        Convert 2D uint8 phase image to BGRA image for cv2 fullscreen display.
+        input:
+            phase_uint10: image array that range from 0 to 1023
         """
 
         H, W = phase_uint10.shape
