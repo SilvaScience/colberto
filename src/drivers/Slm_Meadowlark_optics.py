@@ -29,13 +29,6 @@ success = ctypes.windll.user32.SetProcessDPIAware()
 ########### Path to the DLL file ############
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
-# Path to the DLL file
-path_blink_c_wrapper = Path(r'C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_Wrapper.dll')
-path_image_gen = Path(r'C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen.dll')
-path_blink_c_wrapper = str(path_blink_c_wrapper)
-path_image_gen = str(path_image_gen)
-
-
 # Definition of the SLM class
 class SLM:
     '''
