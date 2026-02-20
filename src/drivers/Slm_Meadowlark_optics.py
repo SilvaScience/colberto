@@ -114,7 +114,14 @@ class SLM:
     slm.delete_sdk()
 '''
 
-    def __init__(self):
+    def __init__(self, cWrapper, imageGen):
+        
+        # Path to the DLL file
+        path_blink_c_wrapper = Path(cWrapper)
+        path_image_gen = Path(imageGen)
+        path_blink_c_wrapper = str(path_blink_c_wrapper)
+        path_image_gen = str(path_image_gen)
+        
         # Chargement de la DLL
         # Loading the DLL
         self.blink_dll = ctypes.CDLL(path_blink_c_wrapper)
