@@ -11,7 +11,6 @@ from pathlib import Path
 import logging
 import datetime
 import numpy as np
-import configparser
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
@@ -111,18 +110,11 @@ class SLM:
     slm.delete_sdk()
 '''
 
-    def __init__(self):
-
-        path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
-
-        # Create a ConfigParser object
-        config = CaseInsensitiveConfig()
-        # Read the INI file
-        config.read(path_config)
+    def __init__(self, cWrapper, imageGen):
 
         # Path to the DLL file
-        path_blink_c_wrapper = Path(config.get("SLM0","cWrapper")) # New dll file
-        path_image_gen = Path(config.get("SLM0","imageGen"))
+        path_blink_c_wrapper = Path(cWrapper) # New dll file
+        path_image_gen = Path(imageGen)
         path_blink_c_wrapper = str(path_blink_c_wrapper)
         path_image_gen = str(path_image_gen)
 
@@ -401,41 +393,3 @@ class ImageGen:
     
     def generate_best_rings(self, array, wfc, width, height, depth, center_x, center_y, s, rgb):
         self.image_gen_dll.Generate_BESTRings(array, wfc, width, height, depth, center_x, center_y, s, rgb)
-
-class CaseInsensitiveConfig(configparser.ConfigParser):
-    """ This class extends Python’s built-in configparser.ConfigParser to make both section names and option names case-insensitive.
-    Normally, ConfigParser is only case-insensitive for option names, not section names, so this subclass enforces lowercase normalization for both. """
-
-    def __init__(self, *args, **kwargs):
-        """
-            Initialize the parent ConfigParser. By inheriting from it, your class gets all the functionality of ConfigParser — things like: 
-                Reading .ini files
-                Parsing sections and options
-                Providing .get(), .set(), .items(), etc.
-            Then you can override or extend parts of that functionality to make it case-insensitive.
-        """
-        super().__init__(*args, **kwargs)
-
-        # Force all option (key) names to be lowercase when stored internally
-        # This makes option lookups case-insensitive
-        self.optionxform = str.lower
-
-    def read(self, filenames, encoding=None):
-        """
-            Use the parent class's read method to load the config file(s)
-        """
-        super().read(filenames, encoding)
-
-        # Convert all section names and their corresponding option names to lowercase
-        # This ensures that both sections and options are case-insensitive
-        self._sections = {
-            k.lower(): {kk.lower(): vv for kk, vv in v.items()}
-            for k, v in self._sections.items()
-        }
-
-    def get(self, section, option, **kwargs):
-        """
-            Override the default .get() method so that lookups are case-insensitive
-        """
-        # Both section and option names are converted to lowercase before lookup
-        return super().get(section.lower(), option.lower(), **kwargs)

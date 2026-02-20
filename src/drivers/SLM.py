@@ -266,7 +266,7 @@ class SLMWorker(QtCore.QThread):
             Instantiate the SLM driver and create the SDK
         """
         module = importlib.import_module(f"src.drivers.{self.driver_name}")
-        self.slm = module.SLM()
+        self.slm = module.SLM(self.c_wrapper, self.image_Gen)
         self.slm.create_sdk()
         return self.slm
     

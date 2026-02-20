@@ -3,7 +3,7 @@
 Colberto uses a Spatial light modulator at its heart to shape pulses in the spectral domain. Here is how it is interfaced.
 
 Controlling the SLM involves three parts:
-- The driver [SLM](\ref Slm_Meadowlark_optics.SLM) hosts the DLLs that directly control the SLM and implements them in methods of the SLM class. Commonly used functions are 
+- The driver [SLM](\ref Slm_Meadowlark_optics.SLM) hosts the DLLs that directly control the SLM and implements them in methods of the SLM class. You have to choose the config file and modify the path accordingly in the SLM.py worker. the  Commonly used functions are 
     - [create_sdk](\ref Slm_Meadowlark_optics.SLM#create_sdk) to create the software window on a secondary monitor (like the SLM) where the phase image will be displayed and load DLLs
     - [load_lut](\ref Slm_Meadowlark_optics.SLM#load_lut) to load the conversion from grayscale image to voltages to be sent to the SLM
     - [write_image](\ref Slm_Meadowlark_optics.SLM#write_image) to update the image displayed on the SLM
