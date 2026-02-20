@@ -169,11 +169,9 @@ class SLM:
         """
         Writes an image to the SLM.
         input:
-            - image_data (uint8 np.array): either a 1D 8-bit array of image data that has 1920*1152 or 1920*1200 elements or can be an RGB 1D 8-bit
-                array that has 1920x1152*3 elements or 1920*1200*3. RGB data is expected as follows: pixel 0 Red, pixel
+            - image_data (uint16 np.array): 1920*1200*4 elements. RGB data is expected as follows: pixel 0 Red, pixel
                 0 green, pixel 0 blue, pixel 1 red, pixel 1 green, pixel 1 blue, and so on. It is expected through the SDK that
                 the array size will match the SLM dimensions
-            - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
         """
         
         monitor = get_monitors()[1]
