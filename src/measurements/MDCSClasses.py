@@ -148,7 +148,7 @@ class BoxcarGeometry(QtCore.QThread):
         logger.info(filename[:filename.rfind('/') + 1] + 'MDCS')
         self.comments = comments
 
- def run(self):
+    def run(self):
         '''
             Runs the MDCS measurement and send the data in DataHandling after each iterations.
         '''
