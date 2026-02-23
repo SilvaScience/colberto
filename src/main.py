@@ -23,10 +23,12 @@ from GUI.VerticalCalibPlot import VerticalCalibPlot
 from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
 from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
 from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, DelayFitPlot
+from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeasurementFourierPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
+from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, AcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from compute.beams import Beam
@@ -145,7 +147,25 @@ class MainInterface(QtWidgets.QMainWindow):
         self.delay_remove_delay_button = self.findChild(QtWidgets.QPushButton, 'Delay_remove_delay_button')
         self.delay_scan_plot = self.findChild(pg.GraphicsLayoutWidget, 'Delay_scan_plot')
         self.delay_fit_plot = self.findChild(pg.PlotWidget, 'Delay_fit_plot')
-        
+
+        ## Measurement tab
+        self.MDCS_demo_mode_checkbox = self.findChild(QtWidgets.QCheckBox, 'Measurement_demo_mode_checkbox')
+        self.MDCS_phase_cycling_checkbox = self.findChild(QtWidgets.QCheckBox, 'Measurement_phase_cycling_checkbox')
+        self.MDCS_measurement_type_box = self.findChild(QtWidgets.QComboBox, 'Measurement_type_box')
+        self.MDCS_TLO_delay_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_TLO_delay_value')
+        self.MDCS_scanned_delay_min_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_scanned_delay_min_value')
+        self.MDCS_scanned_delay_max_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_scanned_delay_max_value')
+        self.MDCS_scanned_delay_step_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_scanned_delay_step_value')
+        self.MDCS_secondary_delay_min_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_secondary_delay_min_value')
+        self.MDCS_secondary_delay_max_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_secondary_delay_max_value')
+        self.MDCS_secondary_delay_step_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_secondary_delay_step_value')
+        self.MDCS_getLO_button = self.findChild(QtWidgets.QPushButton, 'Measurement_getLO_button')
+        self.MDCS_acquire_button = self.findChild(QtWidgets.QPushButton, 'Measurement_acquire_button')
+        self.MDCS_LO_plot = self.findChild(pg.PlotWidget, 'Local_oscillator_plot')
+        self.MDCS_2D_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_plot')
+        self.MDCS_Fourier_real_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_result_real_plot')
+        self.MDCS_Fourier_imag_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_result_imaginary_plot')
+
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
         self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
@@ -216,6 +236,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.ChirpFitplot = ChirpFitPlot(self.chirp_fit_layout)
         self.DelayCalibrationPlot = DelayCalibrationPlot(self.delay_scan_plot)
         self.DelayFitPlot = DelayFitPlot(self.delay_fit_plot)
+        self.LOspectrumPlot = LOmeasurementPlot(self.MDCS_LO_plot)
+        self.MDCSplot = MDCSmeasurementPlot(self.MDCS_2D_plot)
+        self.MDCSFourierRealPlot = MDCSmeasurementFourierPlot(self.MDCS_Fourier_real_plot)
+        self.MDCSFourierImagPlot = MDCSmeasurementFourierPlot(self.MDCS_Fourier_imag_plot)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
@@ -272,7 +296,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # set variables
         self.measurement_busy = False
-        self.save_folder_path = r'C:/Data/test'
+        self.save_folder_path = r'C:/data/Colbert'
         #a default data folder is always required and it would be good to keep it seperated from the code.
         #can everyone simply create a C:/Data/test' path on their device? # Not sure how to handle different OS here.
         self.filename = r'C:/Data/test'
@@ -326,6 +350,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.delay_fit_delay_button.clicked.connect(self.delayFitMeaserement)
         self.delay_apply_delay_button.clicked.connect(lambda: self.assignDelayCalibration(1))
         self.delay_remove_delay_button.clicked.connect(lambda: self.assignDelayCalibration(-1))
+        # Measurement tab connect events
+        self.MDCS_getLO_button.clicked.connect(self.getLOSpectrum)
+        self.MDCS_acquire_button.clicked.connect(self.MDCSacquireMeasurement)
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
@@ -338,7 +365,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
         self.devices['SLM'].write_image(test_image)
         # Save/load calibration
-        self.save_calibration_pushbutton.clicked.connect(self.save_calibration)
+        self.save_calibration_pushbutton.clicked.connect(lambda: self.save_calibration(filename_prefix="Filename", use_prompt=True, save_dir=None))
         self.load_calibration_pushbutton.clicked.connect(self.load_calibration)
         # run some functions once to define default values
         self.change_filename()
@@ -905,6 +932,52 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             logger.warning('%s Delay calibration fit has not been processed. Processed the calibration fit first'%datetime.datetime.now())
 
+    def getLOSpectrum(self):
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            beam_name = 'LO'
+            beam = self.DataHandling.get_beams()[beam_name]
+            self.measurement = AcquireLO(self.devices, beam_name, beam)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendSpectrum.connect(self.LOspectrumPlot.set_data)
+            self.measurement.sendLOData.connect(self.DataHandling.add_calibration)
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendBeam.connect(self.DataHandling.set_beam)
+            self.measurement.start()
+    
+    def MDCSacquireMeasurement(self):
+            scannedDelay = np.arange(float(self.MDCS_scanned_delay_min_value.text()), float(self.MDCS_scanned_delay_max_value.text()), float(self.MDCS_scanned_delay_step_value.text()), dtype=int)
+            secondaryDelay = np.arange(float(self.MDCS_secondary_delay_min_value.text()), float(self.MDCS_secondary_delay_max_value.text()), float(self.MDCS_secondary_delay_step_value.text()), dtype=int)
+            beam_dict = self.DataHandling.get_beams()
+            beam_name = list(beam_dict.keys())
+            self._cached_filename = None
+            if 'LO_data' in self.DataHandling.calibration:
+                LO_spectrum = self.DataHandling.calibration['LO_data']
+                self.measurement = BoxcarGeometry(self.devices, 
+                    self.MDCS_measurement_type_box.currentText(),
+                    float(self.MDCS_TLO_delay_value.text()),
+                    scannedDelay,
+                    secondaryDelay,
+                    beam_name,
+                    beam_dict,
+                    LO_spectrum['spec'],
+                    self.filename, 
+                    self.comments_edit.toPlainText(),
+                    phase_cycling=self.MDCS_phase_cycling_checkbox.isChecked(),
+                    demo=self.MDCS_demo_mode_checkbox.isChecked())
+                self.measurement.sendProgress.connect(self.set_progress)
+                self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+                self.measurement.sendPhaseCycling.connect(self.LOspectrumPlot.set_data)
+                self.measurement.sendBeam.connect(self.DataHandling.set_multiple_beams)
+                self.measurement.sendMDCSPlot.connect(self.MDCSplot.set_data)
+                self.measurement.sendMDCSRaw.connect(self.DataHandling.add_calibration)
+                self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
+                self.measurement.sendFourierReal.connect(self.MDCSFourierRealPlot.set_data)
+                self.measurement.sendFourierImag.connect(self.MDCSFourierImagPlot.set_data)
+                self.measurement.start()
+            else:
+                logger.warning('%s Get the local oscillotor plot before running an acquisition.'%datetime.datetime.now())
+
     def stop_measurement(self):
         # stop measurement
         self.measurement.stop()
@@ -978,29 +1051,36 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
         QApplication.closeAllWindows()
 
-    def save_calibration(self):
+    def save_calibration(self, filename_prefix="Filename", use_prompt=True, save_dir=None):
         """
-            Save all Beam objects and calibration data using a file dialog.
-            - Beams are converted to dicts with Beam.beam_to_dict
-            - Calibration is converted safely, including Polynomials
+        Save all Beam objects and calibration data.
         """
+
         # Convert all Beam objects to safe dictionaries
         beam_dicts = {name: Beam.beam_to_dict(beam) for name, beam in self.DataHandling.beams.items()}
 
         # Convert calibration data to safe dict
         calibration_dict = DataHandling.calibration_to_dict(self.DataHandling.calibration)
 
-        # Combine beams and calibration into one dict
         data_to_save = {
             "beams": beam_dicts,
             "calibration": calibration_dict
         }
 
-        # Default filename with timestamp
-        default_filename = f"ChirpParameters_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.h5"
+        if use_prompt:
+            HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=filename_prefix)
+        else:
+            if save_dir is None:
+                raise ValueError("save_dir must be provided if use_prompt=False")
+            
+            # Create filename ONCE, reuse on later saves
+            if not hasattr(self, "_cached_filename") or self._cached_filename is None:
+                timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                self._cached_filename = f"{filename_prefix}_{timestamp}.h5"
 
-        # Save using HDF5 prompt
-        HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=default_filename)
+            default_filename = self._cached_filename
+
+            HDF5Helper.save_to_hdf5(data_to_save, save_dir, default_filename)
 
     def load_calibration(self):
         """
@@ -1013,7 +1093,6 @@ class MainInterface(QtWidgets.QMainWindow):
         if loaded_data is None:
             print("No data loaded.")
             return
-
         # Load beams
         beams_loaded = loaded_data.get("beams", {})
         for name, beam_dict in beams_loaded.items():
