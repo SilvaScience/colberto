@@ -1,6 +1,6 @@
 # Spatial Light Modulator (SLM)
 
-Colberto uses a Spatial light modulator at its heart to shape pulses in the spectral domain. Here is how it is interfaced.
+Colberto uses a Spatial light modulator at its heart to shape pulses in the spectral domain. Here is how it is interfaced. The ribbon shield CAD file can be found in the hardware folder. 
 
 Controlling the SLM involves three parts:
 - The driver [SLM](\ref Slm_Meadowlark_optics.SLM) hosts the DLLs that directly control the SLM and implements them in methods of the SLM class. Commonly used functions are 

@@ -66,23 +66,46 @@ def load_instruments():
         'calibrationSlope': 0.9891,
         'calibrationOffset': -51.163
     }
-    try: 
+
+    spectrometers = {}
+    
+    try:
         camera= StresingCamera(stresing_params)
         camera.attach_to_monochromator(Monochrom)
-        devices['spectrometer'] = camera
+        spectrometers['Stresing'] = camera
         logger.info('%s Stresing connected' % datetime.datetime.now())
-    except:
-        try:
-            from drivers.OceanSpectrometer import OceanSpectrometer
-            spectrometer = OceanSpectrometer()
-            spectrometer.start()
-            spec_length = spectrometer.spec_length
-            devices['spectrometer'] = spectrometer
-            logger.warning('%s Spectrometer Connected' % datetime.datetime.now())
-        except:
-            spectrometer = SpectrometerDemo()
-            spec_length = spectrometer.spec_length
-            devices['spectrometer'] = spectrometer
-            logger.warning('%s Spectrometer connection failed, use DEMO' % datetime.datetime.now())
+    except Exception as e:
+        logger.warning(f'Stresing failed: {e}')
 
-    return devices
+    try:
+        from drivers.OceanSpectrometer import OceanSpectrometer
+        ocean = OceanSpectrometer()
+        ocean.start()
+        spectrometers['Ocean'] = ocean
+        logger.info('%s Ocean connected' % datetime.datetime.now())
+    except Exception as e:
+        logger.warning(f'Ocean failed: {e}')
+
+    try:
+        demo = SpectrometerDemo()
+        spectrometers['Demo'] = demo
+        logger.info('%s Demo spectrometer loaded' % datetime.datetime.now())
+    except Exception as e:
+        logger.warning(f'Demo failed: {e}')
+
+    #  Choose a default spectrometer (object only)
+    if 'Ocean' in spectrometers:
+        default_spec = spectrometers['Ocean']
+    elif 'Stresing' in spectrometers:
+        default_spec = spectrometers['Stresing']
+    elif 'Demo' in spectrometers:
+        default_spec = spectrometers['Demo']
+    else:
+        default_spec = None
+
+    # Only store *object* in devices
+    devices['spectrometer'] = default_spec
+
+    # Return both — object dicts only
+    return devices, spectrometers
+
