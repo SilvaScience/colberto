@@ -156,13 +156,43 @@ class SLM:
                 0 green, pixel 0 blue, pixel 1 red, pixel 1 green, pixel 1 blue, and so on. It is expected through the SDK that
                 the array size will match the SLM dimensions
         """
-        
-        monitor = get_monitors()[1]
-        monitor_width = monitor.width
+
         image_bgra = self.phase_to_bgra(image_data)
 
+        # This section is to determine the name of the connected monitors and to assign the right phase image. For example:
+        #   Detected monitors:
+        #       Monitor 0:
+        #           Name / Device: \\.\DISPLAY2
+        #           Position: x=1920, y=0
+        #           Resolution: 1920x1200
+        #       Monitor 1:
+        #           Name / Device: \\.\DISPLAY1
+        #           Position: x=0, y=0
+        #           Resolution: 1920x1080
+        #       Monitor 2:
+        #           Name / Device: \\.\DISPLAY3
+        #           Position: x=3840, y=0
+        #           Resolution: 1920x1200
+
+        #print("Detected monitors:")
+        #monitors = get_monitors()
+        #for i, m in enumerate(monitors):
+        #    print(f"Monitor {i}:")
+        #    print(f"  Name / Device: {getattr(m, 'name', 'N/A')}")
+        #    print(f"  Position: x={m.x}, y={m.y}")
+        #    print(f"  Resolution: {m.width}x{m.height}")
+
+        # Print the phase on the secondary monitor
+        secondary_monitor = next(m for m in get_monitors() if "DISPLAY2" in m.name.upper())
+        cv2.namedWindow("SECONDARY", cv2.WINDOW_NORMAL)
+        cv2.moveWindow("SECONDARY", secondary_monitor.x, secondary_monitor.y)
+        cv2.setWindowProperty("SECONDARY", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.imshow("SECONDARY", image_bgra)
+
+        # Print the phase on the SLM
+        slm_monitor = next(m for m in get_monitors() if "DISPLAY3" in m.name.upper())
         cv2.namedWindow("SLM", cv2.WINDOW_NORMAL)
-        cv2.moveWindow("SLM", monitor_width, 0)
+        cv2.moveWindow("SLM", slm_monitor.x, slm_monitor.y)
         cv2.setWindowProperty("SLM", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow("SLM", image_bgra)
         cv2.waitKey(30)
@@ -265,12 +295,11 @@ class SLM:
         # Fill the array with the right information
         rgba[:, :, 0] = (phase_uint10 >> 2).astype(np.uint8)            # Red = upper 8 bits
         # rgba[:, :, 1] # Green channel is ignored
-        #rgba[:, :, 2] = ((phase_uint10 & 0b11) << 6).astype(np.uint8)   # Blue = lower 2 bits in MSBs
-        rgba[:, :, 2] = (phase_uint10 & 0b11).astype(np.uint8)   # Blue = lower 2 bits in MSBs
+        rgba[:, :, 2] = (phase_uint10 & 0b11).astype(np.uint8)          # Blue = lower 2 bits in MSBs
         rgba[:, :, 3] = 255                                             # Alpha without transparency to avoid corruption between phase pattern
 
         # Reshape arrays and reorder columns for BGRA for cv2 image writing, OpenCV expects B,G,R,A
-        bgra = rgba[:, :, [2, 1, 0, 3]]
+        bgra = rgba[:, :, [2, 1, 0, 3]].copy()
         return bgra
 
 class ImageGen:
