@@ -291,8 +291,8 @@ class SLMWorker(QtCore.QThread):
         """
             Queries the temperature from the SLM driver and emits the signal
         """
-        self.temperature=self.slm.get_slm_temp()
-        self.slmParamsTemperature.emit(int(self.temperature))
+        #self.temperature=self.slm.get_slm_temp()
+        #self.slmParamsTemperature.emit(int(self.temperature))
     
     def write_image_slm(self):
         '''
