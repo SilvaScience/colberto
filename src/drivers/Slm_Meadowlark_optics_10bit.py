@@ -265,13 +265,13 @@ class SLM:
         # Fill the array with the right information
         rgba[:, :, 0] = (phase_uint10 >> 2).astype(np.uint8)            # Red = upper 8 bits
         # rgba[:, :, 1] # Green channel is ignored
-        rgba[:, :, 2] = ((phase_uint10 & 0b11) << 6).astype(np.uint8)   # Blue = lower 2 bits in MSBs
+        #rgba[:, :, 2] = ((phase_uint10 & 0b11) << 6).astype(np.uint8)   # Blue = lower 2 bits in MSBs
+        rgba[:, :, 2] = (phase_uint10 & 0b11).astype(np.uint8)   # Blue = lower 2 bits in MSBs
         rgba[:, :, 3] = 255                                             # Alpha without transparency to avoid corruption between phase pattern
 
         # Reshape arrays and reorder columns for BGRA for cv2 image writing, OpenCV expects B,G,R,A
         bgra = rgba[:, :, [2, 1, 0, 3]]
         return bgra
-
 
 class ImageGen:
     def __init__(self):
