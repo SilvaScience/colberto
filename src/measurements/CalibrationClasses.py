@@ -285,9 +285,13 @@ class AcquireBackground(QtCore.QThread):
         self.terminate = False
         self.acquire_measurement = True
         self.spectrometer = devices['spectrometer']
+        self.SLM= devices['SLM']
         self.background = []
 
     def run(self):
+        image_output = np.zeros((self.SLM.get_height(),self.SLM.get_width()))              
+        self.SLM.write_image(image_output)
+
         self.wls = self.spectrometer.get_wavelength()
         self.background = np.array(self.spectrometer.get_intensities())
         self.sendProgress.emit(50)
@@ -362,6 +366,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             logger.warning('%s Arbitrary spectral calibration used'%datetime.datetime.now())
         self.beam.set_compressionCarrierWave(compression_carrier_wavelength*1e-9) 
         self.beam.set_gratingPeriod(grating_period)
+        self.carrierWls = compression_carrier_wavelength
     
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
@@ -409,7 +414,11 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                                 'data' : np.array(self.intensities)
                                 }
                             if i>=3:
-                                self.send_chirp.emit(self.chirp[3:i],self.wls,np.array(self.intensities)[3:i, :])
+                                indexes = np.where(
+                                    (self.wls >= (self.carrierWls/2 - 100)) &
+                                    (self.wls <= (self.carrierWls/2 + 100))
+                                )[0]
+                                self.send_chirp.emit(self.chirp[3:i],self.wls[indexes],np.array(self.intensities)[3:i,indexes])
         self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
