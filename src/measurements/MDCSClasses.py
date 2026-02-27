@@ -247,7 +247,11 @@ class BoxcarGeometry(QtCore.QThread):
                     image_output += beam_image
             
             self.sendBeam.emit((self.beam))
+            phaseShown = False # Phase image is not dispayed yet
             self.SLM.write_image(image_output)
+            while phaseShown == False:
+                phaseShown = self.SLM.check_phaseShown() # Get True if the phase is displayed
+            
             if not self.isDemo:
                 self.flag = 0
                 print(i)

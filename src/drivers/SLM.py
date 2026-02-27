@@ -40,10 +40,11 @@ class Slm(QtCore.QThread):
         self.slm_worker= SLMWorker()
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
+        self.slm_worker.sendFlag.connect(self.set_phaseShown)
         logger.info('%s SLM worker initialized'%datetime.datetime.now())
         self.slm_worker.start()
         logger.info('%s SLM worker running'%datetime.datetime.now())
-
+        self.phaseShown = False
         
         # set parameter dict
         self.parameter_dict = defaultdict()
@@ -162,7 +163,17 @@ class Slm(QtCore.QThread):
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
         """
         logger.info('Just received an image of %d by %d'%image.shape)
+        self.phaseShown = False
         self.slm_worker.change_image(image,imagetype=imagetype)
+
+    def set_phaseShown(self, phaseShown):
+        self.phaseShown = phaseShown
+    
+    def check_phaseShown(self):
+        if self.phaseShown == True:
+            return True
+        else:
+            return False
 
 class SLMWorker(QtCore.QThread):
     """Worker thread that host the SLM instantiation."""
@@ -170,6 +181,7 @@ class SLMWorker(QtCore.QThread):
     slmParamsSignal = QtCore.pyqtSignal(int, int, int, int, int)
     slmParamsTemperature = QtCore.pyqtSignal(int)
     imageSLM = QtCore.pyqtSignal(np.ndarray)
+    sendFlag = QtCore.pyqtSignal(bool)
     
     def __init__(self):
         super(SLMWorker, self).__init__() # Elevates this thread to be independent.
@@ -198,6 +210,7 @@ class SLMWorker(QtCore.QThread):
         self.current_image = np.zeros((self.width,self.height,3))
         self.new_image_available = False 
         self.frame_duration = 1/self.target_fps
+        self.phaseShown = False
 
     def run(self):
         '''
@@ -260,6 +273,7 @@ class SLMWorker(QtCore.QThread):
             digital_image=image
         self.current_image=digital_image
         self.new_image_available=True
+        self.phaseShown = False
 
     def create_slm_sdk(self):
         """
@@ -267,6 +281,7 @@ class SLMWorker(QtCore.QThread):
         """
         module = importlib.import_module(f"src.drivers.{self.driver_name}")
         self.slm = module.SLM(self.c_wrapper, self.image_Gen)
+        self.slm.sendFlag.connect(self.set_phaseShown)
         self.slm.create_sdk()
         return self.slm
     
@@ -309,6 +324,10 @@ class SLMWorker(QtCore.QThread):
             self.slm.load_lut(lut_path)
         else:
             logger.error('%s  Lut file not found.'%datetime.datetime.now())
+
+    def set_phaseShown(self, phaseShown):
+        self.phaseShown = phaseShown
+        self.sendFlag.emit(phaseShown)
     
     def close(self):
         """

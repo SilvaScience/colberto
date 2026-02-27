@@ -11,6 +11,7 @@ from pathlib import Path
 import logging
 import datetime
 import numpy as np
+from PyQt5 import QtCore
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
@@ -30,7 +31,7 @@ success = ctypes.windll.user32.SetProcessDPIAware()
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
 # Definition of the SLM class
-class SLM:
+class SLM(QtCore.QThread):
     '''
     A class to interface with a Spatial Light Modulator (SLM) via a C-based DLL.
 
@@ -106,8 +107,11 @@ class SLM:
     slm.write_image(image_data, is_8_bit=True)
     slm.delete_sdk()
 '''
+    sendFlag = QtCore.pyqtSignal(bool)
 
     def __init__(self, cWrapper, imageGen):
+
+        super(SLM, self).__init__()
         
         # Path to the DLL file
         path_blink_c_wrapper = Path(cWrapper)
@@ -156,6 +160,10 @@ class SLM:
             - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
         """
         self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), c_uint(1))
+
+        # Flag to confirm the phase on the device
+        phaseShown = True
+        self.sendFlag.emit(phaseShown)
 
     def load_lut(self, file_path):
         """

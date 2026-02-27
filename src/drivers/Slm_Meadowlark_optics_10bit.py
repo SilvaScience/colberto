@@ -17,6 +17,7 @@ errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awarenes
 
 import cv2
 from screeninfo import get_monitors
+from PyQt5 import QtCore
 
 #print(awareness.value)
 
@@ -33,7 +34,7 @@ success = ctypes.windll.user32.SetProcessDPIAware()
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
 
 # Definition of the SLM class
-class SLM:
+class SLM(QtCore.QThread):
     '''
     A class to interface with a Spatial Light Modulator (SLM) via a C-based DLL.
 
@@ -109,8 +110,11 @@ class SLM:
     slm.write_image(image_data, is_8_bit=True)
     slm.delete_sdk()
 '''
+    sendFlag = QtCore.pyqtSignal(bool)
 
     def __init__(self, cWrapper, imageGen):
+
+        super(SLM, self).__init__()
 
         # Path to the DLL file
         path_blink_c_wrapper = Path(cWrapper) # New dll file
@@ -196,6 +200,10 @@ class SLM:
         cv2.setWindowProperty("SLM", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow("SLM", image_bgra)
         cv2.waitKey(30)
+
+        # Flag to confirm the phase on the device
+        phaseShown = True
+        self.sendFlag.emit(phaseShown)
 
     def load_lut(self, file_path):
         """
