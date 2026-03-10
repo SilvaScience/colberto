@@ -27,9 +27,10 @@ if __name__=="__main__":
     a=12.54e-3
     #For fused silica
     h=1e-3*np.linspace(1,8,50)
-    E=75e9 # GPa=10^9 kg m-1s-2, from accuratus
-    nu=0.17 # Poisson's ratio, from accuratus
-    volume_density=2.2 # g per cm3
+    materials{}
+    E=0.86e9 # GPa=10^9 kg m-1s-2, from https://www.ineos.com/globalassets/ineos-group/businesses/ineos-olefins-and-polymers-usa/products/technical-information--patents/new/ineos-typical-engineering-properties-of-hdpe.pdf
+    nu=0.4 # Poisson's ratio, from  https://www.ineos.com/globalassets/ineos-group/businesses/ineos-olefins-and-polymers-usa/products/technical-information--patents/new/ineos-typical-engineering-properties-of-hdpe.pdf
+    volume_density=0.94 # g per cm3
     volume_density=volume_density*1e-3/(1e-6)#convert to kg m-3 
     plt.figure()
     [plt.plot(1e3*h,1e-3*mode_frequency(lambsquare=lambsquare,nu=nu,E=E,h=h,density=volume_density,a=a),label=indice) for (lambsquare,indice) in zip(lambsquares,indices)]

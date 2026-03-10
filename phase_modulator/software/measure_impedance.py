@@ -1,54 +1,36 @@
 import numpy as np
-from awg_scpi import AWG
 from time import sleep
 from pymeasure.instruments.keysight import KeysightDSOX1102G
+from pymeasure.instruments.agilent import Agilent33500
 from matplotlib import pyplot as plt
 import argparse
 from time import localtime, strftime
 from electrutils.waveform import Wave# This is a repo on https://github.com/fthouin/electrutils/
 import h5py
 
-parser = argparse.ArgumentParser(description='Access and control an AWG')
-parser.add_argument('chan', nargs='?', type=int, help='Channel to access/control (starts at 1)', default=1)
-args = parser.parse_args()
 
 ### Experimental parameters of impedance sweep
 resistance=100
-filename="piezo_sandwhich_"+strftime("%H_%M", localtime())+"_impedance_measurement.h5"
+filename="piezo_sanwhich_3mm_3mm_"+strftime("%H_%M", localtime())+"_impedance_measurement.h5"
 
 
 
 from os import environ
-resource = environ.get('AWG_IP', 'TCPIP::192.168.1.127::INSTR')
-awg = AWG(resource)
+generator = Agilent33500('TCPIP::192.168.1.130::INSTR')
+generator.reset()
+generator.shape = 'SIN'                 # Sets default channel output signal shape to sine
+generator.amplitude= 5# Sets default channel output frequency to 1 kHz
+generator.output='on'
 scope = KeysightDSOX1102G('TCPIP::192.168.1.126::INSTR')
-## Upgrade Object to best match based on IDN string
-awg = awg.getBestClass()
 
-## Open this object and work with it
-awg.open()
 
-print('Using SCPI Device:     ' + awg.idn() + ' of series: ' + awg.series + '\n')
-
-# set the channel (can pass channel to each method or just set it
-# once and it becomes the default for all following calls)
-awg.channel = str(args.chan)
-# Prepare the AWG
-awg.reset()               
-awg.setOutputLoad(True,channel=1)
-awg.setVoltageProtection(11)
-awg.setAmplitude(5)
-awg.setOffset(0)
-awg.setPhase(0)
-awg.outputOn()
 #Prepare scope
 data_in_out=[]
 times=[]
-freqs=np.logspace(4,7,100)
-print("Voltage Protection is set to maximum: {}V Amplitude (assumes 0V offset)".format(awg.queryVoltageProtection()))
+freqs=np.logspace(4,6,400)
 for freq in freqs:
     print(freq)
-    awg.setFrequency(freq)
+    generator.frequency=freq
     scope.autoscale()
     scope.single()
     ch1_data_array, ch1_preamble = scope.download_data(source="channel1", points=2000)
@@ -58,15 +40,11 @@ for freq in freqs:
     data_in_out.append(np.array([ch1_data_array,ch2_data_array,time]))
 with h5py.File(filename,'w') as f:
     groupin=f.create_group('data')
-    groupin.attrs['AWG Output impedance']=50
+    groupin.attrs['generator Output impedance']=50
     for data,freq,time in zip(data_in_out,freqs,times):
         dataset=groupin.create_dataset("%.2e"%freq,data=data)
         dataset.attrs['instructions']='first row is Voltage (V) of chan 1, second row is Voltage of chan 2 third is time (s)'
         dataset.attrs['freq']=freq
     f.create_dataset('resistance',data=resistance)
-
-# return to LOCAL mode
-awg.setLocal()
-
-awg.close()
+generator.output='off'
 scope.shutdown()
