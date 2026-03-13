@@ -511,13 +511,32 @@ class MainInterface(QtWidgets.QMainWindow):
         # open background file and set as background
         BackgroundFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select background data')
         bg_path = BackgroundFile[0]
-        bg = np.loadtxt(bg_path, delimiter=',')
-        self.DataHandling.background = bg[-self.spec_length:, 1]
-        # logger.info(np.shape(bg[1:,1]))
 
-        # display background filename
+        ############  '''## Load datasets and attributes ##''' #############
+        with h5py.File(bg_path, 'r') as hdf:
+            ls = list(hdf.keys())
+            print('List of Data Sets in this file: \n', ls)
+
+            data = hdf.get('spectra')
+            param_set = hdf.get('parameter')
+
+            data_set = np.array([np.asarray(x, dtype=float).flatten() for x in data])
+            param_set = np.array([np.asarray(x, dtype=float).flatten() for x in param_set])
+
+            grf = hdf['parameter']
+            params = grf.attrs['parameter_keys']
+
+            grp = hdf['spectra']
+            wave = grp.attrs['xaxis']
+
+        bg = data_set
+        self.DataHandling.background = bg[-self.spec_length:]
+
+        # display measured spectra filepath
         idx = bg_path.rfind('/')
-        self.bg_file_indicator.setText(bg_path[idx+1:])
+        self.bg_file_indicator.setText(bg_path[idx + 1:])
+
+        return wave, bg
 
     def update_check_bg(self):
         self.DataHandling.correct_background = self.bg_check_box.isChecked()
