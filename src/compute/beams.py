@@ -410,6 +410,7 @@ class Beam:
         offset=phase/(2*pi)*period
         y=amplitude*sawtooth(2*pi*(indices-offset)/period,width=0) % 2*pi
         return y
+    
     @staticmethod
     def convertPhaseCoeffUnits(phasePolynomial,input_units='fs',output_units='s'):
         '''
@@ -431,18 +432,23 @@ class Beam:
     def TaylorPrefactor(phasePolynomial, TaylorPrefactorFlag=''):
         '''
             Multiply or divide the phasePolynomial by the Taylor coefficients prefactor.
-            input:
-                - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
+            Also, multiply the group delay by -1 to match the timing definition.
+                - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz) 
                 - TaylorPrefactorFlag : depends if you want to add or remove the prefactors to the coefficient
         '''
-        TaylorFactor = [1 / math.factorial(i) for i in range(len(phasePolynomial.coef))]
+        coef = phasePolynomial.coef.copy()
+        TaylorFactor = [1 / math.factorial(i) for i in range(len(coef))]
+
         if TaylorPrefactorFlag == 'add':
-            new_phasePolynomial = P([x * y for x, y in zip(phasePolynomial, TaylorFactor)])
+            coef = [c * f for c, f in zip(coef, TaylorFactor)]
         elif TaylorPrefactorFlag == 'remove':
-            new_phasePolynomial = P([x / y for x, y in zip(phasePolynomial, TaylorFactor)])
-        else:
-            new_phasePolynomial = phasePolynomial
-        return new_phasePolynomial
+            coef = [c / f for c, f in zip(coef, TaylorFactor)]
+
+        # Add minus sign to the group delay (linear term)
+        if len(coef) > 1:
+            coef[1] *= -1
+
+        return P(coef)
     
     @staticmethod
     def beam_to_dict(beam):
