@@ -14,6 +14,10 @@ import numpy as np
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
+
+import cv2
+from screeninfo import get_monitors
+
 #print(awareness.value)
 
 # Set DPI Awareness  (Windows 10 and 8)
@@ -24,7 +28,6 @@ errorCode = ctypes.windll.shcore.SetProcessDpiAwareness(2)
 # Set DPI Awareness  (Windows 7 and Vista)
 success = ctypes.windll.user32.SetProcessDPIAware()
 # behaviour on later OSes is undefined, although when I run it on my Windows 10 machine, it seems to work with effects identical to SetProcessDpiAwareness(1)
-
 
 ########### Path to the DLL file ############
 folder_path = Path(__file__).resolve().parent.parent.parent #add or remove parent based on the file location
@@ -108,13 +111,13 @@ class SLM:
 '''
 
     def __init__(self, cWrapper, imageGen):
-        
+
         # Path to the DLL file
-        path_blink_c_wrapper = Path(cWrapper)
+        path_blink_c_wrapper = Path(cWrapper) # New dll file
         path_image_gen = Path(imageGen)
         path_blink_c_wrapper = str(path_blink_c_wrapper)
         path_image_gen = str(path_image_gen)
-        
+
         # Chargement de la DLL
         # Loading the DLL
         self.blink_dll = ctypes.CDLL(path_blink_c_wrapper)
@@ -130,12 +133,12 @@ class SLM:
         self.blink_dll.Set_channel.restype = ctypes.c_int
         self.blink_dll.Get_SLMTemp.restype = ctypes.c_double
         self.blink_dll.Get_SLMVCom.restype = ctypes.c_double
-        self.blink_dll.Set_SLMVCom.restype = ctypes.c_int
+        #self.blink_dll.Set_SLMVCom.restype = ctypes.c_int # Absent of the new dll file 
         self.blink_dll.Get_Height.restype = ctypes.c_int
         self.blink_dll.Get_Width.restype = ctypes.c_int
         self.blink_dll.Get_Depth.restype = ctypes.c_int
-        self.blink_dll.Get_SLMFound.restype = ctypes.c_int
-        self.blink_dll.Get_COMFound.restype = ctypes.c_int
+        self.blink_dll.GetSLMFound.restype = ctypes.c_int # New version of Get_SLMFound
+        #self.blink_dll.Get_COMFound.restype = ctypes.c_int # Absent of the new dll file
 
     def create_sdk(self):
         """Loads the DLLs and creates the window in the off-screen required to send the image to the SLM """
@@ -149,13 +152,50 @@ class SLM:
         """
         Writes an image to the SLM.
         input:
-            - image_data (uint8 np.array): either a 1D 8-bit array of image data that has 1920*1152 or 1920*1200 elements or can be an RGB 1D 8-bit
-                array that has 1920x1152*3 elements or 1920*1200*3. RGB data is expected as follows: pixel 0 Red, pixel
+            - image_data (uint16 np.array): 1920*1200*4 elements. RGB data is expected as follows: pixel 0 Red, pixel
                 0 green, pixel 0 blue, pixel 1 red, pixel 1 green, pixel 1 blue, and so on. It is expected through the SDK that
                 the array size will match the SLM dimensions
-            - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
         """
-        self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), c_uint(1))
+
+        image_bgra = self.phase_to_bgra(image_data)
+
+        # This section is to determine the name of the connected monitors and to assign the right phase image. For example:
+        #   Detected monitors:
+        #       Monitor 0:
+        #           Name / Device: \\.\DISPLAY2
+        #           Position: x=1920, y=0
+        #           Resolution: 1920x1200
+        #       Monitor 1:
+        #           Name / Device: \\.\DISPLAY1
+        #           Position: x=0, y=0
+        #           Resolution: 1920x1080
+        #       Monitor 2:
+        #           Name / Device: \\.\DISPLAY3
+        #           Position: x=3840, y=0
+        #           Resolution: 1920x1200
+
+        #print("Detected monitors:")
+        #monitors = get_monitors()
+        #for i, m in enumerate(monitors):
+        #    print(f"Monitor {i}:")
+        #    print(f"  Name / Device: {getattr(m, 'name', 'N/A')}")
+        #    print(f"  Position: x={m.x}, y={m.y}")
+        #    print(f"  Resolution: {m.width}x{m.height}")
+
+        # Print the phase on the secondary monitor
+        secondary_monitor = next(m for m in get_monitors() if "DISPLAY2" in m.name.upper())
+        cv2.namedWindow("SECONDARY", cv2.WINDOW_NORMAL)
+        cv2.moveWindow("SECONDARY", secondary_monitor.x, secondary_monitor.y)
+        cv2.setWindowProperty("SECONDARY", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.imshow("SECONDARY", image_bgra)
+
+        # Print the phase on the SLM
+        slm_monitor = next(m for m in get_monitors() if "DISPLAY3" in m.name.upper())
+        cv2.namedWindow("SLM", cv2.WINDOW_NORMAL)
+        cv2.moveWindow("SLM", slm_monitor.x, slm_monitor.y)
+        cv2.setWindowProperty("SLM", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        cv2.imshow("SLM", image_bgra)
+        cv2.waitKey(30)
 
     def load_lut(self, file_path):
         """
@@ -167,7 +207,15 @@ class SLM:
                 types of: *.blt, *.lut, and *.txt.
         """
         logger.info('%s LoadLUT Successful'%(datetime.datetime.now()))
-        return self.blink_dll.Load_lut(file_path.encode())
+        self.blink_dll.Load_lut(0, file_path.encode()) # Need to put a 0 as first argument in the new DLL.
+        self.store_lut() # Used to store the currently applied global LUT file to non-volatile memory
+    
+    def store_lut(self):
+        """
+        Stores the currently applied global LUT file to non-volatile memory. The function will return true if the LUT was successfully stored, or false 
+        if it failed.
+        """
+        return self.blink_dll.Store_lut(0)
 
     def set_post_ramp_slope(self, postRampSlope):
         return self.blink_dll.SetPostRampSlope(postRampSlope)
@@ -179,7 +227,9 @@ class SLM:
         return self.blink_dll.Set_channel(channel)
 
     def get_slm_temp(self):
-        return self.blink_dll.Get_SLMTemp()
+        #return self.blink_dll.Get_SLMTemp()
+        temp = self.blink_dll.Get_SLMTemp(0)
+        return temp # Needs the argument 0 in the new dll file
 
     def get_slm_vcom(self):
         return self.blink_dll.Get_SLMVCom()
@@ -194,7 +244,8 @@ class SLM:
         return self.blink_dll.Get_Width()
 
     def get_depth(self):
-        return self.blink_dll.Get_Depth()
+        #return self.blink_dll.Get_Depth()
+        return self.blink_dll.Get_Depth(0) # Needs the argument 0 in the new dll file
     
     def get_slm_found(self):
         return self.blink_dll.Get_SLMFound()
@@ -203,13 +254,15 @@ class SLM:
         return self.blink_dll.Get_COMFound()
     
     def parameter_slm(self):
-        rgb=1
-        bit=1
         height= SLM.get_height(self)
         width = SLM.get_width(self)
         depth = SLM.get_depth(self)
-        RGB   = ctypes.c_uint(rgb)
-        isEightBitImage = ctypes.c_uint(bit)
+        if depth == 8:
+            RGB = c_uint(0)
+            isEightBitImage = c_uint(1)
+        elif depth == 10:
+            RGB = c_uint(1)
+            isEightBitImage = c_uint(0)
         return height,width,depth,RGB,isEightBitImage
     
     def get_size(self):
@@ -223,9 +276,31 @@ class SLM:
             Convert a float64 phase image (0 to 2π) to uint8 (0 to 255).
         """
         image = np.clip(image, 0, max_phase)  # safety
-        norm_img = (image / max_phase) * 255
-        return norm_img.astype(np.uint8)
+        norm_img = (image / max_phase) * 1023
+        return norm_img.astype(np.uint16)
+    
+    @staticmethod 
+    def phase_to_bgra(phase_uint10):
+        """
+        Convert 2D uint10 phase image to BGRA image for cv2 fullscreen display.
+        input:
+            phase_uint10: image array that range from 0 to 1023
+        """
 
+        H, W = phase_uint10.shape
+
+        # Create 4-channel image
+        rgba = np.zeros((H, W, 4), dtype=np.uint8)
+
+        # Fill the array with the right information
+        rgba[:, :, 0] = (phase_uint10 >> 2).astype(np.uint8)            # Red = upper 8 bits
+        # rgba[:, :, 1] # Green channel is ignored
+        rgba[:, :, 2] = (phase_uint10 & 0b11).astype(np.uint8)          # Blue = lower 2 bits in MSBs
+        rgba[:, :, 3] = 255                                             # Alpha without transparency to avoid corruption between phase pattern
+
+        # Reshape arrays and reorder columns for BGRA for cv2 image writing, OpenCV expects B,G,R,A
+        bgra = rgba[:, :, [2, 1, 0, 3]].copy()
+        return bgra
 
 class ImageGen:
     def __init__(self):
