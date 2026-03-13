@@ -217,7 +217,7 @@ class FitSpectralBeamCalibration(QtCore.QThread):
         self.increment = increment
         super(FitSpectralBeamCalibration, self).__init__()
 
-    def extractMaxima(self,column_array,wavelength_array, data):
+    def extractMaxima(self, column_array, wavelength_array, data):
         '''
             Finds the maximum of spectra
             input:
@@ -229,24 +229,33 @@ class FitSpectralBeamCalibration(QtCore.QThread):
                 - column_out: (np.ndarray) indices of the SLM columns. Emitted through send_maxima signal
                 - wavelengths_out: (np.ndarray) maxima of the spectra acquired in spectral calibration measurement. Emitted through send_maxima signal
         '''
-        wavelengths=[]
-        boundaries=self.boundaries
-        self.column_array=column_array
-        self.wavelength_array=wavelength_array
-        self.data=data
+        wavelengths = []
+        boundaries = self.boundaries
+        self.column_array = column_array
+        self.wavelength_array = wavelength_array
+        self.data = data
+
+        spec_bounds = getattr(self, "spec_wl_bounds", None)
+
+        wave_min_idx = int(np.argmin(np.abs(spec_bounds[0] - self.wavelength_array)))
+        wave_max_idx = int(np.argmin(np.abs(spec_bounds[1] - self.wavelength_array)))
+
+        self.wavelength_array = self.wavelength_array[wave_min_idx:wave_max_idx + 1]
+
         for spectrum in data:
-            wavelengths.append(self.wavelength_array[np.mean(np.argmax(spectrum),dtype=int)])
-        wavelengths=np.array(wavelengths)
-        index = np.arange(len(wavelengths))*self.increment
-        columns_out=column_array[np.logical_and(index>=boundaries[0],index<=boundaries[1])]
-        wavelengths_out=wavelengths[np.logical_and(index>=boundaries[0],index<=boundaries[1])]
-        self.send_maxima.emit(columns_out,wavelengths_out*1e-9)
-        self.spectral_calibration_processed_data={
-            'columns':columns_out,
-            'wavelengths':wavelengths_out
+            spectrum_window = spectrum[wave_min_idx:wave_max_idx]
+            wavelengths.append(self.wavelength_array[np.mean(np.argmax(spectrum_window), dtype=int)])
+        wavelengths = np.array(wavelengths)
+        index = np.arange(len(wavelengths)) * self.increment
+        columns_out = column_array[np.logical_and(index >= boundaries[0], index <= boundaries[1])]
+        wavelengths_out = wavelengths[np.logical_and(index >= boundaries[0], index <= boundaries[1])]
+        self.send_maxima.emit(columns_out, wavelengths_out * 1e-9)
+        self.spectral_calibration_processed_data = {
+            'columns': columns_out,
+            'wavelengths': wavelengths_out
         }
-        self.send_spectral_calibration_data.emit(('spectral_calibration_processed_data',self.spectral_calibration_processed_data))
-        return columns_out,wavelengths_out
+        self.send_spectral_calibration_data.emit(('spectral_calibration_processed_data', self.spectral_calibration_processed_data))
+        return columns_out, wavelengths_out
 
     def set_boundaries(self,boundaries):
         '''
