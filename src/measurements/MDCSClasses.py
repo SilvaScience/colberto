@@ -172,7 +172,7 @@ class BoxcarGeometry(QtCore.QThread):
                             'intensities' : self.intensities #np.array(self.intensities)
                         }
                         #self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j+1], np.array(self.intensities[i]).T)
-                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], self.intensities[i, :j + 1, :].T)
+                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], np.abs(self.intensities[i, :j + 1, :].T))
 
                         self.sendMDCSRaw.emit(('MDCS_raw_data', self.measurement_data))
                         self.sendProgress.emit(((i * len(self.t_scanned)) + (j + 1)) / (len(self.t_secondary) * len(self.t_scanned)) * 100)
@@ -191,29 +191,29 @@ class BoxcarGeometry(QtCore.QThread):
         if self.measurement_type == '0Q':
             self.group_delay = {
                 'A' : np.zeros(Nb_step),
+                'C' : self.t_secondary[i]*np.ones(Nb_step),
                 'B' : self.t_scanned,
-                'C' : np.zeros(Nb_step),
                 'LO' : self.t_scanned-self.t_LO*np.ones(Nb_step)
             }
         elif self.measurement_type == '1Q - rephasing':
             self.group_delay = {
-                'A' : self.t_scanned,
+                'A' : np.zeros(Nb_step),
+                'C' : self.t_scanned,
                 'B' : self.t_scanned+self.t_secondary[i]*np.ones(Nb_step),
-                'C' : np.zeros(Nb_step),
                 'LO' : self.t_scanned+(self.t_secondary[i]-self.t_LO)*np.ones(Nb_step)
             }
         elif self.measurement_type == '1Q - non rephasing':
             self.group_delay = {
-                'A' : np.zeros(Nb_step),
+                'C' : np.zeros(Nb_step),
+                'A' : self.t_scanned,
                 'B' : self.t_scanned+self.t_secondary[i]*np.ones(Nb_step),
-                'C' : self.t_scanned,
                 'LO' : self.t_scanned+(self.t_secondary[i]-self.t_LO)*np.ones(Nb_step)
             }
         elif self.measurement_type == '2Q':
             self.group_delay = {
-                'A' : np.zeros(Nb_step),
+                'C' : np.zeros(Nb_step),
                 'B' : self.t_secondary[i]*np.ones(Nb_step),
-                'C' : self.t_scanned+self.t_secondary[i]*np.ones(Nb_step),
+                'A' : self.t_scanned+self.t_secondary[i]*np.ones(Nb_step),
                 'LO' : self.t_scanned+(self.t_secondary[i]-self.t_LO)*np.ones(Nb_step)
             }
 
@@ -224,16 +224,18 @@ class BoxcarGeometry(QtCore.QThread):
         '''
         self.intensity = np.zeros(len(self.wls))
         if getattr(self, "isPhaseCycling", True):
-            operations = np.array([1, -1, -1, 1, -1, 1, 1, -1])
+            operations = np.array([1, -1, -1, 1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1])
         else:
             operations = np.array([1])  # single step, no phase cycling
+
         self.cep = {
-            'A' : np.array([0, 0, 0, 0, 0, 0, 0, 0]),
-            'B' : np.array([0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi]),
-            'C' : np.array([0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi]),
-            'LO' : np.array([0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi])
+            'A':  np.array([0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi, 0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi]),
+            'B':  np.array([0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi]),
+            'C':  np.array([0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi]),
+            'LO': np.array([0, np.pi, np.pi, 0, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, 0, np.pi, np.pi, 0])
         }
 
+        self.specs = []
         for i in range(len(operations)):
             image_output = None
 
@@ -247,19 +249,22 @@ class BoxcarGeometry(QtCore.QThread):
                     image_output += beam_image
             
             self.sendBeam.emit((self.beam))
-            phaseShown = False # Phase image is not dispayed yet
             self.SLM.write_image(image_output)
-            while phaseShown == False:
-                phaseShown = self.SLM.check_phaseShown() # Get True if the phase is displayed
-            
+
             if not self.isDemo:
                 self.flag = 0
-                print(i)
                 self.take_spectrum()
             else:
                 self.fake_spectrum()
-            self.intensity += operations[i]*self.spec
-        self.sendPhaseCycling.emit(self.wls, self.intensity)
+            self.specs.append(self.spec.copy())
+        
+        # Total signal
+        S_total = np.zeros_like(self.wls, dtype=complex)
+        for i in range(len(operations)):
+            S_total += operations[i] * self.specs[i]
+        self.intensity = S_total/np.sum(np.abs(operations))
+
+        self.sendPhaseCycling.emit(self.wls, np.abs(self.intensity))
     
     def take_spectrum(self, max_iter=10):
         '''
@@ -321,7 +326,6 @@ class BoxcarGeometry(QtCore.QThread):
 
     def twoDmaps(self, wls, LO_spectrum, data_2D, t_scanned, t_LO, pad=10000):
         carrier = self.beam['LO'].get_compressionCarrier(unit='wavelength')
-        print(carrier)
         data_2D = data_2D[:,0:-60]
         LO_spectrum = LO_spectrum[0:-60]
         wls = wls[0:-60]

@@ -144,6 +144,9 @@ class SLM(QtCore.QThread):
         self.blink_dll.GetSLMFound.restype = ctypes.c_int # New version of Get_SLMFound
         #self.blink_dll.Get_COMFound.restype = ctypes.c_int # Absent of the new dll file
 
+        self.secondary_monitor = self.find_monitor("DISPLAY2")
+        self.slm_monitor = self.find_monitor("DISPLAY3")
+
     def create_sdk(self):
         """Loads the DLLs and creates the window in the off-screen required to send the image to the SLM """
         self.blink_dll.Create_SDK()
@@ -187,16 +190,16 @@ class SLM(QtCore.QThread):
         #    print(f"  Resolution: {m.width}x{m.height}")
 
         # Print the phase on the secondary monitor
-        secondary_monitor = next(m for m in get_monitors() if "DISPLAY2" in m.name.upper())
+        m = self.secondary_monitor
         cv2.namedWindow("SECONDARY", cv2.WINDOW_NORMAL)
-        cv2.moveWindow("SECONDARY", secondary_monitor.x, secondary_monitor.y)
+        cv2.moveWindow("SECONDARY", m.x, m.y)
         cv2.setWindowProperty("SECONDARY", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow("SECONDARY", image_bgra)
 
         # Print the phase on the SLM
-        slm_monitor = next(m for m in get_monitors() if "DISPLAY3" in m.name.upper())
+        m = self.slm_monitor
         cv2.namedWindow("SLM", cv2.WINDOW_NORMAL)
-        cv2.moveWindow("SLM", slm_monitor.x, slm_monitor.y)
+        cv2.moveWindow("SLM", m.x, m.y)
         cv2.setWindowProperty("SLM", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow("SLM", image_bgra)
         cv2.waitKey(30)
@@ -204,6 +207,15 @@ class SLM(QtCore.QThread):
         # Flag to confirm the phase on the device
         phaseShown = True
         self.sendFlag.emit(phaseShown)
+
+    def find_monitor(self, name):
+        monitors = get_monitors()
+
+        for m in monitors:
+            if name in m.name.upper():
+                return m
+
+        raise RuntimeError(name, "monitor not found")
 
     def load_lut(self, file_path):
         """

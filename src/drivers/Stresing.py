@@ -93,11 +93,13 @@ class StresingCamera(QtCore.QThread):
 
         self.parameter_display_dict['No_Sample']['val'] = self.sample
         self.parameter_display_dict['No_Sample']['unit'] = ' '
+        self.parameter_display_dict['No_Sample']['min'] = 2
         self.parameter_display_dict['No_Sample']['max'] = 4294967295
         self.parameter_display_dict['No_Sample']['read'] = False
 
         self.parameter_display_dict['No_Block']['val'] = self.block
         self.parameter_display_dict['No_Block']['unit'] = ' '
+        self.parameter_display_dict['No_Block']['min'] = 1
         self.parameter_display_dict['No_Block']['max'] = 4294967295
         self.parameter_display_dict['No_Block']['read'] = False
 
