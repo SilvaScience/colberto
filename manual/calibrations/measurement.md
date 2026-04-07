@@ -15,7 +15,7 @@ There are four measurement types: 0Q, 1Q-Rephasing, 1Q-Non rephasing and 2Q. The
 
 Before the first measurment, the LO spectrum must be acquire by cliking on `Get LO` button. This is for the quick Fourier transform after the measurment. Then the measurement can be perform by cliking on `Acquire`
 
-When the measurement is initiated, the code is running over two loops, the t_secondary and t_scanned values. For every t_secondary, timming vectors are created. They depends on the meaasurement type. Then, for evry t_scanned the phase cycling is performed (see the next section for details). For each cycling steps, a acquisition is done and stored in a list. The 16 measurements are summed together following the `operations` vector written below at the end of the phase cycling procedure. For every t_scanned, the outcome intensity of the phase cycling is saved.
+When the measurement is initiated, the code is running over two loops, the t_secondary and t_scanned values. For every t_secondary, timming vectors are created. They depends on the meaasurement type. Then, for every t_scanned the phase cycling is performed (see the next section for details). For each cycling steps, a acquisition is done and stored in a list. The 16 measurements are summed together following the `operations` vector written below at the end of the phase cycling procedure. For every t_scanned, the outcome intensity of the phase cycling is saved.
 
 ## Phase cycling
 
