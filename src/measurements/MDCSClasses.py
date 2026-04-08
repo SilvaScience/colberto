@@ -177,7 +177,6 @@ class BoxcarGeometry(QtCore.QThread):
                         self.sendMDCSRaw.emit(('MDCS_raw_data', self.measurement_data))
                         self.sendProgress.emit(((i * len(self.t_scanned)) + (j + 1)) / (len(self.t_secondary) * len(self.t_scanned)) * 100)
                 self.sendSave.emit()
-                self.twoDmaps(self.wls, self.LO_spectrum, np.array(self.intensities[i]), self.t_scanned, self.t_LO, pad=10000)
         self.sendProgress.emit(100)
         self.stop()
         print(self.measurement_type+' measurement '+time.strftime('%H:%M:%S')+' finished')
@@ -323,38 +322,3 @@ class BoxcarGeometry(QtCore.QThread):
         scaling = 0.8 + 0.2 * np.random.rand()   # random scaling factor
         spec = scaling * (noise + gaussian - 50)
         self.spec = spec.astype(float)
-
-    def twoDmaps(self, wls, LO_spectrum, data_2D, t_scanned, t_LO, pad=10000):
-        carrier = self.beam['LO'].get_compressionCarrier(unit='wavelength')
-        data_2D = data_2D[:,0:-60]
-        LO_spectrum = LO_spectrum[0:-60]
-        wls = wls[0:-60]
-        [c_spectra, freq] = self.heterodyne_filter(wls, LO_spectrum, data_2D, carrier, t_LO)
-        [freq_FT, FT_spectra] = self.Fourier_transform(t_scanned, c_spectra, pad)
-        self.sendFourierReal.emit(co.angFreqToeV(freq), co.angFreqToeV(freq_FT), np.abs(FT_spectra))
-        self.sendFourierImag.emit(co.angFreqToeV(freq), co.angFreqToeV(freq_FT), np.real(FT_spectra))
-
-    @staticmethod
-    def heterodyne_filter(wls, LO_spectrum, data_2D, carrier, t_LO):
-        func = interp1d(wls, np.sqrt(LO_spectrum), kind='cubic')
-        w_freq = co.waveToAngFreq(wls*1e-9)
-        freq = np.linspace(co.waveToAngFreq(max(wls*1e-9)), co.waveToAngFreq(min(wls*1e-9)), len(wls))
-        w_c = co.waveToAngFreq(carrier*1e-9)
-        data_2D = data_2D/func(wls)
-        for i in range(len(data_2D)):
-            func2 = interp1d(w_freq, data_2D[i]*co.waveToAngFreq(wls**2), kind='cubic')
-            data_2D[i] = func2(freq)
-        filter = np.concatenate((np.zeros(int(len(data_2D[0])/2)), np.ones(int(len(data_2D[0])/2))))
-        c_spectra = fft(fftshift(ifftshift(ifft(data_2D, axis=1))*filter), axis=1)
-        c_spectra = c_spectra*np.exp(1j*(freq-w_c)*t_LO)
-        return c_spectra, freq
-    
-    @staticmethod 
-    def Fourier_transform(t_scanned, c_spectra, pad):
-        t_scanned = np.pad(t_scanned, (0, pad), 'linear_ramp', end_values=(max(t_scanned)+(t_scanned[1]-t_scanned[0])*pad))*1e-15 # units in seconds
-        n = len(t_scanned)
-        sample_rate = n/(max(t_scanned)-min(t_scanned))
-        xf = fftshift(fftfreq(n, 1/sample_rate))*2*np.pi # Hz
-        Y = [np.array(fftshift(fft(np.pad(signal, (0, pad), 'constant')))) for signal in np.transpose(c_spectra)]
-        FT_Y = np.array(Y)
-        return xf, FT_Y
