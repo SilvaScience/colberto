@@ -704,10 +704,10 @@ class DelayCalibrationMeasurement(QtCore.QThread):
     
     def take_spectrum(self, i):
         if i == 0: 
-            self.spec = np.array(self.spectrometer.get_intensities())
+            self.shg = np.array(self.spectrometer.get_intensities())
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
-            self.spec = self.spec-self.background
+            self.spec = self.spec-self.background-self.shg
             self.sendSpectrum.emit(self.wls, self.spec)
 
     def set_SNR(self, delaydata, SNR_threshold, boundaries):

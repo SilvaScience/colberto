@@ -8,6 +8,7 @@ Created on Wed Jun  5 10:52:39 2024
 import ctypes
 import os
 import configparser
+import numpy as np
 
 # These are the settings structs. It must be the same like in EBST_CAM/shared_src/struct.h regarding order, data formats and size.
 class camera_settings(ctypes.Structure):
@@ -100,6 +101,8 @@ def init_driver(self, path_dll, config):
     self.settings.camera_settings[self.drvno].VFREQ = int(config.get("board0","vfreq")) # Controls the vertical clock frequency for FFT sensors (sensor S14290). 
     self.settings.camera_settings[self.drvno].use_software_polling = int(config.get("board0","useSoftwarePolling")) # Determines which method is used to copy data from DMA to user buffer.
     self.settings.camera_settings[self.drvno].adc_gain = int(config.get("board0","adcGain")) # Controlling the gain function of the ADC in 3030 high speed cameras (sensor S14290 use 5 or 6).
+    self.settings.camera_settings[self.drvno].tor = int(config.get("board0","tor")) # Shows the exposure window at the O output of the PCI card.
+    self.settings.camera_settings[self.drvno].trigger_mode_integrator = int(config.get("board0","triggerCc")) # Trigger mode camera control.
 
     # Scan trigger input (sti) mode determines the signal on which one readout is started :
     #   0 - External trigger on input I of PCIe board 
@@ -174,6 +177,12 @@ def init_measure(self):
 
 def measure(self, use_blocking_call):
 
+    # The sensor S14290 is a high speed sensor and is not completely cleared by one read out.
+    # Therefore it may not be used without a reset signal, or following readouts have a crosstalk.
+    status = self.dll.DLLCloseShutter(self.drvno)
+    if(status != 0):
+        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+
     if use_blocking_call:
         # Start the measurement. This is the blocking call, which means it will return when the measurement is finished. This is done to ensure that no data access happens before all data is collected.
         status = self.dll.DLLStartMeasurement_blocking()
@@ -192,34 +201,32 @@ def measure(self, use_blocking_call):
             self.dll.DLLGetCurrentScanNumber(self.drvno, ptr_cur_sample, ptr_cur_block)
             print("sample: "+str(cur_sample.value)+" block: "+str(cur_block.value))
 
-    # Create an c-style uint16 array of size pixel which is initialized to 0
-    # frame_buffer = (ctypes.c_uint16 * self.settings.camera_settings[self.drvno].PIXEL)(0)
-    # ptr_frame_buffer = ctypes.pointer(frame_buffer)
-    # Get the data of one frame. Sample 5, block 0, camera 0
-    # status = self.dll.DLLCopyOneSample(self.drvno, 5, 0, 0, ptr_frame_buffer)
-    # if(status != 0):
-    #     raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
-    
-    # This block is showing you how to get all data of one frame with one DLL call
-    # block_buffer = (c_uint16 * (settings.PIXEL * settings.nos * settings.CAMCNT))(0)
-    # ptr_block_buffer = pointer(block_buffer)
-    # status = dll.DLLCopyOneBlock(drvno, 0, ptr_block_buffer)
-    # if(status != 0):
-    # 	raise BaseException(dll.DLLConvertErrorCodeToMsg(status))
-
     # This block is showing you how to get all data of the whole measurement with one DLL call
     data_buffer = (ctypes.c_uint16 * (self.settings.camera_settings[self.drvno].PIXEL * self.settings.nos * self.settings.camera_settings[self.drvno].CAMCNT * self.settings.nob))(0)
     ptr_data_buffer = ctypes.pointer(data_buffer)
     status = self.dll.DLLCopyAllData(self.drvno, ptr_data_buffer)
+
     if(status != 0):
         raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
     
-    # Convert the c-style array to a python list
-    # list_frame_buffer = [data_buffer[i] for i in range(self.settings.camera_settings[self.drvno].PIXEL)]
-    list_frame_buffer = [data_buffer[i * self.settings.camera_settings[self.drvno].PIXEL:(i + 1) * self.settings.camera_settings[self.drvno].PIXEL] for i in range(self.settings.nos)]
-    summed_frame = [sum(pixel_values) for pixel_values in zip(*list_frame_buffer)]
-    averaged_frame = [value / self.settings.nos for value in summed_frame]
-    return averaged_frame
+    status = self.dll.DLLOpenShutter(self.drvno)
+    if(status != 0):
+        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+
+    # Convert ctypes array to numpy
+    arr = np.ctypeslib.as_array(data_buffer)
+
+    # Reshape to [nob, nos, PIXEL]
+    arr = arr.reshape(self.settings.nob, self.settings.nos, self.settings.camera_settings[self.drvno].PIXEL)
+    # Example: first block, first sample : arr[0, 0, :]
+
+    # arr has shape [nob, nos, PIXEL]
+    sum_over_blocks = np.sum(arr, axis=0)  # shape will be [nos, PIXEL]
+    avg_over_blocks = sum_over_blocks/self.settings.nob
+
+    # First sample averaged over all blocks
+    last_sample_avg = avg_over_blocks[-1, :]
+    return last_sample_avg
 
 def exit(self):
 
