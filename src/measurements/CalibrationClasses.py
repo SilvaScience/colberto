@@ -693,7 +693,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
                                 }
                             if i>=3:
                                 self.sendCrossCorrelation.emit(self.delay[3:i], self.wls, np.array(self.intensities)[3:i, :])
-        self.sendCrossCorrelationData.emit(('Delay_calibration_raw_data',self.delay_calibration_data))
+        self.sendCrossCorrelationData.emit((f"Delay_calibration_raw_data_{self.refBeamName}_{self.secBeamName}", self.delay_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
         print('Delay Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
