@@ -1,6 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from scipy.special import jv,iv
+from scipy.special import jv,iv,jvp,ivp
 
 class vibratingPlate():
     '''
@@ -41,8 +41,8 @@ class vibratingPlate():
     def Wns(self,n,s,r,theta):
         '''
             Computes the mode profile at radius r and angle theta for a mode indices n and s 
-            :param n: Number of axial nodes (theta)
-            :param s: Number of radial nodes (r)
+            :param n: Number of axial nodes (along theta)
+            :param s: Number of radial nodes (along r)
             :param r: radial position (m)
             :param theta: angular position (rad)
             
@@ -52,6 +52,28 @@ class vibratingPlate():
         Wns=((-iv(n,k*self.a)/jv(n,k*self.a))*jv(n,k*r)+iv(n,k*r))*np.cos(n*theta)
         Wns=Wns*np.where(r>=self.a,np.nan,1)
         return Wns
+    
+    def Xi(self,n,s,nu,r_0,theta_0):
+        '''
+            Computes the response of a mode of indices n,s to a force at frequency nu applied at rho_0 and theta_0.
+            The response is normalized by the time dependant force 
+            :param n: Number of axial nodes (along theta)
+            :param s: Number of radial nodes (along r)
+            :param nu: frequency (Hz) of the force 
+            :param r_0: radial position of the force (m)
+            :param theta_0: angular position (rad) of the force 
+
+            returns Xi_n,s(r_0,theta_0)
+
+        '''
+        kns2=self.lambsquare[n,s]/self.a**2
+        print(kns2)
+        k2=2*np.pi*nu*np.sqrt(self.a_rho/self.D)
+        print(k2)
+        Ans=np.abs(iv(n,self.lambsquare[n,s])/jv(n,self.lambsquare[n,s]))**2*(self.a**2/2)*np.abs(jvp(n,self.lambsquare[n,s]))**2+(self.a**2/2)*np.abs(ivp(n,self.lambsquare[n,s]))**2
+        Xins=(self.Wns(n,s,r_0,theta_0))/((kns2-k2)*(kns2+k2)*Ans)
+        return Xins
+
     def mode_profile(self,n,s):
         '''
             Plots the spatial profile at maximal ampltiude of a mode
@@ -70,12 +92,6 @@ class vibratingPlate():
         theta=theta+np.where(xx<=0,np.pi,0)
         plt.imshow(self.Wns(n,s,rho,theta))
         plt.colorbar()
-def lambsquares(n):
-        '''
-            Finds the eigenvalues determining the frequencies of the plate probme (roots of eq 2.5 of Leissa) 
-        '''
-        fun=lambda x: jv(n,x)*iv(n+1,x)+iv(n,x)*jv(n+1,x)
-        return n
 
 if __name__=="__main__":
     #indices=['0-0','0-1','0-2','1-0','0-3']
@@ -88,6 +104,18 @@ if __name__=="__main__":
     volume_density=volume_density*1e-3/(1e-6)#convert to kg m-3 
     fused_silica_3mm=vibratingPlate(nu=nu,E=E,h=h,rho=volume_density,a=a) 
     print("Resonnance frequency is : %.2e Hz"%fused_silica_3mm.mode_frequency(0,0))
-    fused_silica_3mm.mode_profile(n=1,s=1)
+    fused_silica_3mm.mode_profile(n=1,s=0)
     plt.title('n=1,s=1')
+    nu=np.logspace(4,6,1000)
+    r_0=a/2*0.75
+    theta_0=0
+    plt.figure()
+    plt.title('r_0=a/2, theta_0=0')
+    plt.loglog(nu,np.abs(fused_silica_3mm.Xi(0,0,nu,r_0=r_0,theta_0=theta_0)),label='n=0, s=0')
+    plt.loglog(nu,np.abs(fused_silica_3mm.Xi(0,1,nu,r_0=r_0,theta_0=theta_0)),label='n=1, s=0')
+    plt.loglog(nu,np.abs(fused_silica_3mm.Xi(1,0,nu,r_0=r_0,theta_0=theta_0)),label='n=0, s=1')
+    plt.xlabel('Drive frequency (Hz)')
+    plt.ylabel('Mode response')
+    plt.legend()
+
     plt.show()
