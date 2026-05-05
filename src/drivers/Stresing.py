@@ -177,7 +177,7 @@ class StresingCamera(QtCore.QThread):
         In devices with workers, a pause of continuous acquisition might be required. """
         if parameter == 'No_Sample':
             self.parameter_dict['No_Sample'] = value
-            self.driver.settings.nos = int(value)
+            self.driver.settings.nos = int(value)+5
             self.sample = value
             self.new_spectrum = False
         elif parameter == 'No_Block':

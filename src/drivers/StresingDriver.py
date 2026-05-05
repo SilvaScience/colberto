@@ -217,7 +217,7 @@ def measure(self, use_blocking_call):
     arr = np.ctypeslib.as_array(data_buffer)
 
     # Reshape to [nob, nos, PIXEL]
-    arr = arr.reshape(self.settings.nob, self.settings.nos, self.settings.camera_settings[self.drvno].PIXEL)
+    arr = arr.reshape(self.settings.nob, self.settings.nos+5, self.settings.camera_settings[self.drvno].PIXEL)
     # Example: first block, first sample : arr[0, 0, :]
 
     # Remove the first 5 samples
