@@ -1023,12 +1023,15 @@ class MainInterface(QtWidgets.QMainWindow):
             self.DataHandling.clear_data()
             self.measurement = Measure_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_int_time_box.value(),
                                                             self.LUT_calib_spectra_avg_box.value(),
-                                                            self.LUT_calib_scans_number_box.value())
+                                                            self.LUT_calib_scans_number_box.value(),
+                                                            self.grating_period_edit.value())
             self.measurement.sendProgress.connect(self.set_progress)
             self.DataHandling.sendSpectrum.connect(self.LUT_Calib_plot.set_data)
 
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendCalib.connect(self.DataHandling.add_calibration)
             self.measurement.sendParameter.connect(self.change_parameter)
+            self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
             self.measurement.start()
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())

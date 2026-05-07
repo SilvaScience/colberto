@@ -408,7 +408,9 @@ class Beam:
         '''
         indices=np.arange(num)
         offset=phase/(2*pi)*period
-        y=amplitude*sawtooth(2*pi*(indices-offset)/period,width=0) % 2*pi
+        #y=amplitude*sawtooth(2*pi*(indices-offset)/period,width=0) % 2*pi
+        ramp = (sawtooth(2*np.pi*(indices - offset)/period, width=0) + 1) / 2
+        y = ramp * amplitude * 2*np.pi
         return y
     
     @staticmethod

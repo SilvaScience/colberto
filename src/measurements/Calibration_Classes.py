@@ -22,6 +22,7 @@ import logging
 import datetime
 path_root = Path(__file__).parents[2]
 sys.path.append(str(path_root))
+from src.compute.beams import Beam
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,11 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
     '''
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendProgress = QtCore.pyqtSignal(float)
+    sendCalib = QtCore.pyqtSignal(tuple)
     sendParameter = QtCore.pyqtSignal(str, float)
+    sendSave =  QtCore.pyqtSignal()
 
-    def __init__(self, devices, parameter, int_time, spectra_number, scan_number):
+    def __init__(self, devices, parameter, int_time, spectra_number, scan_number, grating_period):
         '''
          Initializes the LUT file measurement
          input:
@@ -59,52 +62,77 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         self.acquire_measurement = True
 
         self.parameter = parameter
+        #self.intensities = np.zeros(len(self.GreyScale_Vals),len(self.wls))
+
+        self.intensities = np.full(
+            (len(self.GreyScale_Vals), len(self.wls)),
+            np.nan,
+            dtype=float)
+
+
+
+        self.measurement_type = 'Lut_Calibration'
+
+        self.measurement_data={
+            'type' : self.measurement_type,
+            'wavelengths' : self.wls,
+            'grey_scale' : self.GreyScale_Vals,
+            'intensities' : self.intensities}
+
+        self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
+        self.monobeam.set_gratingPeriod(grating_period)
 
     def run(self):
         logger.info('%s Run LUT File Calibration Measurement' % datetime.datetime.now())
         #print(time.strftime('%H:%M:%S') + ' Run LUT File Calibration Measurement')
         progress = 0
-        for i in range(self.scan_number):
-            self.sendProgress.emit(progress)
-            for n in range(len(self.GreyScale_Vals)):
-                #print(self.GreyScale_Vals[n])
-                if not self.terminate:  # check whether stopping measurement is called
-                    self.sendParameter.emit('greyscale_val', self.GreyScale_Vals[n])
-                    self.sendParameter.emit('int_time', self.int_time)
+        #for i in range(self.scan_number):
+        self.sendProgress.emit(progress)
+        for n in range(len(self.GreyScale_Vals)):
+            #print(self.GreyScale_Vals[n])
+            if not self.terminate:  # check whether stopping measurement is called
+                self.sendParameter.emit('greyscale_val', self.GreyScale_Vals[n])
+                #self.sendParameter.emit('int_time', self.int_time) # For the Stresing it should be Scan_Timer
 
-                    image = self.generate_calibibration_image(n)  # Generate Image for SLM
+                image = self.generate_calibration_image(n)  # Generate Image for SLM
 
-                    self.SLM.write_image(image, imagetype='raw')
-                    #time.sleep(0.001)
-                    logger.info(f'%s Image Sent n={n} {datetime.datetime.now()}')
+                #self.SLM.write_image(image, imagetype='raw')
+                self.SLM.write_image(image)
+                #time.sleep(0.001)
+                logger.info(f'%s Image Sent n={n} {datetime.datetime.now()}')
 
-                    #time.sleep(0.5)
+                #time.sleep(0.5)
 
-                    # Acquire Data
-                    for m in range(self.spectra_number):  # might need to make this (self.spectra_number-1)
-                        self.summedspec = np.array(self.spectrometer.get_intensities())
-                        logger.info(f'%s Spectra #{m} Acquired {datetime.datetime.now()}')
-                        progress = (((n + 1) + (i * len(self.GreyScale_Vals))) / (
-                                        len(self.GreyScale_Vals) * self.scan_number)) * 100
+                
+                # Acquire Data
+                #for m in range(self.spectra_number):  # might need to make this (self.spectra_number-1)
+                #self.summedspec = np.array(self.spectrometer.get_intensities())
+                #logger.info(f'%s Spectra #{m} Acquired {datetime.datetime.now()}')
+                #progress = (((n + 1) + (i * len(self.GreyScale_Vals))) / (
+                #                len(self.GreyScale_Vals) * self.scan_number)) * 100
+                progress = n/len(self.GreyScale_Vals)*100
 
-                        self.wls = np.array(self.spectrometer.get_wavelength())
-                        self.spec = np.array(self.spectrometer.get_intensities())
+                self.wls = np.array(self.spectrometer.get_wavelength())
+                self.spec = np.array(self.spectrometer.get_intensities())
 
-                        self.summedspec = self.summedspec + self.spec
-                        self.sendProgress.emit(progress)
+                #self.summedspec = self.summedspec + self.spec
+                self.sendProgress.emit(progress)
+                self.intensities[n, :] = self.spec
+                self.measurement_data={
+                    'intensities' : self.intensities}
+                #self.spec = self.summedspec / self.spectra_number
+                self.sendSpectrum.emit(self.wls, self.spec)
+                self.sendCalib.emit(('LUT_calib', self.measurement_data))
 
-                    self.spec = self.summedspec / self.spectra_number
-                    self.sendSpectrum.emit(self.wls, self.spec)
+                #logger.info(f'%s Spectrum Acquired for n={n} {datetime.datetime.now()}')
 
-                    logger.info(f'%s Spectrum Acquired for n={n} {datetime.datetime.now()}')
-
-
+        self.sendSave.emit()
         self.sendProgress.emit(100)
         logger.info('%s LUT File Calibration Measurement Finished ' % datetime.datetime.now())
         #print(time.strftime('%H:%M:%S') + ' LUT File Calibration Measurement Finished')
 
 
-    def generate_calibibration_image(self, right_val):
+    def generate_calibration_image(self, right_val):
         """
         Generates an image (heigt,width) in grey value. The image is spit vertically in 2.
 
@@ -113,16 +141,20 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         Return :
             np.ndarray of shape (height, width) dtype uint8
         """
-        height, width, depth, RGB, isEightBitImage = self.SLM.get_parameters()
-        left_val = 0
+        # height, width, depth, RGB, isEightBitImage = self.SLM.get_parameters()
+        # left_val = 0
 
-        img = np.zeros((height, width), dtype=np.uint8)
-        middle = width // 2
+        # img = np.zeros((height, width), dtype=np.uint8)
+        # middle = width // 2
 
-        img[:, :middle] = left_val
-        img[:, middle:] = right_val
+        # img[:, :middle] = left_val
+        # img[:, middle:] = right_val
 
-        return img
+        self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
+        self.monobeam.set_gratingAmplitude(right_val/255)
+        image_output=self.monobeam.makeGrating()                
+
+        return image_output
 
 
     def stop(self):
@@ -164,11 +196,12 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
             logger.info(f' {fn} {(datetime.datetime.now())}')
             
             with h5py.File(fn, 'r') as hdf: #analyze data file loaded
-                data = hdf.get('spectra')
+                data = hdf.get('/calibration/LUT_calib/intensities')
                 data_set = np.array(data)
                 print(data_set.shape)
 
-                grp = hdf['spectra']
+
+                grp = hdf['/calibration/LUT_calib/intensities']
                 params = grp.attrs['parameter_keys']
                 wave = grp.attrs['yaxis']
 
@@ -289,4 +322,4 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
             logger.info('%s Request Stop ' % datetime.datetime.now())
             #print(time.strftime('%H:%M:%S') + ' Request Stop')
 
-
+        
