@@ -16,6 +16,7 @@ import sys
 from ctypes import *
 import h5py
 import scipy.signal as signal
+from scipy.optimize import curve_fit
 from PyQt5.QtWidgets import QApplication, QFileDialog
 import csv
 import logging
@@ -161,6 +162,21 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         self.terminate = True
         logger.info('%s Request Stop ' % datetime.datetime.now())
 ########################################################################################################################
+
+"""
+HDF5 format: Y-Axis(wave) : wavelenght vector of the spectro 
+param: "greyscale_val
+
+A mean is done to have only unique 1D vector (Uniq_Greysclae_Vals)
+
+spectra: Matrix (wavelenght X nb of scan)
+
+average_spectrum is a matrix (x: greyscale, y: wavelenght: Z mean intensity)
+
+
+
+"""
+
 
 class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
 
@@ -322,4 +338,82 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
             logger.info('%s Request Stop ' % datetime.datetime.now())
             #print(time.strftime('%H:%M:%S') + ' Request Stop')
 
+
+        def dataprocessing():
+            "the function need to extract the good 1D spectra, to do the fit. "
+            greyscale_vals= 0
+            intensity_vals=0
+
+            return greyscale_vals, intensity_vals
+
+        """
+        def extract_phase_curve_fit(greyscale_vals, intensity_vals):
+
+            def slm_interference_model(g, a0, a1, b0, b1, c0, c1, c2, c3):
+        # Enveloppe d'amplitude (droite)
+                amplitude = a0 + a1 * g
+            # Dérive du zéro/offset (droite)
+                offset = b0 + b1 * g
+            # Réponse de phase (polynôme cubique)
+                phase = c0 + c1 * g + c2 * g**2 + c3 * g**3
+            
+                return amplitude * np.cos(phase) + offset
+
+        # 2. Estimer les paramètres initiaux (Guess) pour aider l'algorithme
+        # On suppose que l'amplitude initiale est la moitié du max, etc.
+            a0_guess = (np.max(intensity_vals) - np.min(intensity_vals)) / 2
+            b0_guess = np.mean(intensity_vals)
+        # On s'attend généralement à un déphasage de ~2pi sur la plage 0-255
+            c1_guess = 2 * np.pi / 255 
         
+            initial_guess = [a0_guess, 0, b0_guess, 0, 0, c1_guess, 0, 0]
+
+        # 3. Lancer l'ajustement non-linéaire
+            try:
+                popt, _ = curve_fit(slm_interference_model, greyscale_vals, intensity_vals, p0=initial_guess)
+            except RuntimeError:
+                print("Erreur : Impossible de faire converger l'ajustement.")
+                return np.zeros_like(greyscale_vals)
+
+        # 4. Extraire uniquement la partie "Phase" du résultat
+            c0, c1, c2, c3 = popt[4:]
+            calculated_phase = c0 + c1 * greyscale_vals + c2 * greyscale_vals**2 + c3 * greyscale_vals**3
+        
+        # Normaliser la phase pour qu'elle commence à 0
+            calculated_phase = calculated_phase - calculated_phase[0]
+        
+            return calculated_phase, popt, slm_interference_model 
+
+        def generate_final_slm_lut(calculated_phase, greyscale_vals, target_phase_max=2*np.pi):
+        '''
+            Inverse la courbe de phase pour créer le tableau LUT final pour le SLM.
+            Le SLM s'attend généralement à avoir 256 entrées correspondantes à 
+            des phases allant de 0 à 2*pi.
+            '''
+            
+            # 1. On s'assure que la phase augmente de façon monotone (requis pour l'interpolation)
+            # Si la phase descend au lieu de monter, on inverse les tableaux
+            if calculated_phase[-1] < calculated_phase[0]:
+                calculated_phase = calculated_phase[::-1]
+                greyscale_vals = greyscale_vals[::-1]
+
+            # 2. On crée l'axe des X de notre fichier LUT (la phase désirée, ex: 256 pas entre 0 et 2*pi)
+            desired_phases = np.linspace(0, target_phase_max, 256)
+            
+            # 3. On utilise l'interpolation de NumPy pour "lire la courbe à l'envers"
+            # np.interp(x_désiré, x_connu, y_connu)
+            # Ici, notre x_connu est la phase calculée, et le y_connu est le niveau de gris !
+            lut_greyscale_output = np.interp(desired_phases, calculated_phase, greyscale_vals)
+            
+            # 4. On arrondit pour avoir des entiers 8-bits (0-255) que le SLM peut lire
+            lut_greyscale_output = np.clip(np.round(lut_greyscale_output), 0, 255).astype(int)
+            
+            return desired_phases, lut_greyscale_output    
+
+
+        """
+
+
+
+
+            
