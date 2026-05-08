@@ -83,7 +83,7 @@ class Slm(QtCore.QThread):
 
         self.parameter_display_dict['greyscale_val']['val'] = 0
         self.parameter_display_dict['greyscale_val']['unit'] = ' '
-        self.parameter_display_dict['greyscale_val']['max'] = 255
+        self.parameter_display_dict['greyscale_val']['max'] = 10000
         self.parameter_display_dict['greyscale_val']['read'] = False
 
         # set parameters
@@ -122,6 +122,10 @@ class Slm(QtCore.QThread):
     def get_width(self):
         """Wrapper to get SLM width"""
         return self.parameter_dict['Width']
+    
+    def get_depth(self):
+        """Wrapper to get the SLM depth"""
+        return self.parameter_dict['Depth']
 
     def closeEvent(self, event):
         # Si la fenêtre se ferme, on arrête le worker proprement
@@ -201,6 +205,7 @@ class SLMWorker(QtCore.QThread):
         self.c_wrapper = config.get("SLM0","cWrapper")
         self.image_Gen = config.get("SLM0","imageGen")
         self.lut_File = config.get("SLM0","lutFile")
+        print(self.lut_File)
         self.rgb = int(config.get("SLM0","rgb"))
         self.is_eight_bit_image = int(config.get("SLM0","isEightBitImage"))
         self.height = int(config.get("SLM0","height")) 

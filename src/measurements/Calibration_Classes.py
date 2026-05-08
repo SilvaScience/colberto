@@ -16,7 +16,9 @@ import sys
 from ctypes import *
 import h5py
 import scipy.signal as signal
+from scipy.interpolate import interp1d
 from PyQt5.QtWidgets import QApplication, QFileDialog
+from scipy.ndimage import gaussian_filter1d
 import csv
 import logging
 import datetime
@@ -33,12 +35,13 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         while keeping the other half set to zero and records the intensity on a spectrometer.
     '''
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendIntensity = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendProgress = QtCore.pyqtSignal(float)
     sendCalib = QtCore.pyqtSignal(tuple)
     sendParameter = QtCore.pyqtSignal(str, float)
     sendSave =  QtCore.pyqtSignal()
 
-    def __init__(self, devices, parameter, int_time, spectra_number, scan_number, grating_period):
+    def __init__(self, devices, parameter, grating_period, central_wavelength):
         '''
          Initializes the LUT file measurement
          input:
@@ -50,11 +53,8 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
 
         self.spectrometer = devices['spectrometer']
         self.SLM= devices['SLM']
-        self.int_time = int_time
-        self.spectra_number = spectra_number
-        self.scan_number = scan_number
-        self.GreyScale_Vals = np.arange(0,256,1) #255
-        #self.GreyScale_Vals = np.arange(0, 11, 1)  # for testing purposes
+        self.SLMdepth = 2**self.SLM.get_depth()-1
+        self.GreyScale_Vals = np.arange(0,self.SLMdepth,5) #depth of the SLM
         self.spectra = []  # preallocate spec array
         self.summedspec = []
         self.wls = self.spectrometer.get_wavelength()
@@ -62,105 +62,79 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         self.acquire_measurement = True
 
         self.parameter = parameter
-        #self.intensities = np.zeros(len(self.GreyScale_Vals),len(self.wls))
-
         self.intensities = np.full(
             (len(self.GreyScale_Vals), len(self.wls)),
             np.nan,
             dtype=float)
-
-
-
+        self.area = np.zeros(len(self.GreyScale_Vals))
+        self.phase = np.zeros(len(self.GreyScale_Vals))
         self.measurement_type = 'Lut_Calibration'
-
-        self.measurement_data={
-            'type' : self.measurement_type,
-            'wavelengths' : self.wls,
-            'grey_scale' : self.GreyScale_Vals,
-            'intensities' : self.intensities}
 
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
         self.monobeam.set_gratingPeriod(grating_period)
+        self.central_wavelength = central_wavelength
 
     def run(self):
         logger.info('%s Run LUT File Calibration Measurement' % datetime.datetime.now())
-        #print(time.strftime('%H:%M:%S') + ' Run LUT File Calibration Measurement')
         progress = 0
-        #for i in range(self.scan_number):
         self.sendProgress.emit(progress)
+
         for n in range(len(self.GreyScale_Vals)):
-            #print(self.GreyScale_Vals[n])
             if not self.terminate:  # check whether stopping measurement is called
                 self.sendParameter.emit('greyscale_val', self.GreyScale_Vals[n])
-                #self.sendParameter.emit('int_time', self.int_time) # For the Stresing it should be Scan_Timer
+                image = self.generate_calibration_image(self.GreyScale_Vals[n])  # Generate Image for SLM
 
-                image = self.generate_calibration_image(n)  # Generate Image for SLM
-
-                #self.SLM.write_image(image, imagetype='raw')
                 self.SLM.write_image(image)
-                #time.sleep(0.001)
+                time.sleep(0.01)
                 logger.info(f'%s Image Sent n={n} {datetime.datetime.now()}')
-
-                #time.sleep(0.5)
-
-                
-                # Acquire Data
-                #for m in range(self.spectra_number):  # might need to make this (self.spectra_number-1)
-                #self.summedspec = np.array(self.spectrometer.get_intensities())
-                #logger.info(f'%s Spectra #{m} Acquired {datetime.datetime.now()}')
-                #progress = (((n + 1) + (i * len(self.GreyScale_Vals))) / (
-                #                len(self.GreyScale_Vals) * self.scan_number)) * 100
                 progress = n/len(self.GreyScale_Vals)*100
 
                 self.wls = np.array(self.spectrometer.get_wavelength())
                 self.spec = np.array(self.spectrometer.get_intensities())
-
-                #self.summedspec = self.summedspec + self.spec
                 self.sendProgress.emit(progress)
-                self.intensities[n, :] = self.spec
-                self.measurement_data={
-                    'intensities' : self.intensities}
-                #self.spec = self.summedspec / self.spectra_number
-                self.sendSpectrum.emit(self.wls, self.spec)
-                self.sendCalib.emit(('LUT_calib', self.measurement_data))
 
-                #logger.info(f'%s Spectrum Acquired for n={n} {datetime.datetime.now()}')
+                self.intensities[n, :] = self.spec
+                mask = (self.wls >= self.central_wavelength-50) & (self.wls <= self.central_wavelength+50)
+                self.area[n] = np.trapezoid(self.spec[mask], self.wls[mask])
+
+                self.sendSpectrum.emit(self.wls, self.spec)
+
+        I_norm = np.clip((self.area - self.area.min()) /(self.area.max() - self.area.min()), 0, 1)
+        I_norm = gaussian_filter1d(I_norm, sigma=5)
+        self.sendIntensity.emit(self.GreyScale_Vals, I_norm)
+
+        self.measurement_data={
+            'type' : self.measurement_type,
+            'wavelengths' : self.wls,
+            'greyscale' : self.GreyScale_Vals,
+            'intensities' : self.intensities,
+            'I_norm' : I_norm
+            }
+        self.sendCalib.emit(('LUT_calib', self.measurement_data))
 
         self.sendSave.emit()
         self.sendProgress.emit(100)
         logger.info('%s LUT File Calibration Measurement Finished ' % datetime.datetime.now())
-        #print(time.strftime('%H:%M:%S') + ' LUT File Calibration Measurement Finished')
-
 
     def generate_calibration_image(self, right_val):
         """
-        Generates an image (heigt,width) in grey value. The image is spit vertically in 2.
+        Generates an image (heigt,width) in grey value.
 
         - right_val : intensity (0-255) for right
 
         Return :
             np.ndarray of shape (height, width) dtype uint8
         """
-        # height, width, depth, RGB, isEightBitImage = self.SLM.get_parameters()
-        # left_val = 0
-
-        # img = np.zeros((height, width), dtype=np.uint8)
-        # middle = width // 2
-
-        # img[:, :middle] = left_val
-        # img[:, middle:] = right_val
 
         self.monobeam.set_beamVerticalDelimiters([0, self.SLM.get_height()])
-        self.monobeam.set_gratingAmplitude(right_val/255)
-        image_output=self.monobeam.makeGrating()                
+        self.monobeam.set_gratingAmplitude(right_val/self.SLMdepth)
+        image_output=self.monobeam.makeStripes()                
 
         return image_output
-
 
     def stop(self):
         self.terminate = True
         logger.info('%s Request Stop ' % datetime.datetime.now())
-########################################################################################################################
 
 class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
 
@@ -169,95 +143,142 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
         '''
 
         sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+        sendLine = QtCore.pyqtSignal(int)
+        sendPhase = QtCore.pyqtSignal(np.ndarray, np.ndarray)
         sendProgress = QtCore.pyqtSignal(float)
         sendParameter = QtCore.pyqtSignal(str, float)
 
-        def __init__(self, devices, parameter, filepath):
+        def __init__(self, devices, parameter, region, grayscale, intensity):
             '''
              Initializes the LUT File Calculations
              input:
                  - devices: the devices dictionary holding at least a spectrometer and a SLM
                  - parameters:
                  - filepath: path where the measured spectra is stored
+                 - region: 0 and 2pi value of grayscale 
             '''
 
             super(Generate_LUT_PhasetoGreyscale, self).__init__()
 
-            self.filepath = filepath
+            self.SLM = devices['SLM']
+            self.SLMdepth = 2**self.SLM.get_depth()-1
             self.terminate = False
             self.acquire_measurement = True
+            self.region = region
+            self.grayscale = grayscale
+            self.intensity = intensity
 
         def run(self):
             logger.info('%s Run LUT File Generation ' % datetime.datetime.now())
-            #print(time.strftime('%H:%M:%S') + ' Run LUT File Generation')
-            progress = 0
+            self.sendProgress.emit(0)
 
-            fn = self.filepath
-            logger.info(f' {fn} {(datetime.datetime.now())}')
-            
-            with h5py.File(fn, 'r') as hdf: #analyze data file loaded
-                data = hdf.get('/calibration/LUT_calib/intensities')
-                data_set = np.array(data)
-                print(data_set.shape)
+            self.sendLine.emit(self.region[0])
+            self.sendLine.emit(self.region[1])
 
+            mask = (self.grayscale >= self.region[0]) & (self.grayscale <= self.region[1])
+            self.intensity = self.intensity[mask]-np.min(self.intensity[mask])
+            self.intensity /= np.max(self.intensity)
+            self.grayscale = self.grayscale[mask]
 
-                grp = hdf['/calibration/LUT_calib/intensities']
-                params = grp.attrs['parameter_keys']
-                wave = grp.attrs['yaxis']
+            lut_voltage = np.linspace(0, 4092, self.SLMdepth) # Voltage array
+            V = lut_voltage[self.grayscale] 
 
-            try:
-                index = np.where(params == 'greyscale_val')
-                index = np.array(index)
-                idx_val = int(index[0])
-                print("String found at index", index)
-            except ValueError:
-                print("String not found!")
+            phi = np.zeros(len(self.intensity))
+            imax = np.argmax(self.intensity)
 
-            Total_GreyScale_Vals = data_set[idx_val, :]
-            print(Total_GreyScale_Vals)
-            Uniq_GreyScale_Vals = np.unique(Total_GreyScale_Vals)
+            phi_left = 2 * np.arcsin(np.sqrt(self.intensity[:imax+1]))
+            phi_right = 2*np.pi - 2 * np.arcsin(np.sqrt(self.intensity[imax+1:]))
 
-            cut = len(params)
-            spectra = data_set[cut:, :] #trim data set to include only measured spectra
+            phi_left_norm = (phi_left-np.min(phi_left))
+            phi_left_norm = phi_left_norm/np.max(phi_left_norm)*0.5
+            phi_right_norm = (phi_right-np.min(phi_right))
+            phi_right_norm = 0.5+phi_right_norm/np.max(phi_right_norm)*0.5
 
-            avg_spectrum = np.zeros((len(wave), len(Uniq_GreyScale_Vals))) #set array size to average spectrum from diff scans
-            for j in range(len(Uniq_GreyScale_Vals)):
-                for i in range(len(Total_GreyScale_Vals)):
-                    if Total_GreyScale_Vals[i] == Uniq_GreyScale_Vals[j]:
-                        avg_spectrum[:, j] = avg_spectrum[:, j] + spectra[:, i]
+            shift = phi_left_norm[-1] - phi_right_norm[0]
+            phi_right_norm += shift
 
-            scan_num = len(Total_GreyScale_Vals) / len(Uniq_GreyScale_Vals)
-            
-            logger.info(f' Total_GreyScale_Vals = {len(Total_GreyScale_Vals)} {datetime.datetime.now()}')
-            print(len(Total_GreyScale_Vals))
+            phi = np.concatenate([phi_left_norm, phi_right_norm])
+            phi = 2*np.pi*phi/np.max(phi)
 
-            logger.info(f' Uniq_GreyScale_Vals = {len(Uniq_GreyScale_Vals)} {datetime.datetime.now()}')
-            print(len(Uniq_GreyScale_Vals))
+            self.sendPhase.emit(self.grayscale, phi/(2*np.pi))
 
-            logger.info(f' Number of Scans = {scan_num} {datetime.datetime.now()}')
-            print(scan_num)
+            idx = np.argsort(phi)
+            phi_sorted = phi[idx]
+            V_sorted = lut_voltage[self.grayscale[idx]]
 
-            avg_spectrum = avg_spectrum / scan_num
-            logger.info('%s Spectrum Averaged ' % datetime.datetime.now())
-            print('Spectrum Averaged')
+            phi_to_V = interp1d(phi_sorted, V_sorted, kind='linear', fill_value="extrapolate", bounds_error=False)
+            phi_target = np.linspace(0, 2*np.pi, self.SLMdepth+1)
+            V_target = phi_to_V(phi_target)
+            V_target_int = np.round(V_target).astype(int)
 
-            wavelength_shift = np.zeros((len(wave),len(Uniq_GreyScale_Vals)))#creating the right size array
-            phase_shift = np.zeros((len(wave),len(Uniq_GreyScale_Vals)))#creating the right size array
-
-            print(wavelength_shift)
-            print(phase_shift)
-            #function to determine phse shifts utilizing a fourier transform
-            for i in range(len(Uniq_GreyScale_Vals)):
-                wavelength_shift[:, i], phase_shift[:, i] = self.detect_peak_shift(wave, avg_spectrum[:,0], avg_spectrum[:, i])
-
-            logger.info('%s Phase Shift Calculated ' % datetime.datetime.now())
-            print('Phase Shift Calculated')
-
-            self.generate_phase_greyscale_LUT(wave, phase_shift, Uniq_GreyScale_Vals)
+            self.grayscale = np.arange(self.SLMdepth+1)
+            self.generate_voltage_lut(self.grayscale, V_target_int)
 
             self.sendProgress.emit(100)
-            logger.info('%s LUT File Generation Finished ' % datetime.datetime.now())
-            print(time.strftime('%H:%M:%S') + ' LUT File Generation Finished')
+            
+            # with h5py.File(fn, 'r') as hdf: #analyze data file loaded
+            #     data = hdf.get('/calibration/LUT_calib/intensities')
+            #     data_set = np.array(data)
+            #     print(data_set.shape)
+
+
+            #     grp = hdf['/calibration/LUT_calib/intensities']
+            #     params = grp.attrs['parameter_keys']
+            #     wave = grp.attrs['yaxis']
+
+            # try:
+            #     index = np.where(params == 'greyscale_val')
+            #     index = np.array(index)
+            #     idx_val = int(index[0])
+            #     print("String found at index", index)
+            # except ValueError:
+            #     print("String not found!")
+
+            # Total_GreyScale_Vals = data_set[idx_val, :]
+            # print(Total_GreyScale_Vals)
+            # Uniq_GreyScale_Vals = np.unique(Total_GreyScale_Vals)
+
+            # cut = len(params)
+            # spectra = data_set[cut:, :] #trim data set to include only measured spectra
+
+            # avg_spectrum = np.zeros((len(wave), len(Uniq_GreyScale_Vals))) #set array size to average spectrum from diff scans
+            # for j in range(len(Uniq_GreyScale_Vals)):
+            #     for i in range(len(Total_GreyScale_Vals)):
+            #         if Total_GreyScale_Vals[i] == Uniq_GreyScale_Vals[j]:
+            #             avg_spectrum[:, j] = avg_spectrum[:, j] + spectra[:, i]
+
+            # scan_num = len(Total_GreyScale_Vals) / len(Uniq_GreyScale_Vals)
+            
+            # logger.info(f' Total_GreyScale_Vals = {len(Total_GreyScale_Vals)} {datetime.datetime.now()}')
+            # print(len(Total_GreyScale_Vals))
+
+            # logger.info(f' Uniq_GreyScale_Vals = {len(Uniq_GreyScale_Vals)} {datetime.datetime.now()}')
+            # print(len(Uniq_GreyScale_Vals))
+
+            # logger.info(f' Number of Scans = {scan_num} {datetime.datetime.now()}')
+            # print(scan_num)
+
+            # avg_spectrum = avg_spectrum / scan_num
+            # logger.info('%s Spectrum Averaged ' % datetime.datetime.now())
+            # print('Spectrum Averaged')
+
+            # wavelength_shift = np.zeros((len(wave),len(Uniq_GreyScale_Vals)))#creating the right size array
+            # phase_shift = np.zeros((len(wave),len(Uniq_GreyScale_Vals)))#creating the right size array
+
+            # print(wavelength_shift)
+            # print(phase_shift)
+            # #function to determine phse shifts utilizing a fourier transform
+            # for i in range(len(Uniq_GreyScale_Vals)):
+            #     wavelength_shift[:, i], phase_shift[:, i] = self.detect_peak_shift(wave, avg_spectrum[:,0], avg_spectrum[:, i])
+
+            # logger.info('%s Phase Shift Calculated ' % datetime.datetime.now())
+            # print('Phase Shift Calculated')
+
+            # self.generate_phase_greyscale_LUT(wave, phase_shift, Uniq_GreyScale_Vals)
+
+            # self.sendProgress.emit(100)
+            # logger.info('%s LUT File Generation Finished ' % datetime.datetime.now())
+            # print(time.strftime('%H:%M:%S') + ' LUT File Generation Finished')
 
 
         def detect_peak_shift(self, wavelengths, ref_spec, shift_spec):
@@ -290,6 +311,43 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
 
             return wavelength_shift, phase_shift
 
+        def generate_voltage_lut(self, greyscale_values, voltage_values):
+            """
+            Generates a .lut file mapping grayscale -> voltage.
+            
+            Parameters
+            ----------
+            greyscale_values : array-like
+                Grayscale input values (e.g., 0–255 or 0–1023)
+
+            voltage_values : array-like
+                Corresponding voltages for each grayscale value
+            """
+
+            greyscale_values = np.asarray(greyscale_values)
+            voltage_values = np.asarray(voltage_values)
+
+            if len(greyscale_values) != len(voltage_values):
+                raise ValueError("Greyscale and voltage arrays must have same length")
+
+            output_file, _ = QFileDialog.getSaveFileName(
+                None,
+                "Save LUT File",
+                "",
+                "LUT Files (*.lut)"
+            )
+
+            if not output_file:
+                print("LUT file save canceled.")
+                return
+
+            with open(output_file, 'w') as f:
+
+                for g, v in zip(greyscale_values, voltage_values):
+                    f.write(f"{int(g)}\t{int(round(v))}\n")
+
+            print(f"LUT saved to: {output_file}")
+        
         def generate_phase_greyscale_LUT(self, wave, phase_shift_array, greyscale_values):
             """
             Generates a phase-to-greyscale Look-Up Table (LUT) based on the detected phase shifts and allows the user to choose a save location using Qt.

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1047</width>
+    <width>1259</width>
     <height>942</height>
    </rect>
   </property>
@@ -369,6 +369,216 @@ p, li { white-space: pre-wrap; }
             <height>400</height>
            </rect>
           </property>
+         </widget>
+        </widget>
+        <widget class="QWidget" name="tab_3">
+         <attribute name="title">
+          <string>LUT Calibration</string>
+         </attribute>
+         <widget class="QGroupBox" name="LUT_calibration_groupbox_2">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>10</y>
+            <width>901</width>
+            <height>771</height>
+           </rect>
+          </property>
+          <property name="font">
+           <font>
+            <weight>50</weight>
+            <bold>false</bold>
+            <underline>false</underline>
+            <kerning>false</kerning>
+           </font>
+          </property>
+          <property name="title">
+           <string/>
+          </property>
+          <property name="checkable">
+           <bool>false</bool>
+          </property>
+          <property name="checked">
+           <bool>false</bool>
+          </property>
+          <widget class="QLabel" name="LUT_calib_central_wavelength_label">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>100</y>
+             <width>121</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Central wavelength :</string>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="LUT_calib_plot_layout" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>310</x>
+             <y>10</y>
+             <width>581</width>
+             <height>241</height>
+            </rect>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="measure_LUT_calib">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>190</y>
+             <width>231</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Measure Spectrum - Phase2Grey Calibration</string>
+           </property>
+          </widget>
+          <widget class="QDoubleSpinBox" name="LUT_calib_central_wavelength_value">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>100</y>
+             <width>101</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="suffix">
+            <string> nm</string>
+           </property>
+           <property name="maximum">
+            <double>10000.000000000000000</double>
+           </property>
+           <property name="value">
+            <double>10.000000000000000</double>
+           </property>
+          </widget>
+          <widget class="QLabel" name="LUT_calib_0_label">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>130</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Grayscale value at 0 :</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="LUT_calib_0_value">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>130</y>
+             <width>101</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="suffix">
+            <string/>
+           </property>
+           <property name="maximum">
+            <number>10000</number>
+           </property>
+           <property name="value">
+            <number>5</number>
+           </property>
+          </widget>
+          <widget class="QPushButton" name="generate_LUT_calib">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>220</y>
+             <width>231</width>
+             <height>27</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Generate LUT File - Phase2Grey Calibration</string>
+           </property>
+          </widget>
+          <widget class="QSpinBox" name="LUT_calib_2pi_value">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>160</y>
+             <width>101</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="toolTipDuration">
+            <number>-2</number>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="suffix">
+            <string/>
+           </property>
+           <property name="maximum">
+            <number>10000</number>
+           </property>
+           <property name="value">
+            <number>2</number>
+           </property>
+          </widget>
+          <widget class="QLabel" name="LUT_calib_2pi_label">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>160</y>
+             <width>121</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Grayscale value at 2pi :</string>
+           </property>
+          </widget>
+          <widget class="PlotWidget" name="LUT_calib_plot_layout_2" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>260</y>
+             <width>881</width>
+             <height>501</height>
+            </rect>
+           </property>
+          </widget>
+          <widget class="QLabel" name="label_vertical_calibration_box_5">
+           <property name="geometry">
+            <rect>
+             <x>10</x>
+             <y>0</y>
+             <width>291</width>
+             <height>19</height>
+            </rect>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>16</pointsize>
+            </font>
+           </property>
+           <property name="text">
+            <string>Phase to Graysacle Calibration</string>
+           </property>
+          </widget>
          </widget>
         </widget>
         <widget class="QWidget" name="spatial_tab">
@@ -2718,206 +2928,6 @@ Start:Stepnumber:Stop  Start:Stepnum...
            </property>
           </widget>
          </widget>
-         <widget class="QGroupBox" name="LUT_calibration_groupbox">
-          <property name="geometry">
-           <rect>
-            <x>10</x>
-            <y>300</y>
-            <width>851</width>
-            <height>281</height>
-           </rect>
-          </property>
-          <property name="font">
-           <font>
-            <weight>50</weight>
-            <bold>false</bold>
-            <underline>false</underline>
-            <kerning>false</kerning>
-           </font>
-          </property>
-          <property name="title">
-           <string/>
-          </property>
-          <property name="checkable">
-           <bool>false</bool>
-          </property>
-          <property name="checked">
-           <bool>false</bool>
-          </property>
-          <widget class="QLabel" name="LUT_calib_label_int_time">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>30</y>
-             <width>131</width>
-             <height>19</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Integration Time (ms)</string>
-           </property>
-          </widget>
-          <widget class="PlotWidget" name="LUT_calib_plot_layout" native="true">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="geometry">
-            <rect>
-             <x>280</x>
-             <y>10</y>
-             <width>551</width>
-             <height>251</height>
-            </rect>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="measure_LUT_calib">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>150</y>
-             <width>231</width>
-             <height>27</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Measure Spectrum - Phase2Grey Calibration</string>
-           </property>
-          </widget>
-          <widget class="QDoubleSpinBox" name="LUT_int_time_doubleSpinBox">
-           <property name="geometry">
-            <rect>
-             <x>140</x>
-             <y>30</y>
-             <width>91</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 255, 255);</string>
-           </property>
-           <property name="suffix">
-            <string> ms</string>
-           </property>
-           <property name="maximum">
-            <double>10000.000000000000000</double>
-           </property>
-           <property name="value">
-            <double>10.000000000000000</double>
-           </property>
-          </widget>
-          <widget class="QLabel" name="LUT_calib_label_num_spectra">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>70</y>
-             <width>111</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Number of Spectra</string>
-           </property>
-          </widget>
-          <widget class="QSpinBox" name="LUT_calib_spectra_avg_spinBox">
-           <property name="geometry">
-            <rect>
-             <x>140</x>
-             <y>70</y>
-             <width>101</width>
-             <height>22</height>
-            </rect>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 255, 255);</string>
-           </property>
-           <property name="suffix">
-            <string>  spectra</string>
-           </property>
-           <property name="maximum">
-            <number>10000</number>
-           </property>
-           <property name="value">
-            <number>5</number>
-           </property>
-          </widget>
-          <widget class="QLabel" name="LUT_calib_scans_number_spectra">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>110</y>
-             <width>111</width>
-             <height>21</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Number of Scans</string>
-           </property>
-          </widget>
-          <widget class="QSpinBox" name="LUT_calib_scans_number_spinBox">
-           <property name="geometry">
-            <rect>
-             <x>140</x>
-             <y>110</y>
-             <width>101</width>
-             <height>22</height>
-            </rect>
-           </property>
-           <property name="toolTipDuration">
-            <number>-2</number>
-           </property>
-           <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 255, 255);</string>
-           </property>
-           <property name="suffix">
-            <string>  scans</string>
-           </property>
-           <property name="maximum">
-            <number>10000</number>
-           </property>
-           <property name="value">
-            <number>2</number>
-           </property>
-          </widget>
-          <widget class="QLineEdit" name="LUT_Data_file_lineEdit">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>190</y>
-             <width>101</width>
-             <height>25</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Data_File</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="generate_LUT_calib">
-           <property name="geometry">
-            <rect>
-             <x>10</x>
-             <y>230</y>
-             <width>231</width>
-             <height>27</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Generate LUT File - Phase2Grey Calibration</string>
-           </property>
-          </widget>
-          <widget class="QPushButton" name="select_LUT_Data_file_pushButton">
-           <property name="geometry">
-            <rect>
-             <x>130</x>
-             <y>190</y>
-             <width>111</width>
-             <height>23</height>
-            </rect>
-           </property>
-           <property name="text">
-            <string>Select Data File</string>
-           </property>
-          </widget>
-         </widget>
          <widget class="QLabel" name="label_vertical_calibration_box_2">
           <property name="geometry">
            <rect>
@@ -2948,7 +2958,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1047</width>
+     <width>1259</width>
      <height>21</height>
     </rect>
    </property>
