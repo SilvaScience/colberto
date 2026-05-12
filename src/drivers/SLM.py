@@ -172,13 +172,15 @@ class Slm(QtCore.QThread):
         self.phaseShown = False
         self.slm_worker.change_image(image,imagetype=imagetype)
 
-    def load_LUT(self):
-        LUT_path = filedialog.askopenfilename(
-            title="Select a file",
-            filetypes=[("Text files", "*.lut"), ("All files", "*.*")]
-        )
+    def load_LUT(self, LUT_path=None):
+        if LUT_path is None:
+            LUT_path = filedialog.askopenfilename(
+                title="Select a file",
+                filetypes=[("Text files", "*.lut"), ("All files", "*.*")]
+            )
         print('Importing the LUT file...')
         self.slm_worker.load_lut(LUT_path)
+        return LUT_path
 
     def set_phaseShown(self, phaseShown):
         self.phaseShown = phaseShown

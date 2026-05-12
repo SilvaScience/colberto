@@ -1056,7 +1056,9 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
                     Ask the user which LUT file to load. 
         '''
-        self.devices['SLM'].load_LUT()
+        LUT_FilePath = self.devices['SLM'].load_LUT()
+        LUT_FilePath = ('LUT_FilePath', LUT_FilePath)
+        self.DataHandling.add_calibration(LUT_FilePath)
     
     def show_beam_explorer(self):
         """
@@ -1144,6 +1146,8 @@ class MainInterface(QtWidgets.QMainWindow):
         calibration_loaded = loaded_data.get("calibration", {})
         self.DataHandling.calibration = DataHandling.dict_to_calibration(calibration_loaded)
 
+        LUT_FilePath = self.DataHandling.calibration['LUT_FilePath']
+        self.devices['SLM'].load_LUT(LUT_FilePath)
         self.assign_spectral_calibration()
         print("Calibration and beams successfully loaded.")
 
