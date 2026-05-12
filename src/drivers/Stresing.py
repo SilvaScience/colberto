@@ -93,7 +93,7 @@ class StresingCamera(QtCore.QThread):
 
         self.parameter_display_dict['No_Sample']['val'] = self.sample
         self.parameter_display_dict['No_Sample']['unit'] = ' '
-        self.parameter_display_dict['No_Sample']['min'] = 2
+        self.parameter_display_dict['No_Sample']['min'] = 6
         self.parameter_display_dict['No_Sample']['max'] = 4294967295
         self.parameter_display_dict['No_Sample']['read'] = False
 
@@ -177,7 +177,7 @@ class StresingCamera(QtCore.QThread):
         In devices with workers, a pause of continuous acquisition might be required. """
         if parameter == 'No_Sample':
             self.parameter_dict['No_Sample'] = value
-            self.driver.settings.nos = int(value)+5
+            self.driver.settings.nos = int(value)
             self.sample = value
             self.new_spectrum = False
         elif parameter == 'No_Block':

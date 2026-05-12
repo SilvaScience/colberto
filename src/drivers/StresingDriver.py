@@ -202,7 +202,7 @@ def measure(self, use_blocking_call):
             print("sample: "+str(cur_sample.value)+" block: "+str(cur_block.value))
 
     # This block is showing you how to get all data of the whole measurement with one DLL call
-    data_buffer = (ctypes.c_uint16 * (self.settings.camera_settings[self.drvno].PIXEL * (self.settings.nos+5) * self.settings.camera_settings[self.drvno].CAMCNT * self.settings.nob))(0)
+    data_buffer = (ctypes.c_uint16 * (self.settings.camera_settings[self.drvno].PIXEL * (self.settings.nos) * self.settings.camera_settings[self.drvno].CAMCNT * self.settings.nob))(0)
     ptr_data_buffer = ctypes.pointer(data_buffer)
     status = self.dll.DLLCopyAllData(self.drvno, ptr_data_buffer)
 
@@ -217,14 +217,17 @@ def measure(self, use_blocking_call):
     arr = np.ctypeslib.as_array(data_buffer)
 
     # Reshape to [nob, nos, PIXEL]
-    arr = arr.reshape(self.settings.nob, self.settings.nos+5, self.settings.camera_settings[self.drvno].PIXEL)
+    arr = arr.reshape(self.settings.nob, self.settings.nos, self.settings.camera_settings[self.drvno].PIXEL)
     # Example: first block, first sample : arr[0, 0, :]
+    
 
     # Remove the first 5 samples
-    arr_trim = arr[:, 5:, :] # shape: [nob, nos-5, PIXEL]
+    arr_trim = arr[:, 4:, :] # shape: [nob, nos-5, PIXEL]
+
 
     # Average over samples
     avg_over_samples = np.mean(arr_trim, axis=1)  # shape: [nob, PIXEL]
+
 
     # Average over blocks
     final_avg = np.mean(avg_over_samples, axis=0)  # shape: [PIXEL]

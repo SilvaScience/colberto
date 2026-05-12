@@ -24,7 +24,7 @@ from GUI.SpectralCalibPlot import SpectralCalibDataPlot, SpectralCalibFitPlot
 from GUI.ChirpCalibrationPlot import ChirpCalibrationPlot, ChirpSelectionPlot, ChirpFitPlot
 from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, DelayFitPlot
 from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeasurementFourierPlot
-from GUI.LUT_Calib_plot import LUT_Calib_plot
+from GUI.LUT_Calib_plot import LUT_Calib_plot, LUT_Calib_intensity_plot
 from GUI.SLMDisplay import SLMDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
@@ -171,14 +171,16 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # LUT Calibration - Utilities
         self.LUT_calibration_box = self.findChild(QtWidgets.QGroupBox, 'LUT_calibration')
-        self.LUT_int_time_box = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_int_time_doubleSpinBox')
-        self.LUT_calib_spectra_avg_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_spectra_avg_spinBox')
-        self.LUT_calib_scans_number_box = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_scans_number_spinBox')
+        self.LUT_grating_period = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_grating_period_value')
+        self.LUT_calib_central_wavelength = self.findChild(QtWidgets.QDoubleSpinBox, 'LUT_calib_central_wavelength_value')
+        self.LUT_calib_0 = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_0_value')
+        self.LUT_calib_2pi = self.findChild(QtWidgets.QSpinBox, 'LUT_calib_2pi_value')
         self.LUT_calib_plot_layout = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout')
-        self.measure_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'measure_LUT_calib')
-        self.select_LUT_Data_file_button = self.findChild(QtWidgets.QPushButton, 'select_LUT_Data_file_pushButton')
-        self.LUT_Data_file_edit = self.findChild(QtWidgets.QLineEdit, 'LUT_Data_file_lineEdit')
-        self.generate_LUT_calib_button = self.findChild(QtWidgets.QPushButton, 'generate_LUT_calib')
+        self.LUT_calib_plot_layout_2 = self.findChild(pg.PlotWidget, 'LUT_calib_plot_layout_2')
+        self.LUT_measure_spectrum_button = self.findChild(QtWidgets.QPushButton, 'LUT_measure_spectrum_button')
+        self.LUT_generate_LUT_file_button = self.findChild(QtWidgets.QPushButton, 'LUT_generate_LUT_file_button')
+        self.LUT_clear_graph_button = self.findChild(QtWidgets.QPushButton, 'LUT_clear_graph_button')
+        self.LUT_load_LUT_file_button = self.findChild(QtWidgets.QPushButton, 'LUT_load_LUT_file_button')
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
         
@@ -244,6 +246,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.MDCSFourierRealPlot = MDCSmeasurementFourierPlot(self.MDCS_Fourier_real_plot)
         self.MDCSFourierImagPlot = MDCSmeasurementFourierPlot(self.MDCS_Fourier_imag_plot)
         self.LUT_Calib_plot = LUT_Calib_plot(self.LUT_calib_plot_layout)
+        self.LUT_Calib_plot_2 = LUT_Calib_intensity_plot(self.LUT_calib_plot_layout_2)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
         """ This initializes the parameter tree. It is constructed based on the device dict, 
@@ -329,10 +332,10 @@ class MainInterface(QtWidgets.QMainWindow):
         self.fit_spectral_calibration_runButton.clicked.connect(self.fit_spectral_calibration)
         self.assign_spectral_calibration_button.clicked.connect(self.assign_spectral_calibration)
         # LUT Calibration Measurement Connect Events
-        self.measure_LUT_calib_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
-        self.select_LUT_Data_file_button.clicked.connect(self.load_LUT_Data_file)  # select spectrum data file
-        self.generate_LUT_calib_button.clicked.connect(
-        self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
+        self.LUT_measure_spectrum_button.clicked.connect(self.Measure_LUT_PhasetoGreyscale)  # measure spectrum
+        self.LUT_generate_LUT_file_button.clicked.connect(self.Generate_LUT_PhasetoGreyscale)  # use spectrum data to generate LUT file
+        self.LUT_clear_graph_button.clicked.connect(self.LUT_Calib_plot_2.clear_all)
+        self.LUT_load_LUT_file_button.clicked.connect(self.Load_LUT_PhasetoGrayscale)
         # Chirp calibration connect events
         self.background_chirp_data_runbutton.clicked.connect(self.BackgroundMeasurement)
         self.acquire_chirp_data_runButton.clicked.connect(self.chirpCalibrationMeasurement)
@@ -568,15 +571,6 @@ class MainInterface(QtWidgets.QMainWindow):
             logger.info('%s Kinetic Interval: %s'%(datetime.datetime.now(),str(self.kinetic_interval)))
         except:
             logger.warning('%s Lecture of kinetic interval failed'%datetime.datetime.now())
-
-    def load_LUT_Data_file(self):
-        # open background file and set as background
-        LUT_DataFile = QtWidgets.QFileDialog.getOpenFileName(self, 'Select LUT Data File')
-        LUT_DataFile_path = LUT_DataFile[0]
-
-        # display measured spectra filepath
-        self.LUT_Data_file_edit.setText(LUT_DataFile_path)
-        logger.warning('%s Data path stored' % datetime.datetime.now())
 
     ##### Measurements #####
 
@@ -1021,14 +1015,15 @@ class MainInterface(QtWidgets.QMainWindow):
             print('Start LUT Calibration Measurement')
             self.measurement_busy = True
             self.DataHandling.clear_data()
-            self.measurement = Measure_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_int_time_box.value(),
-                                                            self.LUT_calib_spectra_avg_box.value(),
-                                                            self.LUT_calib_scans_number_box.value())
+            self.measurement = Measure_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_grating_period.value(), self.LUT_calib_central_wavelength.value())
             self.measurement.sendProgress.connect(self.set_progress)
             self.DataHandling.sendSpectrum.connect(self.LUT_Calib_plot.set_data)
 
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendIntensity.connect(self.LUT_Calib_plot_2.add_data)
+            self.measurement.sendCalib.connect(self.DataHandling.add_calibration)
             self.measurement.sendParameter.connect(self.change_parameter)
+            self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
             self.measurement.start()
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
@@ -1040,17 +1035,31 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
 
         if not self.measurement_busy:
-            logger.info('%s Start LUT Generation' % datetime.datetime.now())
-            print('Start LUT File Generation')
-            self.measurement_busy = True
-            self.DataHandling.clear_data()
-            self.measurement = Generate_LUT_PhasetoGreyscale(self.devices, self.parameter, self.LUT_Data_file_edit.text())
-            self.measurement.sendProgress.connect(self.set_progress)
-
-            self.measurement.start()
+            if 'LUT_calib' in self.DataHandling.calibration:
+                LUT_calib = self.DataHandling.calibration['LUT_calib']
+                grayscale = LUT_calib['greyscale']
+                intensity = LUT_calib['I_norm']
+                logger.info('%s Start LUT Generation' % datetime.datetime.now())
+                print('Start LUT File Generation')
+                self.measurement_busy = True
+                self.DataHandling.clear_data()
+                self.measurement = Generate_LUT_PhasetoGreyscale(self.devices, self.parameter, [self.LUT_calib_0.value(), self.LUT_calib_2pi.value()], grayscale, intensity)
+                self.measurement.sendProgress.connect(self.set_progress)
+                self.measurement.sendLine.connect(self.LUT_Calib_plot_2.draw_line)
+                self.measurement.sendPhase.connect(self.LUT_Calib_plot_2.add_data)
+                self.measurement.start()
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
             #print('Measurement not started, devices are busy')
+
+    def Load_LUT_PhasetoGrayscale(self):
+        '''
+                    Ask the user which LUT file to load. 
+        '''
+        LUT_FilePath = self.devices['SLM'].load_LUT()
+        LUT_FilePath = ('LUT_FilePath', LUT_FilePath)
+        self.DataHandling.add_calibration(LUT_FilePath)
+    
     def show_beam_explorer(self):
         """
             Shows the beam explorer if it is not already shown
@@ -1137,6 +1146,8 @@ class MainInterface(QtWidgets.QMainWindow):
         calibration_loaded = loaded_data.get("calibration", {})
         self.DataHandling.calibration = DataHandling.dict_to_calibration(calibration_loaded)
 
+        LUT_FilePath = self.DataHandling.calibration['LUT_FilePath']
+        self.devices['SLM'].load_LUT(LUT_FilePath)
         self.assign_spectral_calibration()
         print("Calibration and beams successfully loaded.")
 

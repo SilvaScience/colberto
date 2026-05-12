@@ -8,7 +8,7 @@ import numpy as np
 import math
 from src.compute.calibration import Calibration
 from scipy.constants import c
-from scipy.signal import sawtooth
+from scipy.signal import sawtooth, square
 from src.compute import colbertoutils as co
 from numpy.polynomial import Polynomial as P
 from scipy.constants import pi
@@ -376,6 +376,25 @@ class Beam:
                 -(int): The period of the phase grating in units of pixels 
         '''
         return self.phaseGratingPeriod
+    
+    def makeStripes(self):
+        '''
+            Makes the phase stripe using the current phase, amplitude and period
+            output:
+                - 2d.array: A 2D phase array corresponding to the current phase profile in rad
+        '''
+        self.make_mask()
+        phaseStripesImage=np.zeros((self.SLMHeight,self.SLMWidth))
+        if self.phaseGratingPeriod is None:
+            return phaseStripesImage
+        numberVerticalPixels=self.SLMHeight
+        phaseProfile=self.get_sampledCurrentPhase(mode='absolute')
+        for i,phase in enumerate(phaseProfile):
+            phaseStripesImage[:,i]=self.generate_1Dstripes(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
+        phaseStripesImage=np.array(phaseStripesImage)
+        if self.maskOn:
+            phaseStripesImage=phaseStripesImage*self.mask  
+        return phaseStripesImage 
 
     def makeGrating(self):
         '''
@@ -397,6 +416,22 @@ class Beam:
         return phaseGratingImage 
     
     @staticmethod 
+    def generate_1Dstripes(amplitude,period,phase,num):
+        '''
+            Generates a stripes pattern for Diffraction-based spatiotemporal pulse shaping
+            input:
+                amplitude: (float) number between 0 and 1 setting the amplitude of the grating to amplitude*2*pi
+                period: period of the sawtooth pattern in units of pixels
+                phase: phase to be imparted on the diffracted beam (see eq. 13 of Turner et al. Rev. Sci. Instr. 2011)
+                num: the number of pixels in the sawtooth pattern  
+        '''
+        indices=np.arange(num)
+        offset=phase/(2*pi)*period
+        stripes = (square(2 * np.pi * (indices - offset) / period) + 1) / 2
+        y = stripes * amplitude * 2 * np.pi
+        return y
+    
+    @staticmethod 
     def generate_1Dgrating(amplitude,period,phase,num):
         '''
             Generates a sawtooth pattern for Diffraction-based spatiotemporal pulse shaping
@@ -408,7 +443,9 @@ class Beam:
         '''
         indices=np.arange(num)
         offset=phase/(2*pi)*period
-        y=amplitude*sawtooth(2*pi*(indices-offset)/period,width=0) % 2*pi
+        #y=amplitude*sawtooth(2*pi*(indices-offset)/period,width=0) % 2*pi
+        ramp = (sawtooth(2*np.pi*(indices - offset)/period, width=0) + 1) / 2
+        y = ramp * amplitude * 2*np.pi
         return y
     
     @staticmethod

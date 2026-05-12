@@ -27,6 +27,8 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
 import logging
 import datetime
+import tkinter as tk
+from tkinter import filedialog
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +85,7 @@ class Slm(QtCore.QThread):
 
         self.parameter_display_dict['greyscale_val']['val'] = 0
         self.parameter_display_dict['greyscale_val']['unit'] = ' '
-        self.parameter_display_dict['greyscale_val']['max'] = 255
+        self.parameter_display_dict['greyscale_val']['max'] = 10000
         self.parameter_display_dict['greyscale_val']['read'] = False
 
         # set parameters
@@ -122,6 +124,10 @@ class Slm(QtCore.QThread):
     def get_width(self):
         """Wrapper to get SLM width"""
         return self.parameter_dict['Width']
+    
+    def get_depth(self):
+        """Wrapper to get the SLM depth"""
+        return self.parameter_dict['Depth']
 
     def closeEvent(self, event):
         # Si la fenêtre se ferme, on arrête le worker proprement
@@ -165,6 +171,16 @@ class Slm(QtCore.QThread):
         logger.info('Just received an image of %d by %d'%image.shape)
         self.phaseShown = False
         self.slm_worker.change_image(image,imagetype=imagetype)
+
+    def load_LUT(self, LUT_path=None):
+        if LUT_path is None:
+            LUT_path = filedialog.askopenfilename(
+                title="Select a file",
+                filetypes=[("Text files", "*.lut"), ("All files", "*.*")]
+            )
+        print('Importing the LUT file...')
+        self.slm_worker.load_lut(LUT_path)
+        return LUT_path
 
     def set_phaseShown(self, phaseShown):
         self.phaseShown = phaseShown
@@ -322,6 +338,7 @@ class SLMWorker(QtCore.QThread):
         """ Load lut file in the SDK Meadowlark."""
         if self.slm is not None:
             self.slm.load_lut(lut_path)
+            print(lut_path)
         else:
             logger.error('%s  Lut file not found.'%datetime.datetime.now())
 
