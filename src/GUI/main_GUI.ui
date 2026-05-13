@@ -2995,24 +2995,6 @@ Start:Stepnumber:Stop  Start:Stepnum...
            </property>
           </widget>
          </widget>
-         <widget class="QLabel" name="label_vertical_calibration_box_2">
-          <property name="geometry">
-           <rect>
-            <x>20</x>
-            <y>290</y>
-            <width>221</width>
-            <height>19</height>
-           </rect>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>8</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>  Phase to Greyscale - LUT File Measurement</string>
-          </property>
-         </widget>
         </widget>
        </widget>
       </item>
