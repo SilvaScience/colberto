@@ -85,7 +85,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
                 self.vertical_calibration_data['intensities']=self.intensities
                 self.vertical_calibration_data['rows']=self.rows
                 if i>=1:
-                    self.send_intensities.emit(self.rows,self.intensities)
+                    self.send_intensities.emit(self.rows,self.intensities[1:])
         self.vertical_calibration_data['intensities']=self.intensities
         self.vertical_calibration_data['rows']=self.rows
         self.send_vertical_calibration_data.emit(('vertical_calibration_data',self.vertical_calibration_data))
