@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1259</width>
+    <width>1313</width>
     <height>942</height>
    </rect>
   </property>
@@ -349,7 +349,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>2</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -365,9 +365,99 @@ p, li { white-space: pre-wrap; }
            <rect>
             <x>10</x>
             <y>10</y>
-            <width>640</width>
-            <height>400</height>
+            <width>960</width>
+            <height>600</height>
            </rect>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="SLM_close_image">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>650</y>
+            <width>221</width>
+            <height>27</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Close image</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="SLM_test_image_button">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>620</y>
+            <width>221</width>
+            <height>27</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Test image</string>
+          </property>
+         </widget>
+         <widget class="QLabel" name="SLM_grating_period_label">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>690</y>
+            <width>121</width>
+            <height>19</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Grating period (px) :</string>
+          </property>
+         </widget>
+         <widget class="QDoubleSpinBox" name="SLM_grating_period_value">
+          <property name="geometry">
+           <rect>
+            <x>130</x>
+            <y>690</y>
+            <width>101</width>
+            <height>21</height>
+           </rect>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(255, 255, 255);</string>
+          </property>
+          <property name="suffix">
+           <string/>
+          </property>
+          <property name="decimals">
+           <number>0</number>
+          </property>
+          <property name="maximum">
+           <double>10000.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>15.000000000000000</double>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="SLM_make_stripes_button">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>720</y>
+            <width>221</width>
+            <height>27</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Make stripes</string>
+          </property>
+         </widget>
+         <widget class="QPushButton" name="SLM_make_grating_button">
+          <property name="geometry">
+           <rect>
+            <x>10</x>
+            <y>750</y>
+            <width>221</width>
+            <height>27</height>
+           </rect>
+          </property>
+          <property name="text">
+           <string>Make grating</string>
           </property>
          </widget>
         </widget>
@@ -3007,7 +3097,7 @@ Start:Stepnumber:Stop  Start:Stepnum...
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1259</width>
+     <width>1313</width>
      <height>21</height>
     </rect>
    </property>
