@@ -910,7 +910,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendBeam.connect(self.DataHandling.set_beam)
             self.measurement.sendCrossCorrelation.connect(self.DelayCalibrationPlot.set_data)
             self.measurement.sendCrossCorrelationData.connect(self.DataHandling.add_calibration)
-            self.measurement.sendCrossCorreletionRegion.connect(self.DelayFitPlot.set_data)
+            self.measurement.sendCrossCorrelationRegion.connect(self.DelayFitPlot.set_data)
             self.measurement.sendCrossCorrelationRegionData.connect(self.DataHandling.add_calibration)
             self.measurement.sendCrossCorrelationRegionFit.connect(self.DelayFitPlot.set_fit)
             self.measurement.sendCrossCorrelationRegionFitData.connect(self.DataHandling.add_calibration)
@@ -922,8 +922,12 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
             Apply the SNR on the chirp scan and show the desired wavelength bandwidth.
         '''
-        if 'Delay_calibration_raw_data' in self.DataHandling.calibration:
-            delay_calib_dict = self.DataHandling.calibration['Delay_calibration_raw_data']
+        self.refBeamName = self.delay_reference_beam_name_box.currentText()
+        self.secBeamName = self.delay_second_beam_name_box.currentText()
+
+        key = f'Delay_calibration_raw_data_{self.refBeamName}_{self.secBeamName}'
+        if key in self.DataHandling.calibration:
+            delay_calib_dict = self.DataHandling.calibration[key]
             self.measurement.set_SNR(delay_calib_dict, self.delay_SNR_threshold_value.value(), [self.delay_min_wavelength_bandwidth_value.value(), self.delay_max_wavelength_bandwidth_value.value()])
         else:
             logger.warning('%s Delay calibration data has not been taken. Run a delay beam calibration measurement first'%datetime.datetime.now())

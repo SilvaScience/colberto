@@ -608,7 +608,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
     sendBeam = QtCore.pyqtSignal(object)
     sendCrossCorrelation = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     sendCrossCorrelationData = QtCore.pyqtSignal(tuple)
-    sendCrossCorreletionRegion = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendCrossCorrelationRegion = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendCrossCorrelationRegionData = QtCore.pyqtSignal(tuple)
     sendCrossCorrelationRegionFit = QtCore.pyqtSignal(np.ndarray, np.ndarray, float, float)
     sendCrossCorrelationRegionFitData = QtCore.pyqtSignal(tuple)
@@ -776,7 +776,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
         data_integrated = np.sum(data_filtered_region, axis=1)
         data_integrated_normalized = data_integrated/np.max(data_integrated)
 
-        self.sendCrossCorreletionRegion.emit(delay_array_region, data_integrated_normalized)
+        self.sendCrossCorrelationRegion.emit(delay_array_region, data_integrated_normalized)
         self.delay_calibration_processed_data={
             'delay': delay_array_region,
             'wavelength': wavelength_array_region,
