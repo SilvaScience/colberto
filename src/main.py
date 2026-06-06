@@ -184,6 +184,13 @@ class MainInterface(QtWidgets.QMainWindow):
         #SLM Related
         self.slm_display=self.findChild(pg.GraphicsLayoutWidget,'slm_display')
         
+
+        #Cryostat
+        if 'cryostat' in self.devices:
+
+            if hasattr(self, 'CryostatTab'):
+                self.CryostatTab.set_driver(self.devices['cryostat'])
+
         # Spectrometer Selection
         self.spectrometer_select = self.findChild(QtWidgets.QComboBox, 'spec_selection_comboBox')
 

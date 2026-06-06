@@ -349,7 +349,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>8</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -2896,6 +2896,11 @@ p, li { white-space: pre-wrap; }
           <string>Parameter View</string>
          </attribute>
         </widget>
+        <widget class="CryostatTab" name="CryostatTab">
+         <attribute name="title">
+          <string>Cryostat</string>
+         </attribute>
+        </widget>
         <widget class="QWidget" name="tab">
          <attribute name="title">
           <string>Utilities</string>
@@ -3200,6 +3205,12 @@ Start:Stepnumber:Stop  Start:Stepnum...
    <class>GraphicsLayoutWidget</class>
    <extends>QWidget</extends>
    <header>pyqtgraph</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>CryostatTab</class>
+   <extends>QWidget</extends>
+   <header location="global">GUI.cryostattab</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

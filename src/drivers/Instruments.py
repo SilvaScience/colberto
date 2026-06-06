@@ -9,7 +9,7 @@ from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
 from drivers.Stresing import StresingCamera
 from drivers.Shamrock import Shamrock 
-from drivers.PascalCryostat import CryoPasqal
+from drivers.Optidry250 import CryoPasqal
 
 logger = logging.getLogger(__name__)
 
