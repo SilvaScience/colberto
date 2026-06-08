@@ -5,6 +5,11 @@ import pyvisa
 import numpy as np
 
 class CryoPasqal(QtCore.QThread):
+    """
+    Main driver class for the Optidry 250 Cryostat.
+    Inherits from QThread to integrate smoothly with PyQt5 applications.
+    Manages state dictionaries, hardware commands, and the background polling worker.
+    """
     # MANDATORY class variables for the GUI tree structure
     name = 'CryoPasqal'
     type = 'Cryostat'
@@ -12,15 +17,15 @@ class CryoPasqal(QtCore.QThread):
     def __init__(self, port_com='COM9'):
         super(CryoPasqal, self).__init__()
         
-        # 1. CORRECTED: Initialize the right dictionary!
+        # 1. Initialize nested dictionary for detailed parameter info (value, limits, read-only flags)
         self.parameter_display_dict = defaultdict(dict)
         
-        # Setpoint and Loop settings
+        # --- Setpoint and Loop settings ---
         self.parameter_display_dict['Set_T']['val'] = 300.0
         self.parameter_display_dict['Set_T']['unit'] = ' K'
         self.parameter_display_dict['Set_T']['min'] = 0
         self.parameter_display_dict['Set_T']['max'] = 400
-        self.parameter_display_dict['Set_T']['read'] = False
+        self.parameter_display_dict['Set_T']['read'] = False # False means it is writable by the user
 
         self.parameter_display_dict['Regulation_Loop']['val'] = 1
         self.parameter_display_dict['Regulation_Loop']['unit'] = ' loop'
@@ -28,7 +33,8 @@ class CryoPasqal(QtCore.QThread):
         self.parameter_display_dict['Regulation_Loop']['max'] = 2
         self.parameter_display_dict['Regulation_Loop']['read'] = False
         
-        # Temperatures (Channels A to E)
+        # --- Temperatures (Channels A to E) ---
+        # Note: 'read': True means these are sensor values, not meant to be manually overwritten
         self.parameter_display_dict['ChannelA_T']['val'] = 300.0
         self.parameter_display_dict['ChannelA_T']['unit'] = ' K'
         self.parameter_display_dict['ChannelA_T']['min'] = 0
@@ -59,7 +65,7 @@ class CryoPasqal(QtCore.QThread):
         self.parameter_display_dict['ChannelE_T']['max'] = 400
         self.parameter_display_dict['ChannelE_T']['read'] = True
         
-        # Pressures (Channels F and G)
+        # --- Pressures (Channels F and G) ---
         self.parameter_display_dict['PressureF']['val'] = 101300.0
         self.parameter_display_dict['PressureF']['unit'] = ' Pa'
         self.parameter_display_dict['PressureF']['min'] = 0
@@ -72,7 +78,7 @@ class CryoPasqal(QtCore.QThread):
         self.parameter_display_dict['PressureG']['max'] = 200000
         self.parameter_display_dict['PressureG']['read'] = True
         
-        # PID Parameters
+        # --- PID Parameters ---
         self.parameter_display_dict['Pid_P']['val'] = 0.0
         self.parameter_display_dict['Pid_P']['unit'] = ' P'
         self.parameter_display_dict['Pid_P']['min'] = 0
@@ -91,7 +97,7 @@ class CryoPasqal(QtCore.QThread):
         self.parameter_display_dict['Pid_D']['max'] = 1000
         self.parameter_display_dict['Pid_D']['read'] = False
 
-        # Status and Compressor
+        # --- Status and Compressor ---
         self.parameter_display_dict['OnOff_comp']['val'] = 0
         self.parameter_display_dict['OnOff_comp']['unit'] = ' state'
         self.parameter_display_dict['OnOff_comp']['min'] = 0
@@ -106,25 +112,26 @@ class CryoPasqal(QtCore.QThread):
         self.parameter_display_dict['Critical_State']['unit'] = ''
         self.parameter_display_dict['Critical_State']['read'] = True
 
-
-        # CORRECTED: Create flat parameter_dict mapping values
+        # 2. Create flat parameter_dict mapping values (used for quick access by the GUI)
         self.parameter_dict = {}
         for key in self.parameter_display_dict.keys():
             self.parameter_dict[key] = self.parameter_display_dict[key]['val']
 
-        # History for stability calculation
+        # --- History for stability calculation ---
         self.temp_history = []
-        self.stability_threshold = 0.05
-        self.stability_window = 30
+        self.stability_threshold = 0.05 # Delta T (Kelvin) allowed to be considered stable
+        self.stability_window = 30      # Number of recent samples required to check stability
 
-        # PyVISA management and communication lock
+        # --- PyVISA management and communication lock ---
         self.port_com = port_com
         self.rm = pyvisa.ResourceManager()
         self.is_connected = False
-        self.visa_mutex = QtCore.QMutex()
         
-        self.Opti = None # Initialize empty just in case
+        # Mutex ensures the background thread and main thread don't send/receive VISA commands simultaneously
+        self.visa_mutex = QtCore.QMutex() 
+        self.Opti = None
 
+        # Attempt to open hardware connection
         try:
             self.Opti = self.rm.open_resource(
                 self.port_com,
@@ -141,19 +148,26 @@ class CryoPasqal(QtCore.QThread):
             print(f"VISA initialization error for the Optidry250: {e}")
             self.is_connected = False
 
-        # Démarrage du Worker de lecture en arrière-plan
+        # Initialize and start the background polling worker
         self.UpdateWorker = PascalWorker(self.Opti, self.visa_mutex, self.is_connected)
+        
+        # Connect the worker's data emission signal to the update_all_data slot
         self.UpdateWorker.new_T.connect(self.update_all_data)
         self.UpdateWorker.start()
 
-    # 2. CORRECTED: Added the missing set_parameter method required by main.py
     def set_parameter(self, parameter, value):
+        """
+        Dispatcher method called by main.py/GUI to update a parameter.
+        Updates internal dictionaries and fires specific hardware commands.
+        """
         if not self.is_connected: return
 
+        # Update local states
         self.parameter_dict[parameter] = value
         if parameter in self.parameter_display_dict:
             self.parameter_display_dict[parameter]['val'] = value
 
+        # Route to appropriate hardware command
         if parameter == 'Set_T':
             loop = int(self.parameter_dict.get('Regulation_Loop', 1))
             self.set_temperature_setpoint(loop, float(value))
@@ -167,10 +181,15 @@ class CryoPasqal(QtCore.QThread):
             self.set_compressor_state(bool(int(value)))
 
     def update_all_data(self, data_list):
+        """
+        Slot function that receives new sensor data from the background worker.
+        Updates internal dictionary states and triggers stability calculations.
+        """
+        # Ensure data integrity before unpacking
         if not isinstance(data_list, list) or len(data_list) < 8:
             return
             
-        # 3. CORRECTED: Target the 'val' sub-key so we don't overwrite the dicts
+        # Helper function to safely update both dictionaries
         def assign_val(key, val):
             self.parameter_dict[key] = val
             self.parameter_display_dict[key]['val'] = val
@@ -184,14 +203,23 @@ class CryoPasqal(QtCore.QThread):
         assign_val('PressureG', data_list[6])
         assign_val('OnOff_comp', int(data_list[7]))
 
+        # Calculate stability based on the primary temperature channel (ChannelA_T)
         self.calculate_stability(data_list[0])
 
     def calculate_stability(self, current_temp):
+        """
+        Maintains a rolling window of temperature readings to determine system stability.
+        Updates the 'Stability' parameter to "Stable" or "In progress".
+        """
         self.temp_history.append(current_temp)
+        
+        # Keep window size clamped
         if len(self.temp_history) > self.stability_window:
             self.temp_history.pop(0)
 
         status = "In progress"
+        
+        # Only evaluate if we have a full window of data
         if len(self.temp_history) >= self.stability_window:
             temp_range = max(self.temp_history) - min(self.temp_history)
             if temp_range <= self.stability_threshold:
@@ -200,9 +228,12 @@ class CryoPasqal(QtCore.QThread):
         self.parameter_dict['Stability'] = status
         self.parameter_display_dict['Stability']['val'] = status
 
+    # --- Hardware Command Methods ---
+    
     def set_temperature_setpoint(self, loop, target_temp):
         if not self.is_connected: return
         try:
+            # Lock the mutex to prevent the polling worker from interfering
             locker = QtCore.QMutexLocker(self.visa_mutex)
             self.Opti.write(f"SOURce:TEMPerature:SPOint {loop}, {target_temp}")
             print(f"Loop {loop} setpoint updated to: {target_temp} K")
@@ -222,6 +253,7 @@ class CryoPasqal(QtCore.QThread):
         if not self.is_connected: return
         try:
             locker = QtCore.QMutexLocker(self.visa_mutex)
+            # Send P, I, and D values via SCPI commands
             self.Opti.write(f"SOURce:TEMPerature:PROPortional {loop}, {p}")
             self.Opti.write(f"SOURce:TEMPerature:INTegral {loop}, {i}")
             self.Opti.write(f"SOURce:TEMPerature:DERivative {loop}, {d}")
@@ -250,41 +282,58 @@ class CryoPasqal(QtCore.QThread):
 
 
 class PascalWorker(QtCore.QThread):
+    """
+    Background worker thread that continually polls the Cryostat hardware.
+    Using a separate thread prevents the GUI from freezing during I/O delays.
+    """
+    # Signal emitted containing the [temps, pressures, comp_state] list
     new_T = QtCore.pyqtSignal(list)
 
     def __init__(self, instrument_visa, visa_mutex, is_connected):
         super(PascalWorker, self).__init__()
         self.stop = False
-        self.waitTime = 1.0 
+        self.waitTime = 1.0  # Poll interval in seconds
         self.instrument_visa = instrument_visa 
         self.visa_mutex = visa_mutex
         self.is_connected = is_connected
 
     def run(self):
+        """
+        The main loop executed by the thread.
+        """
         while not self.stop:
             if self.is_connected and self.instrument_visa is not None:
                 data = self.read_all_hardware_data()
                 if data:
-                    self.new_T.emit(data)
+                    self.new_T.emit(data) # Broadcast the data to the main thread
             time.sleep(self.waitTime)
 
     def read_all_hardware_data(self):
+        """
+        Fetches live data from the hardware using SCPI query commands.
+        Returns a formatted list of [T1, T2, T3, T4, T5, P1, P2, Comp_State].
+        """
         try:
+            # Lock the mutex so we don't query while the main thread is sending a setting
             locker = QtCore.QMutexLocker(self.visa_mutex)    
             
-            # 4. CORRECTED: Changed self.Opti to self.instrument_visa
+            # Query channels 1 through 5 for temperature
             rep_temp = self.instrument_visa.query("MEASure:TEMPerature? (@1,2,3,4,5)")
             temps_float = [float(t) for t in rep_temp.strip().split(',')]
             
+            # Query channels 1 and 2 for pressure
             rep_press = self.instrument_visa.query("MEASure:PRESSure? (@1,2)")
             press_float = [float(p) for p in rep_press.strip().split(',')]
             
+            # Query compressor status
             rep_comp = self.instrument_visa.query("CONTrol:COMPressor:STATe?")
             comp_state = 1 if "ON" in rep_comp.upper() else 0
             
+            # Unlock immediately after queries are complete
             locker.unlock()
             
             return temps_float + press_float + [comp_state]
             
         except Exception as e:
+            # Fallback values if the read times out or fails (prevents crashing)
             return [300.0, 300.0, 300.0, 300.0, 300.0, 101300.0, 101300.0, 0]
