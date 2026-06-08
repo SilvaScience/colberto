@@ -472,13 +472,17 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.parameter_tree.setItemWidget(child, 0, name_widget)
                 self.parameter_tree.setItemWidget(child, 1, spin)
 
+    
+
     def update_read_parameter(self, new_parameter):
-        # update all read parameters
         for param in new_parameter.keys():
-            self.parameter_widgets[param].setValue(new_parameter[param])
-            self.parameter[param] = new_parameter[param]
-        # send parameters to DataViewer
-        self.DataHandling.update_parameter(list(self.parameter.values()))
+            if param in self.parameter_widgets:
+                try:
+                    self.parameter_widgets[param].setValue(new_parameter[param])
+                except TypeError:
+                    # Si le paramètre est du texte (ex: "Stable"), on ignore l'erreur du spinbox
+                    pass
+
 
     def change_parameter(self, parameter, value):
         # change parameter when called from another script

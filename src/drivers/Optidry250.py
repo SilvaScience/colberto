@@ -9,44 +9,122 @@ class CryoPasqal(QtCore.QThread):
     name = 'CryoPasqal'
     type = 'Cryostat'
 
-    def __init__(self, port_com='ASRL9::INSTR'):
+    def __init__(self, port_com='COM9'):
         super(CryoPasqal, self).__init__()
         
-        # Initialization of the parameter dictionary for the main GUI
-        self.parameter_dict = defaultdict()
-        self.parameter_dict['Set_T'] = 300.0
-        self.parameter_dict['OnOff_comp'] = 0
-        self.parameter_dict['Regulation_Loop'] = 1  # 1 ou 2 selon la ComboBox
+        # 1. CORRECTED: Initialize the right dictionary!
+        self.parameter_display_dict = defaultdict(dict)
+        
+        # Setpoint and Loop settings
+        self.parameter_display_dict['Set_T']['val'] = 300.0
+        self.parameter_display_dict['Set_T']['unit'] = ' K'
+        self.parameter_display_dict['Set_T']['min'] = 0
+        self.parameter_display_dict['Set_T']['max'] = 400
+        self.parameter_display_dict['Set_T']['read'] = False
+
+        self.parameter_display_dict['Regulation_Loop']['val'] = 1
+        self.parameter_display_dict['Regulation_Loop']['unit'] = ' loop'
+        self.parameter_display_dict['Regulation_Loop']['min'] = 1
+        self.parameter_display_dict['Regulation_Loop']['max'] = 2
+        self.parameter_display_dict['Regulation_Loop']['read'] = False
         
         # Temperatures (Channels A to E)
-        self.parameter_dict['ChannelA_T'] = 300.0
-        self.parameter_dict['ChannelB_T'] = 300.0
-        self.parameter_dict['ChannelC_T'] = 300.0
-        self.parameter_dict['ChannelD_T'] = 300.0
-        self.parameter_dict['ChannelE_T'] = 300.0
-        
-       # Pressures (Channels F and G)
-        self.parameter_dict['PressureF'] = 101300.0
-        self.parameter_dict['PressureG'] = 101300.0
-        
-       # Statuses and PID
-        self.parameter_dict['Pid_P'] = 0.0
-        self.parameter_dict['Pid_I'] = 0.0
-        self.parameter_dict['Pid_D'] = 0.0
-        self.parameter_dict['Stability'] = "In progress"
-        self.parameter_dict['Critical_State'] = "OK"
+        self.parameter_display_dict['ChannelA_T']['val'] = 300.0
+        self.parameter_display_dict['ChannelA_T']['unit'] = ' K'
+        self.parameter_display_dict['ChannelA_T']['min'] = 0
+        self.parameter_display_dict['ChannelA_T']['max'] = 400
+        self.parameter_display_dict['ChannelA_T']['read'] = True
 
-        # History for stability calculation (e.g., last 30 readings)
+        self.parameter_display_dict['ChannelB_T']['val'] = 300.0
+        self.parameter_display_dict['ChannelB_T']['unit'] = ' K'
+        self.parameter_display_dict['ChannelB_T']['min'] = 0
+        self.parameter_display_dict['ChannelB_T']['max'] = 400
+        self.parameter_display_dict['ChannelB_T']['read'] = True
+
+        self.parameter_display_dict['ChannelC_T']['val'] = 300.0
+        self.parameter_display_dict['ChannelC_T']['unit'] = ' K'
+        self.parameter_display_dict['ChannelC_T']['min'] = 0
+        self.parameter_display_dict['ChannelC_T']['max'] = 400
+        self.parameter_display_dict['ChannelC_T']['read'] = True
+
+        self.parameter_display_dict['ChannelD_T']['val'] = 300.0
+        self.parameter_display_dict['ChannelD_T']['unit'] = ' K'
+        self.parameter_display_dict['ChannelD_T']['min'] = 0
+        self.parameter_display_dict['ChannelD_T']['max'] = 400
+        self.parameter_display_dict['ChannelD_T']['read'] = True
+
+        self.parameter_display_dict['ChannelE_T']['val'] = 300.0
+        self.parameter_display_dict['ChannelE_T']['unit'] = ' K'
+        self.parameter_display_dict['ChannelE_T']['min'] = 0
+        self.parameter_display_dict['ChannelE_T']['max'] = 400
+        self.parameter_display_dict['ChannelE_T']['read'] = True
+        
+        # Pressures (Channels F and G)
+        self.parameter_display_dict['PressureF']['val'] = 101300.0
+        self.parameter_display_dict['PressureF']['unit'] = ' Pa'
+        self.parameter_display_dict['PressureF']['min'] = 0
+        self.parameter_display_dict['PressureF']['max'] = 200000
+        self.parameter_display_dict['PressureF']['read'] = True
+
+        self.parameter_display_dict['PressureG']['val'] = 101300.0
+        self.parameter_display_dict['PressureG']['unit'] = ' Pa'
+        self.parameter_display_dict['PressureG']['min'] = 0
+        self.parameter_display_dict['PressureG']['max'] = 200000
+        self.parameter_display_dict['PressureG']['read'] = True
+        
+        # PID Parameters
+        self.parameter_display_dict['Pid_P']['val'] = 0.0
+        self.parameter_display_dict['Pid_P']['unit'] = ' P'
+        self.parameter_display_dict['Pid_P']['min'] = 0
+        self.parameter_display_dict['Pid_P']['max'] = 1000
+        self.parameter_display_dict['Pid_P']['read'] = False
+
+        self.parameter_display_dict['Pid_I']['val'] = 0.0
+        self.parameter_display_dict['Pid_I']['unit'] = ' I'
+        self.parameter_display_dict['Pid_I']['min'] = 0
+        self.parameter_display_dict['Pid_I']['max'] = 1000
+        self.parameter_display_dict['Pid_I']['read'] = False
+
+        self.parameter_display_dict['Pid_D']['val'] = 0.0
+        self.parameter_display_dict['Pid_D']['unit'] = ' D'
+        self.parameter_display_dict['Pid_D']['min'] = 0
+        self.parameter_display_dict['Pid_D']['max'] = 1000
+        self.parameter_display_dict['Pid_D']['read'] = False
+
+        # Status and Compressor
+        self.parameter_display_dict['OnOff_comp']['val'] = 0
+        self.parameter_display_dict['OnOff_comp']['unit'] = ' state'
+        self.parameter_display_dict['OnOff_comp']['min'] = 0
+        self.parameter_display_dict['OnOff_comp']['max'] = 1
+        self.parameter_display_dict['OnOff_comp']['read'] = False
+
+        self.parameter_display_dict['Stability']['val'] = "In progress"
+        self.parameter_display_dict['Stability']['unit'] = ''
+        self.parameter_display_dict['Stability']['read'] = True
+
+        self.parameter_display_dict['Critical_State']['val'] = "OK"
+        self.parameter_display_dict['Critical_State']['unit'] = ''
+        self.parameter_display_dict['Critical_State']['read'] = True
+
+
+        # CORRECTED: Create flat parameter_dict mapping values
+        self.parameter_dict = {}
+        for key in self.parameter_display_dict.keys():
+            self.parameter_dict[key] = self.parameter_display_dict[key]['val']
+
+        # History for stability calculation
         self.temp_history = []
-        self.stability_threshold = 0.05  # Stability threshold in Kelvin (e.g., +/- 50 mK)
-        self.stability_window = 30       # Time window (in seconds if waitTime=1.0s)
+        self.stability_threshold = 0.05
+        self.stability_window = 30
 
-       # PyVISA management and communication lock
+        # PyVISA management and communication lock
         self.port_com = port_com
         self.rm = pyvisa.ResourceManager()
         self.is_connected = False
-        self.visa_mutex = QtCore.QMutex()  # Native Qt Mutex to protect the serial port
+        self.visa_mutex = QtCore.QMutex()
         
+        self.Opti = None # Initialize empty just in case
+
         try:
             self.Opti = self.rm.open_resource(
                 self.port_com,
@@ -68,66 +146,70 @@ class CryoPasqal(QtCore.QThread):
         self.UpdateWorker.new_T.connect(self.update_all_data)
         self.UpdateWorker.start()
 
-    # =========================================================================
-    # UPDATE FUNCTIONS (READING)
-    # =========================================================================
+    # 2. CORRECTED: Added the missing set_parameter method required by main.py
+    def set_parameter(self, parameter, value):
+        if not self.is_connected: return
 
+        self.parameter_dict[parameter] = value
+        if parameter in self.parameter_display_dict:
+            self.parameter_display_dict[parameter]['val'] = value
+
+        if parameter == 'Set_T':
+            loop = int(self.parameter_dict.get('Regulation_Loop', 1))
+            self.set_temperature_setpoint(loop, float(value))
+        elif parameter in ['Pid_P', 'Pid_I', 'Pid_D']:
+            loop = int(self.parameter_dict.get('Regulation_Loop', 1))
+            p = float(self.parameter_dict.get('Pid_P', 0.0))
+            i = float(self.parameter_dict.get('Pid_I', 0.0))
+            d = float(self.parameter_dict.get('Pid_D', 0.0))
+            self.set_pid_parameters(loop, p, i, d)
+        elif parameter == 'OnOff_comp':
+            self.set_compressor_state(bool(int(value)))
 
     def update_all_data(self, data_list):
         if not isinstance(data_list, list) or len(data_list) < 8:
             return
             
-       # 1. Temperature extraction (Index 0 to 4)
-        self.parameter_dict['ChannelA_T'] = data_list[0] # Sample
-        self.parameter_dict['ChannelB_T'] = data_list[1] # Radiation Shield
-        self.parameter_dict['ChannelC_T'] = data_list[2] # Cold Head
-        self.parameter_dict['ChannelD_T'] = data_list[3] # Pulse Tube
-        self.parameter_dict['ChannelE_T'] = data_list[4] # Compressor Discharge
-        
-        # 2. Pressure extraction (Index 5 and 6)
-        self.parameter_dict['PressureF'] = data_list[5]  # Vacuum Chamber
-        self.parameter_dict['PressureG'] = data_list[6]  # He Return
-        
-        # 3. Compressor status extraction (Index 7)
-        self.parameter_dict['OnOff_comp'] = int(data_list[7])
+        # 3. CORRECTED: Target the 'val' sub-key so we don't overwrite the dicts
+        def assign_val(key, val):
+            self.parameter_dict[key] = val
+            self.parameter_display_dict[key]['val'] = val
 
-        # 4. Calculation of sample stability (Channel A)
+        assign_val('ChannelA_T', data_list[0])
+        assign_val('ChannelB_T', data_list[1])
+        assign_val('ChannelC_T', data_list[2])
+        assign_val('ChannelD_T', data_list[3])
+        assign_val('ChannelE_T', data_list[4])
+        assign_val('PressureF', data_list[5])
+        assign_val('PressureG', data_list[6])
+        assign_val('OnOff_comp', int(data_list[7]))
+
         self.calculate_stability(data_list[0])
 
     def calculate_stability(self, current_temp):
-        """Calculates temperature stability over a rolling window"""
         self.temp_history.append(current_temp)
         if len(self.temp_history) > self.stability_window:
             self.temp_history.pop(0)
 
+        status = "In progress"
         if len(self.temp_history) >= self.stability_window:
-            # Calculation of the maximum variation within the window
             temp_range = max(self.temp_history) - min(self.temp_history)
             if temp_range <= self.stability_threshold:
-                self.parameter_dict['Stability'] = "Stable"
-            else:
-                self.parameter_dict['Stability'] = "In progress"  # "In progress"
-        else:
-            self.parameter_dict['Stability'] = "In progress"  # "In progress"
+                status = "Stable"
 
-    # =========================================================================
-    # ACTION / COMMAND FUNCTIONS (WRITING)
-    # =========================================================================
+        self.parameter_dict['Stability'] = status
+        self.parameter_display_dict['Stability']['val'] = status
 
     def set_temperature_setpoint(self, loop, target_temp):
-        """Sends the setpoint value for the active loop"""
         if not self.is_connected: return
         try:
             locker = QtCore.QMutexLocker(self.visa_mutex)
             self.Opti.write(f"SOURce:TEMPerature:SPOint {loop}, {target_temp}")
             print(f"Loop {loop} setpoint updated to: {target_temp} K")
-            self.parameter_dict['Set_T'] = target_temp
         except Exception as e:
             print(f"Error while sending the setpoint: {e}")
 
-
     def set_heater_range(self, loop, range_level):
-        """Sets the Heater Range (0=Off, 1=Low, 2=Medium, 3=High)"""
         if not self.is_connected: return
         try:
             locker = QtCore.QMutexLocker(self.visa_mutex)
@@ -137,7 +219,6 @@ class CryoPasqal(QtCore.QThread):
             print(f"Error while sending the Heater Range: {e}")
 
     def set_pid_parameters(self, loop, p, i, d):
-        """Sends the three PID loop parameters to the controller"""
         if not self.is_connected: return
         try:
             locker = QtCore.QMutexLocker(self.visa_mutex)
@@ -145,32 +226,25 @@ class CryoPasqal(QtCore.QThread):
             self.Opti.write(f"SOURce:TEMPerature:INTegral {loop}, {i}")
             self.Opti.write(f"SOURce:TEMPerature:DERivative {loop}, {d}")
             print(f"Loop {loop} PID parameters updated: P={p}, I={i}, D={d}")
-            self.parameter_dict['Pid_P'] = p
-            self.parameter_dict['Pid_I'] = i
-            self.parameter_dict['Pid_D'] = d
         except Exception as e:
             print(f"Error while sending the PID parameters: {e}")
 
     def set_compressor_state(self, state_on):
-        """Turns the helium compressor ON (True) or OFF (False)"""
         if not self.is_connected: return
         etat_str = "ON" if state_on else "OFF"
         try:
             locker = QtCore.QMutexLocker(self.visa_mutex)
             self.Opti.write(f"CONTrol:COMPressor:STATe {etat_str}")
             print(f"Compressor set to: {etat_str}")
-            self.parameter_dict['OnOff_comp'] = 1 if state_on else 0
         except Exception as e:
             print(f"Compressor command error: {e}")
 
     def reset_compressor_alarm(self):
-        """Sends a Reset command to clear compressor alarms"""
         if not self.is_connected: return
         try:
             locker = QtCore.QMutexLocker(self.visa_mutex)
             self.Opti.write("CONTrol:COMPressor:RESet")
             print("Alarm reset command sent.")
-            self.parameter_dict['Critical_State'] = "OK"
         except Exception as e:
             print(f"Error during alarm reset: {e}")
 
@@ -181,40 +255,36 @@ class PascalWorker(QtCore.QThread):
     def __init__(self, instrument_visa, visa_mutex, is_connected):
         super(PascalWorker, self).__init__()
         self.stop = False
-        self.waitTime = 1.0  # 1 second between each cycle
-        ...
+        self.waitTime = 1.0 
+        self.instrument_visa = instrument_visa 
+        self.visa_mutex = visa_mutex
+        self.is_connected = is_connected
 
     def run(self):
         while not self.stop:
-            if self.is_connected:
+            if self.is_connected and self.instrument_visa is not None:
                 data = self.read_all_hardware_data()
                 if data:
                     self.new_T.emit(data)
             time.sleep(self.waitTime)
 
     def read_all_hardware_data(self):
-        """Queries the device to read all sensors at once"""
         try:
             locker = QtCore.QMutexLocker(self.visa_mutex)    
             
-            # 1. Reading the 5 SCPI Temperature Channels
-            rep_temp = self.Opti.query("MEASure:TEMPerature? (@1,2,3,4,5)")
+            # 4. CORRECTED: Changed self.Opti to self.instrument_visa
+            rep_temp = self.instrument_visa.query("MEASure:TEMPerature? (@1,2,3,4,5)")
             temps_float = [float(t) for t in rep_temp.strip().split(',')]
             
-            # 2. Reading the 2 Pressure Gauges
-            rep_press = self.Opti.query("MEASure:PRESSure? (@1,2)")
+            rep_press = self.instrument_visa.query("MEASure:PRESSure? (@1,2)")
             press_float = [float(p) for p in rep_press.strip().split(',')]
             
-            # 3. Reading the compressor status (0 = OFF, 1 = ON)
-            rep_comp = self.Opti.query("CONTrol:COMPressor:STATe?")
+            rep_comp = self.instrument_visa.query("CONTrol:COMPressor:STATe?")
             comp_state = 1 if "ON" in rep_comp.upper() else 0
             
             locker.unlock()
             
-            # Merge all readings into a single list for the signal
-            # Index: [0..4] Temperatures, [5..6] Pressions, [7] Compressor Status
             return temps_float + press_float + [comp_state]
             
         except Exception as e:
-            # In case of disconnection or timeout, safe/neutral default values are returned
             return [300.0, 300.0, 300.0, 300.0, 300.0, 101300.0, 101300.0, 0]
