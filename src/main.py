@@ -393,6 +393,16 @@ class MainInterface(QtWidgets.QMainWindow):
         # Rebuild parameter tree UI (existing code)
         self.create_parameter_array()
 
+        self.parameter = {}
+        for device in self.parameter_dic:
+            for param in self.parameter_dic[device]:
+                self.parameter[param] = self.parameter_dic[device][param]['val']
+        self.DataHandling.close()
+        self.DataHandling = DataHandling(self.parameter, self.spec_length)
+        self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
+        self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
+        self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
+
         logger.info(
             f"Switched to spectrometer: {new_name} "
             f"(spec_length={self.spec_length})"
