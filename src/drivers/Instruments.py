@@ -9,6 +9,8 @@ from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
 from drivers.Stresing import StresingCamera
 from drivers.Shamrock import Shamrock 
+from drivers.Pixis import Pixis
+from drivers.SpectraPro2300i import SpectraPro2300i
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +44,9 @@ def load_instruments():
         logger.info('%s SLMDemo connected' % datetime.datetime.now())
 
     # initialize MonochromDemo
+    # Shamrock grating parameters
     grating_params={
         'focal_length_mm':163,
-        'f':np.float64(330605663.74965495),
         'delta':np.float64(-0.20488367116307532),
         'gamma':np.float64(2.021864300924973),
         'n0':np.float64(511.0), # Central pixel
@@ -53,11 +55,25 @@ def load_instruments():
         'x_pixel':26000.0,
         'curvature':np.float64(3.1224154313329654e-06),
     }
-    Monochrom = Shamrock(grating_params) 
+    # SpectraPro 2300i grating parameters
+    grating_params = {
+        'focal_length_mm':300,
+        'delta':np.float64(0),
+        'gamma':np.float64(0),
+        'n0':np.float64(511.0), # Central pixel
+        'offset_adjust':0,
+        'd_grating':None,
+        'x_pixel':None,
+        'curvature':np.float64(0),
+    }
+    Monochrom = SpectraPro2300i(grating_params) 
+
+    
+    
     devices['Monochrom'] = Monochrom 
     logger.info('%s Monochrom DEMO connected' % datetime.datetime.now())
 
-    # initialize StresingDemo
+    # initialize Cameras
     stresing_params={
         'pixel_size_mm':24e-3,
         'num_pixels':1010,
@@ -65,6 +81,14 @@ def load_instruments():
         'calibrationThirdOrder': -3e-5,
         'calibrationSlope': 0.9891,
         'calibrationOffset': -51.163
+    }
+    pixis_params = {
+        'pixel_size_mm':26e-3,
+        'num_pixels':1024,
+        'calibrated':False,
+        'calibrationThirdOrder':0,
+        'calibrationSlope':0,
+        'calibrationOffset':0
     }
 
     spectrometers = {}
@@ -76,6 +100,14 @@ def load_instruments():
         logger.info('%s Stresing connected' % datetime.datetime.now())
     except Exception as e:
         logger.warning(f'Stresing failed: {e}')
+
+    try:
+        camera = Pixis(pixis_params)
+        spectrometers['Pixis'] = camera
+        camera.attach_to_monochromator(Monochrom)
+        logger.info('%s Pixis connected' % datetime.datetime.now())
+    except Exception as e:
+        logger.warning(f'Pixis failed: {e}')
 
     try:
         from drivers.OceanSpectrometer import OceanSpectrometer
