@@ -59,27 +59,33 @@ def load_instruments():
         logger.info('%s SLMDemo connected' % datetime.datetime.now())
 
     # initialize MonochromDemo
-    # Shamrock grating parameters
-    grating_params={
-        'focal_length_mm':163,
-        'delta':np.float64(-0.20488367116307532),
-        'gamma':np.float64(2.021864300924973),
-        'n0':np.float64(511.0), # Central pixel
-        'offset_adjust':0,
-        'd_grating':np.float64(6666.666666666667),
-        'x_pixel':26000.0,
-        'curvature':np.float64(3.1224154313329654e-06),
-    }
-    # SpectraPro 2300i grating parameters
-    grating_params = {
+    grating_params_stresing={
         'focal_length_mm':300,
-        'delta':np.float64(0),
-        'gamma':np.float64(0),
-        'n0':np.float64(511.0), # Central pixel
+        'f':np.float64(305381928.6149399),
+        'delta':np.float64(0.11432112488955509),
+        'gamma':np.float64(0.5337955112241486),
+        'n0':np.float64(539.4), # Central pixel
         'offset_adjust':0,
-        'd_grating':None,
-        'x_pixel':None,
-        'curvature':np.float64(0),
+        'd_grating':833.3333333333334,
+        'x_pixel':24000.0,
+        'curvature':np.float64(5.736575254871788e-07),
+    }
+    f, delta, gamma, n0, offset_adjust, d_grating, x_pixel, curvature = [np.float64(330605663.74965495), np.float64(-0.20488367116307532), np.float64(2.021864300924973), np.float64(508.0), 0, 6666.666666666667, 26000.0, np.float64(3.1224154313329654e-06)]
+    grating_params_pixis = {
+        'focal_length_mm':300,
+        'f':np.float64(300000000.0),
+        'delta':np.float64(0.06),
+        'gamma':np.float64(0.5),
+        'n0':np.float64(516.6), # Central pixel
+        'offset_adjust':0,
+        'd_grating':833.3333333333334,
+        'x_pixel':26000,
+        'curvature':np.float64(0.0),
+    }
+
+    grating_params = {
+        'Stresing': grating_params_stresing,
+        'Pixis': grating_params_pixis
     }
     Monochrom = SpectraPro2300i(grating_params) 
 
@@ -92,7 +98,7 @@ def load_instruments():
     stresing_params={
         'pixel_size_mm':24e-3,
         'num_pixels':1010,
-        'calibrated': False,
+        'calibrated': True,
         'calibrationThirdOrder': -3e-5,
         'calibrationSlope': 0.9891,
         'calibrationOffset': -51.163
@@ -100,7 +106,7 @@ def load_instruments():
     pixis_params = {
         'pixel_size_mm':26e-3,
         'num_pixels':1024,
-        'calibrated':False,
+        'calibrated':True,
         'calibrationThirdOrder':0,
         'calibrationSlope':0,
         'calibrationOffset':0

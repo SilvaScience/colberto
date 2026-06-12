@@ -119,7 +119,8 @@ class Pixis(QtCore.QThread):
     def get_wavelength(self):
         """This simply returns the wavelength. In Colbert this needs to be adapted if the calibration
          changes. This function will be accessible from MeasurementClasses. """
-        return self.calculate_wavelength_array()
+        self.calculate_wavelength_array()
+        return self.wavelengths
 
     def calculate_wavelength_array(self):
         """
@@ -136,32 +137,32 @@ class Pixis(QtCore.QThread):
             focal_length_mm = self.hardware_params['focal_length_mm']
             num_pixels = self.hardware_params['num_pixels']
         
-        calibrated = False
-        if calibrated:
-            pixel_size_mm = 26 / 1E3  # specs of PIXIS
-            focal_length_mm = 300  # specs of SP2150
-            num_pixels = 1024  # specs of PIXIS
+        if self.hardware_params['calibrated']:
 
-            #
+            pixel_size_mm = 26 / 1E3  # specs of PIXIS
+            focal_length_mm = 300  # specs of SP2300
+            num_pixels = 1024  # specs of PIXIS
 
             wl_center = self.center_wavelength
             m_order = 1
             px = self.px0
 
             # calibration from notebook
-            f, delta, gamma, n0, offset_adjust, d_grating, x_pixel, curvature = [np.float64(330605663.74965495), np.float64(-0.20488367116307532), np.float64(2.021864300924973), np.float64(508.0), 0, 6666.666666666667, 26000.0, np.float64(3.1224154313329654e-06)]
-
-
+            f=self.hardware_params['f']
+            delta=self.hardware_params['delta']
+            gamma=self.hardware_params['gamma']
+            n0=self.hardware_params['n0']
+            offset_adjust=self.hardware_params['offset_adjust']
+            d_grating=self.hardware_params['d_grating']
+            x_pixel=self.hardware_params['x_pixel']
+            curvature=self.hardware_params['curvature']
 
             n = px - (n0 + offset_adjust * wl_center)
-
-            # print('psi top', m_order* wl_center)
-            # print('psi bottom', (2*d_grating*np.cos(gamma/2)) )
 
             psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
             eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
-            wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+            self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
         else:
             pixel_size_mm = 26 / 1E3  # specs of PIXIS
             focal_length_mm = 300  # specs of SP2150
@@ -177,9 +178,7 @@ class Pixis(QtCore.QThread):
             pixel_indices = np.arange(num_pixels)
 
             # Wavelength at each pixel
-            wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-
-        return wavelengths
+            self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
 
     def attach_to_monochromator(self,monochromator):
         """
@@ -189,7 +188,7 @@ class Pixis(QtCore.QThread):
         """
         self.monochromator=monochromator
         self.type='Spectrometer'
-        self.hardware_params.update(self.monochromator.get_hardware_parameters())
+        self.hardware_params.update(self.monochromator.get_hardware_parameters('Pixis'))
     
     def start_acquisition(self):
         """ Sets camera to continuous acquisition mode. """
