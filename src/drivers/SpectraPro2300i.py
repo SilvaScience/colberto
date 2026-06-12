@@ -110,7 +110,7 @@ class SpectraPro2300i(QtCore.QThread):
             self.parameter_dict['grating'] = value
             self.grating = value
 
-    def get_hardware_parameters(self):
+    def get_hardware_parameters(self, name):
         """
             Returns the hardware parameters of the monochromator
             output:
@@ -125,7 +125,8 @@ class SpectraPro2300i(QtCore.QThread):
                     - curvature
 
         """
-        return self.hardware_params
+        return self.hardware_params[name]
+    
     def get_monochromator_parameters(self):
         """
             Returns the current parameters of the monochromator.
@@ -133,6 +134,4 @@ class SpectraPro2300i(QtCore.QThread):
                 - central_wavelength (np.float): the central wavelength in nm
                 - grating_lines_per_mm (np.float): the number of groove per mm of the selected grating
         """
-        return self.center_wl, self.grating_densities[int(self.grating)]
-
-
+        return self.center_wl, self.grating_densities[int(self.grating-1)]
