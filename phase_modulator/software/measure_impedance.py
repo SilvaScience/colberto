@@ -11,7 +11,7 @@ import h5py
 
 ### Experimental parameters of impedance sweep
 resistance=100
-filename="piezo_sanwhich_3mm_3mm_"+strftime("%H_%M", localtime())+"_impedance_measurement.h5"
+filename="piezo_3mm_tighter_damping"+strftime("%H_%M", localtime())+"_impedance_measurement.h5"
 
 
 
@@ -27,7 +27,7 @@ scope = KeysightDSOX1102G('TCPIP::192.168.1.126::INSTR')
 #Prepare scope
 data_in_out=[]
 times=[]
-freqs=np.logspace(4,6,400)
+freqs=np.logspace(4,6,200)
 for freq in freqs:
     print(freq)
     generator.frequency=freq
