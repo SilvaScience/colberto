@@ -9,6 +9,7 @@ from drivers.SLM import Slm
 from drivers.SLMDemo import SLMDemo
 from drivers.Stresing import StresingCamera
 from drivers.Shamrock import Shamrock 
+from drivers.Optidry250 import CryoPasqal
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,22 @@ def load_instruments():
     # always try to include communication on important events.
     # This is extremely useful for debugging and troubleshooting.
     logger.warning('%s You are using a DEMO version of the cryostat'%datetime.datetime.now())
-    cryostat = CryoDemo() # launch cryostat interface
-    devices['cryostat'] = cryostat # store in global device dict.
+    
+
+    try: 
+        cryostat = CryoPasqal() # launch cryostat interface
+        devices['cryostat'] = cryostat # store in global device dict.
+        logger.info('%s Pascal_Cryo connected' % datetime.datetime.now())
+    except Exception as e:
+        cryostat = CryoDemo() # launch cryostat interface
+        devices['cryostat'] = cryostat # store in global device dict.
+        logger.error('%s Pascal Cryostat initialization failed at interface startup. Error type %s' % (datetime.datetime.now(),str(e)))
+        logger.info('%s CryoDemo connected' % datetime.datetime.now())
+
+
+
+
+
 
     # initialize SLM
     try:

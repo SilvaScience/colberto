@@ -19,7 +19,7 @@ from collections import defaultdict
 class CryoDemo(QtCore.QThread):
 
     name = 'CryoDemo'
-    type = 'Cryostat'
+    type = 'Cryostatas'
     
     def __init__(self):
         super(CryoDemo, self).__init__()
