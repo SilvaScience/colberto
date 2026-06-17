@@ -67,9 +67,7 @@ class vibratingPlate():
 
         '''
         kns2=self.lambsquare[n,s]/self.a**2
-        print(kns2)
         k2=2*np.pi*nu*np.sqrt(self.a_rho/self.D)
-        print(k2)
         Ans=np.abs(iv(n,self.lambsquare[n,s])/jv(n,self.lambsquare[n,s]))**2*(self.a**2/2)*np.abs(jvp(n,self.lambsquare[n,s]))**2+(self.a**2/2)*np.abs(ivp(n,self.lambsquare[n,s]))**2
         Xins=(self.Wns(n,s,r_0,theta_0))/((kns2-k2)*(kns2+k2)*Ans)
         return Xins
@@ -97,13 +95,15 @@ if __name__=="__main__":
     #indices=['0-0','0-1','0-2','1-0','0-3']
     a=12.54e-3
     #For fused silica
-    h=3e-3
+    h=1.37e-3
     E=75e9 # GPa=10^9 kg m-1s-2, from https://www.ineos.com/globalassets/ineos-group/businesses/ineos-olefins-and-polymers-usa/products/technical-information--patents/new/ineos-typical-engineering-properties-of-hdpe.pdf
     nu=0.17 # Poisson's ratio, from  https://www.ineos.com/globalassets/ineos-group/businesses/ineos-olefins-and-polymers-usa/products/technical-information--patents/new/ineos-typical-engineering-properties-of-hdpe.pdf
     volume_density=2.2 # g per cm3
     volume_density=volume_density*1e-3/(1e-6)#convert to kg m-3 
     fused_silica_3mm=vibratingPlate(nu=nu,E=E,h=h,rho=volume_density,a=a) 
-    print("Resonnance frequency is : %.2e Hz"%fused_silica_3mm.mode_frequency(0,0))
+    for n in range(3):
+        for s in range(3):
+            print("Resonnance fre:uency mode n=%d, s=%d is : %.2e Hz"%(n,s,fused_silica_3mm.mode_frequency(n,s)))
     fused_silica_3mm.mode_profile(n=1,s=0)
     plt.title('n=1,s=1')
     nu=np.logspace(4,6,1000)

@@ -11,7 +11,7 @@ import h5py
 
 ### Experimental parameters of impedance sweep
 resistance=100
-filename="piezo_3mm_tighter_damping"+strftime("%H_%M", localtime())+"_impedance_measurement.h5"
+filename="piezo_od1_noair"+strftime("%H_%M", localtime())+"_impedance_measurement.h5"
 
 
 
