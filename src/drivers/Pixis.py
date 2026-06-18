@@ -64,7 +64,7 @@ class Pixis(QtCore.QThread):
         self.parameter_display_dict['sensor_T']['unit'] = ' celsius'
         self.parameter_display_dict['sensor_T']['min'] = -100
         self.parameter_display_dict['sensor_T']['max'] = 100
-        self.parameter_display_dict['sensor_T']['read'] = True
+        self.parameter_display_dict['sensor_T']['read'] = False
 
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
@@ -223,8 +223,9 @@ class Pixis(QtCore.QThread):
         spectrum = spectrum[0, :]
         return spectrum
 
-    def update_temperature(self,temperature):
+    def update_temperature(self, temperature):
         self.parameter_dict['sensor_T'] = temperature
+        self.parameter_display_dict['sensor_T']['val'] = temperature
 
 
 class CameraWorker(QtCore.QThread):

@@ -35,6 +35,7 @@ class SpectraPro2300i(QtCore.QThread):
             self.grating_densities[i] = numbers[i*3 + 1]
             self.grating_blazes[i] = numbers[i * 3 + 2]
         self.center_wl = float(self.write_command('?NM')[0])
+        self.mirror = float(self.write_command('?MIR')[0])
         print(self.center_wl)
         print(self.grating_densities)
         print(self.grating_blazes)
@@ -55,6 +56,7 @@ class SpectraPro2300i(QtCore.QThread):
         
         self.parameter_dict['central_wave'] = self.center_wl
         self.parameter_dict['grating'] = self.grating
+        self.parameter_dict['mirror'] = self.mirror
         
         self.parameter_display_dict['central_wave']['val'] = self.center_wl
         self.parameter_display_dict['central_wave']['unit'] = ' nm'
@@ -64,8 +66,15 @@ class SpectraPro2300i(QtCore.QThread):
         
         self.parameter_display_dict['grating']['val'] = self.grating
         self.parameter_display_dict['grating']['unit'] = ' grat'
+        self.parameter_display_dict['mirror']['min'] = 1
         self.parameter_display_dict['grating']['max'] = 3
         self.parameter_display_dict['grating']['read'] = False
+
+        self.parameter_display_dict['mirror']['val'] = self.mirror
+        self.parameter_display_dict['mirror']['unit'] = ' mirror'
+        self.parameter_display_dict['mirror']['min'] = 0
+        self.parameter_display_dict['mirror']['max'] = 1
+        self.parameter_display_dict['mirror']['read'] = False
 
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
@@ -109,6 +118,11 @@ class SpectraPro2300i(QtCore.QThread):
             self.write_command(cmd)
             self.parameter_dict['grating'] = value
             self.grating = value
+        elif parameter == 'mirror':
+            cmd = f'{value:1.0f} MIRROR'
+            self.write_command(cmd)
+            self.parameter_dict['mirror'] = value
+            self.mirror = value
 
     def get_hardware_parameters(self, name):
         """
