@@ -2716,6 +2716,11 @@ p, li { white-space: pre-wrap; }
              <string>2Q</string>
             </property>
            </item>
+           <item>
+            <property name="text">
+             <string>LO scan</string>
+            </property>
+           </item>
           </widget>
           <widget class="QLabel" name="Measurement_TLO_delay_label">
            <property name="geometry">
