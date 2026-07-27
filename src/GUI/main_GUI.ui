@@ -349,7 +349,7 @@ p, li { white-space: pre-wrap; }
       <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="currentIndex">
-         <number>1</number>
+         <number>6</number>
         </property>
         <widget class="QWidget" name="spectro_tab">
          <attribute name="title">
@@ -2714,6 +2714,11 @@ p, li { white-space: pre-wrap; }
            <item>
             <property name="text">
              <string>2Q</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>LO scan</string>
             </property>
            </item>
           </widget>

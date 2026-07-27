@@ -481,10 +481,6 @@ class Beam:
         elif TaylorPrefactorFlag == 'remove':
             coef = [c / f for c, f in zip(coef, TaylorFactor)]
 
-        # Add minus sign to the group delay (linear term)
-        if len(coef) > 1:
-            coef[1] *= -1
-
         return P(coef)
     
     @staticmethod
