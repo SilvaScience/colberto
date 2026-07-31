@@ -41,6 +41,7 @@ class CameraDisplay(QtWidgets.QWidget):
         self.spectrometer = None
         self.last_frame = None
         self._auto_levels_pending = True
+        self._last_frame_shape = None
 
         # ---- image ----
         self.graphLayoutWidget = pg.GraphicsLayoutWidget()
@@ -77,6 +78,11 @@ class CameraDisplay(QtWidgets.QWidget):
         self.height_spin.setValue(1)
         self.auto_button = QtWidgets.QPushButton('Find signal band')
         self.apply_button = QtWidgets.QPushButton('Apply readout region')
+        self.fit_button = QtWidgets.QPushButton('Fit view')
+        self.fit_button.setToolTip(
+            'Reset zoom and colour levels to the last frame received.\n'
+            'Use this if the image looks empty: after switching between full frame and binned\n'
+            'mode the view can stay zoomed on rows that no longer exist in the new frame.')
         self.status_label = QtWidgets.QLabel('No frame received yet.')
         self.status_label.setWordWrap(True)
 
@@ -96,6 +102,7 @@ class CameraDisplay(QtWidgets.QWidget):
         region_layout.addWidget(self.height_spin)
         region_layout.addWidget(self.auto_button)
         region_layout.addWidget(self.apply_button)
+        region_layout.addWidget(self.fit_button)
         region_box.setLayout(region_layout)
         controls.addWidget(region_box, stretch=1)
 
@@ -113,6 +120,7 @@ class CameraDisplay(QtWidgets.QWidget):
         self.mode_full_frame.toggled.connect(self.mode_changed)
         self.auto_button.clicked.connect(self.find_signal_band)
         self.apply_button.clicked.connect(self.apply_roi)
+        self.fit_button.clicked.connect(self.fit_view)
         self.y0_spin.valueChanged.connect(self.spins_changed)
         self.height_spin.valueChanged.connect(self.spins_changed)
 
@@ -164,10 +172,19 @@ class CameraDisplay(QtWidgets.QWidget):
             return
         self.last_frame = frame
 
-        self.image.setImage(frame, autoLevels=self._auto_levels_pending)
-        if self._auto_levels_pending:
+        """ Re-fit the view whenever the frame shape changes (e.g. switching between full frame and
+        binned mode), not just on the very first frame. Otherwise the view can stay zoomed on rows a
+        smaller frame no longer has, making it look like nothing is being received. """
+        shape_changed = frame.shape != self._last_frame_shape
+        self._last_frame_shape = frame.shape
+        needs_reset = shape_changed or self._auto_levels_pending
+
+        self.image.setImage(frame, autoLevels=needs_reset)
+        if needs_reset:
             self.histogram.setLevels(*self.image.getLevels())
             self._auto_levels_pending = False
+        if shape_changed:
+            self.plot.getViewBox().autoRange()
 
         profile = frame.sum(axis=1)
         rows = np.arange(frame.shape[0])
@@ -182,6 +199,19 @@ class CameraDisplay(QtWidgets.QWidget):
             self.status_label.setText(
                 f'Frame {frame.shape[0]} rows x {frame.shape[1]} columns. '
                 f'Brightest row: {peak}. Max: {frame.max():.0f} counts.')
+
+    def fit_view(self):
+        """
+            Resets zoom and colour levels to the last frame received. Use this whenever the image
+            looks empty: it removes zoom and windowing as possible causes, leaving "no signal" as
+            the only remaining explanation.
+        """
+        if self.last_frame is None:
+            self.status_label.setText('No frame received yet: nothing to fit the view to.')
+            return
+        self.image.setImage(self.last_frame, autoLevels=True)
+        self.histogram.setLevels(*self.image.getLevels())
+        self.plot.getViewBox().autoRange()
 
     def find_signal_band(self, floor_fraction=0.1):
         """
