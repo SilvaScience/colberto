@@ -27,6 +27,7 @@ from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeas
 from GUI.LUT_Calib_plot import LUT_Calib_plot, LUT_Calib_intensity_plot
 from GUI.SLMDisplay import SLMDisplay
 from GUI.CameraDisplay import CameraDisplay
+from GUI.LogViewer import LogViewer
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
@@ -265,6 +266,14 @@ class MainInterface(QtWidgets.QMainWindow):
         self.tabWidget.addTab(self.CameraDisplay, 'Camera')
         self.connect_camera_display()
 
+        """ File menu: log viewer. menuFile exists in main_GUI.ui but had no actions. Added here in
+        code, same reasoning as the Camera tab above: avoids another Qt Designer edit to a .ui file
+        that already merges badly between contributors. main.log is a relative path (see
+        logging.basicConfig above), so the viewer also shows where it actually resolved to. """
+        self.log_viewer = None
+        self.view_log_action = self.menuFile.addAction('View Log')
+        self.view_log_action.triggered.connect(self.show_log_viewer)
+
         """ This initializes the parameter tree. It is constructed based on the device dict,
         that includes parameter information of each device """
         self.parameter_tree.setColumnCount(2)
@@ -447,6 +456,18 @@ class MainInterface(QtWidgets.QMainWindow):
             self._camera_display_source = worker
             logger.info('%s Camera view connected to %s'
                         % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
+
+    def show_log_viewer(self):
+        '''
+            Opens the log viewer (File > View Log), or brings it to front if already open.
+            Built once and reused rather than recreated on every click, so its own polling timer
+            doesn't pile up in the background across repeated opens.
+        '''
+        if self.log_viewer is None:
+            self.log_viewer = LogViewer('main.log', parent=self)
+        self.log_viewer.show()
+        self.log_viewer.raise_()
+        self.log_viewer.activateWindow()
 
 
     def create_parameter_array(self):
