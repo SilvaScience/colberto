@@ -26,6 +26,7 @@ from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, D
 from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeasurementFourierPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot, LUT_Calib_intensity_plot
 from GUI.SLMDisplay import SLMDisplay
+from GUI.LogViewer import LogViewer
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
@@ -256,7 +257,15 @@ class MainInterface(QtWidgets.QMainWindow):
         self.LUT_Calib_plot_2 = LUT_Calib_intensity_plot(self.LUT_calib_plot_layout_2)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
-        """ This initializes the parameter tree. It is constructed based on the device dict, 
+        """ File menu: log viewer. menuFile exists in main_GUI.ui but had no actions. Added here in
+        code rather than in Qt Designer: that .ui file already merges badly between contributors.
+        main.log is a relative path (see logging.basicConfig above), so the viewer also shows where
+        it actually resolved to. """
+        self.log_viewer = None
+        self.view_log_action = self.menuFile.addAction('View Log')
+        self.view_log_action.triggered.connect(self.show_log_viewer)
+
+        """ This initializes the parameter tree. It is constructed based on the device dict,
         that includes parameter information of each device """
         self.parameter_tree.setColumnCount(2)
         self.parameter_tree.setHeaderLabels(["Name", "Value"])
@@ -406,8 +415,21 @@ class MainInterface(QtWidgets.QMainWindow):
         logger.info(
             f"Switched to spectrometer: {new_name} "
             f"(spec_length={self.spec_length})"
-        )    
-        
+        )
+
+    def show_log_viewer(self):
+        '''
+            Opens the log viewer (File > View Log), or brings it to front if already open.
+            Built once and reused rather than recreated on every click, so its own polling timer
+            doesn't pile up in the background across repeated opens.
+        '''
+        if self.log_viewer is None:
+            self.log_viewer = LogViewer('main.log', parent=self)
+        self.log_viewer.show()
+        self.log_viewer.raise_()
+        self.log_viewer.activateWindow()
+
+
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
 
