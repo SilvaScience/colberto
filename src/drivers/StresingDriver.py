@@ -96,6 +96,13 @@ def init_driver(self, path_dll, config):
     self.settings.nos = int(config.get("General","nos")) # Number of samples (nos). One sample is one readout of the camera.
     self.settings.nob = int(config.get("General","nob")) # Number of blocks (nob). One block contains nos readouts.
     self.settings.camera_settings[self.drvno].CAMCNT = int(config.get("board0","camcnt")) # Number of cameras which are connected to one PCIe board.
+    # Size of the DMA buffer in scans. Was never set (defaulted to 0 from the ctypes struct), which
+    # made DLLInitMeasurement fail with "Getting DMA buffer failed" on every acquisition. 1000 is the
+    # value used for the same camera/DLL in Silvabot's driver, noted there as their working default.
+    # config is the .ini deployed alongside the Stresing software (see path_config in Stresing.py),
+    # not the repo's copy under src/drivers/stresing/ -- the two are not kept in sync, so this reads
+    # with a fallback rather than requiring the deployed file to already have the key.
+    self.settings.camera_settings[self.drvno].dma_buffer_size_in_scans = config.getint("board0","dmaBufferSizeInScans", fallback=1000)
     self.settings.camera_settings[self.drvno].fft_mode = int(config.get("board0","fftMode")) # Controls the operating mode for FFT sensors.
     self.settings.camera_settings[self.drvno].FFT_LINES = int(config.get("board0","fftLines")) # Count of vertical lines for FFT sensors (sensor S14290).
     self.settings.camera_settings[self.drvno].VFREQ = int(config.get("board0","vfreq")) # Controls the vertical clock frequency for FFT sensors (sensor S14290). 
