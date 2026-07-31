@@ -26,6 +26,7 @@ from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, D
 from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeasurementFourierPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot, LUT_Calib_intensity_plot
 from GUI.SLMDisplay import SLMDisplay
+from GUI.CameraDisplay import CameraDisplay
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
@@ -256,7 +257,15 @@ class MainInterface(QtWidgets.QMainWindow):
         self.LUT_Calib_plot_2 = LUT_Calib_intensity_plot(self.LUT_calib_plot_layout_2)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
-        """ This initializes the parameter tree. It is constructed based on the device dict, 
+        """ Camera view tab. Built in code rather than in main_GUI.ui: the .ui file is edited by
+        several people in Qt Designer and merges badly, so a self-contained tab avoids conflicts.
+        The view is fed straight from the camera worker and deliberately bypasses DataHandling,
+        since it shows live 2D frames for alignment rather than measurement data. """
+        self.CameraDisplay = CameraDisplay()
+        self.tabWidget.addTab(self.CameraDisplay, 'Camera')
+        self.connect_camera_display()
+
+        """ This initializes the parameter tree. It is constructed based on the device dict,
         that includes parameter information of each device """
         self.parameter_tree.setColumnCount(2)
         self.parameter_tree.setHeaderLabels(["Name", "Value"])
@@ -403,11 +412,40 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
         self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
 
+        self.connect_camera_display()
+
         logger.info(
             f"Switched to spectrometer: {new_name} "
             f"(spec_length={self.spec_length})"
-        )    
-        
+        )
+
+    def connect_camera_display(self):
+        '''
+            Points the Camera tab at the active spectrometer.
+            Cameras with a 2D sensor expose their raw frames through a worker signal; those frames are
+            routed straight to the view so alignment can be checked without going through DataHandling,
+            which only carries the 1D spectra used for measurements. Spectrometers without such a
+            worker simply leave the tab disabled.
+        '''
+        previous = getattr(self, '_camera_display_source', None)
+        if previous is not None:
+            try:
+                previous.sendSpectrum.disconnect(self.CameraDisplay.set_data)
+            except (TypeError, RuntimeError):
+                pass  # already disconnected or worker gone
+        self._camera_display_source = None
+
+        spectrometer = self.devices.get('spectrometer')
+        self.CameraDisplay.set_spectrometer(spectrometer)
+
+        worker = getattr(spectrometer, 'worker', None)
+        if worker is not None and hasattr(worker, 'sendSpectrum'):
+            worker.sendSpectrum.connect(self.CameraDisplay.set_data)
+            self._camera_display_source = worker
+            logger.info('%s Camera view connected to %s'
+                        % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
+
+
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
 
