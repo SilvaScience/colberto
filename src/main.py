@@ -424,8 +424,11 @@ class MainInterface(QtWidgets.QMainWindow):
             Points the Camera tab at the active spectrometer.
             Cameras with a 2D sensor expose their raw frames through a worker signal; those frames are
             routed straight to the view so alignment can be checked without going through DataHandling,
-            which only carries the 1D spectra used for measurements. Spectrometers without such a
-            worker simply leave the tab disabled.
+            which only carries the 1D spectra used for measurements. Spectrometers without a
+            configurable readout region (checked via set_binned_roi, the same test CameraDisplay
+            uses to enable its controls) simply leave the tab disabled: their worker's sendSpectrum
+            signal is not guaranteed to share Pixis's (image, int_time) signature, and CameraDisplay
+            is only meaningful for a 2D sensor in the first place.
         '''
         previous = getattr(self, '_camera_display_source', None)
         if previous is not None:
@@ -439,7 +442,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.CameraDisplay.set_spectrometer(spectrometer)
 
         worker = getattr(spectrometer, 'worker', None)
-        if worker is not None and hasattr(worker, 'sendSpectrum'):
+        if worker is not None and hasattr(spectrometer, 'set_binned_roi') and hasattr(worker, 'sendSpectrum'):
             worker.sendSpectrum.connect(self.CameraDisplay.set_data)
             self._camera_display_source = worker
             logger.info('%s Camera view connected to %s'
