@@ -188,7 +188,7 @@ class BeamWidget(QWidget):
 
     def set_phase_manually(self):
         self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]))
-        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
+        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]), mode='absolute')
 
     def toggle_beam_to_slm(self):
         '''
@@ -217,7 +217,7 @@ class BeamWidget(QWidget):
         self.beam.set_beamVerticalDelimiters([int(self.delimiter_table.item(0,0).text()),int(self.delimiter_table.item(0,1).text())])
         self.beam.set_beamHorizontalDelimiters([int(self.delimiter_table.item(1,0).text()),int(self.delimiter_table.item(1,1).text())])
         self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]))
-        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
+        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]), mode='absolute')
 
         return self.name,self.beam
 
