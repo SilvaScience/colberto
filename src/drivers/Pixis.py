@@ -22,21 +22,21 @@ from PyQt5 import QtCore
 from collections import defaultdict
 from pylablib.devices import PrincetonInstruments
 import time
-import serial
 import re
 
 class Pixis(QtCore.QThread):
 
     name = 'Pixis'
     
-    def __init__(self):
+    def __init__(self, hardware_params):
         super(Pixis, self).__init__()
 
         #self.camera.start()
-        self.wavelength =  np.linspace(200,1000,1024) # get property from Worker
+        self.wavelength = np.linspace(200,1000,1024) # get property from Worker
         self.px0 = np.linspace(1,1024,1024)
-        self.spec_length = (252,1024) # get property from Worker
+        self.spec_length = 1024 #(252,1024) # get property from Worker
         self.image = np.zeros(self.spec_length)
+        self.hardware_params = hardware_params
 
         # Indicate shutter, required to discriminate between different detectors
         self.shutter = True
@@ -46,30 +46,6 @@ class Pixis(QtCore.QThread):
         self.int_time = 100
         self.binned_spec = np.zeros(self.spec_length)
         self.new_spectrum = False
-
-        # set up spectrograph
-        self.serial_busy = False
-        port = 'COM6'
-        self.ser = serial.Serial(port=port, baudrate=9600, bytesize=8, parity='N',
-                                 stopbits=1, xonxoff=0, rtscts=0, timeout=0.02)
-        # get startup values
-        self.grating = float(self.write_command('?GRATING')[0])
-        numbers = self.write_command('?GRATINGS')
-        self.num_gratings = int((len(numbers)-8)/2)
-        self.grating_densities = np.zeros(self.num_gratings)
-        self.grating_blazes = np.zeros(self.num_gratings)
-        for i in range(self.num_gratings):
-            self.grating_densities[i] = numbers[i*3 + 1]
-            self.grating_blazes[i] = numbers[i * 3 + 2]
-        self.center_wl = float(self.write_command('?NM')[0])
-        print(self.center_wl)
-        print(self.grating_densities)
-        print(self.grating_blazes)
-        print(self.grating)
-        print('SP2150 grating info: ', numbers)
-        print('SP2150 grating densities: ',self.grating_densities)
-        print('SP2150 grating blazes: ',self.grating_blazes)
-        print('SP2150 selected grating: ',self.grating)
 
         # set parameter dict
         self.parameter_dict = defaultdict()
@@ -88,15 +64,7 @@ class Pixis(QtCore.QThread):
         self.parameter_display_dict['sensor_T']['unit'] = ' celsius'
         self.parameter_display_dict['sensor_T']['min'] = -100
         self.parameter_display_dict['sensor_T']['max'] = 100
-        self.parameter_display_dict['sensor_T']['read'] = True
-        self.parameter_display_dict['center_wl']['val'] = self.center_wl
-        self.parameter_display_dict['center_wl']['unit'] = ' nm'
-        self.parameter_display_dict['center_wl']['max'] = 2000
-        self.parameter_display_dict['center_wl']['read'] = False
-        self.parameter_display_dict['grating']['val'] = self.grating
-        self.parameter_display_dict['grating']['unit'] = ' grat'
-        self.parameter_display_dict['grating']['max'] = 3
-        self.parameter_display_dict['grating']['read'] = False
+        self.parameter_display_dict['sensor_T']['read'] = False
 
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
@@ -108,6 +76,10 @@ class Pixis(QtCore.QThread):
         print(PrincetonInstruments.list_cameras())
         self.camera = PrincetonInstruments.PicamCamera()
         print('Camera connected')
+
+        # set the ROI so the camera is acting like a 1D array of 1024 pixels
+        roi = {"x": 0, "width": 1024, "x_binning": 1, "y": 0, "height": 1, "y_binning": 1}
+        self.camera.set_attribute_value("ROIs", [roi])
 
         # initialize camera
         self.worker = CameraWorker(self.camera,self.int_time)
@@ -134,16 +106,6 @@ class Pixis(QtCore.QThread):
         elif parameter == 'avg_scan':
             self.parameter_dict['avg_scan'] = value
             self.avg_scan = int(value)
-        elif parameter == 'center_wl':
-            cmd = f'{value:0.3f} GOTO'
-            self.write_command(cmd)
-            self.parameter_dict['center_wl'] = value
-            self.center_wl = value
-        elif parameter == 'grating':
-            cmd = f'{value:1.0f} GRATING'
-            self.write_command(cmd)
-            self.parameter_dict['grating'] = value
-            self.grating = value
 
 
     def update_spectrum(self, spec, int_time):
@@ -157,52 +119,57 @@ class Pixis(QtCore.QThread):
     def get_wavelength(self):
         """This simply returns the wavelength. In Colbert this needs to be adapted if the calibration
          changes. This function will be accessible from MeasurementClasses. """
-        return self.calculate_wavelength_array(self.center_wl,self.grating_densities[int(self.grating-1)])
+        self.calculate_wavelength_array()
+        return self.wavelengths
 
-    def calculate_wavelength_array(self,center_wavelength_nm,grating_lines_per_mm):
+    def calculate_wavelength_array(self):
         """
         Calculate the wavelength array for a PIXIS camera on SP-2150 spectrograph.
 
         Parameters:
-            center_wavelength_nm: Central wavelength (nm)
-            grating_lines_per_mm: Groove density (lines/mm)
 
         Returns:
             wavelengths: 1D numpy array of wavelengths (nm)
         """
-        calibrated = True
-        if calibrated:
+        if self.monochromator is not None:
+            self.center_wavelength,self.grating_lines_per_mm=self.monochromator.get_monochromator_parameters()
+            pixel_size_mm =self.hardware_params['pixel_size_mm'] 
+            focal_length_mm = self.hardware_params['focal_length_mm']
+            num_pixels = self.hardware_params['num_pixels']
+        
+        if self.hardware_params['calibrated']:
+
             pixel_size_mm = 26 / 1E3  # specs of PIXIS
-            focal_length_mm = 150  # specs of SP2150
+            focal_length_mm = 300  # specs of SP2300
             num_pixels = 1024  # specs of PIXIS
 
-            #
-
-            wl_center = center_wavelength_nm
+            wl_center = self.center_wavelength
             m_order = 1
             px = self.px0
 
             # calibration from notebook
-            f, delta, gamma, n0, offset_adjust, d_grating, x_pixel, curvature = [np.float64(330605663.74965495), np.float64(-0.20488367116307532), np.float64(2.021864300924973), np.float64(508.0), 0, 6666.666666666667, 26000.0, np.float64(3.1224154313329654e-06)]
-
-
+            f=self.hardware_params['f']
+            delta=self.hardware_params['delta']
+            gamma=self.hardware_params['gamma']
+            n0=self.hardware_params['n0']
+            offset_adjust=self.hardware_params['offset_adjust']
+            d_grating=self.hardware_params['d_grating']
+            x_pixel=self.hardware_params['x_pixel']
+            curvature=self.hardware_params['curvature']
 
             n = px - (n0 + offset_adjust * wl_center)
-
-            # print('psi top', m_order* wl_center)
-            # print('psi bottom', (2*d_grating*np.cos(gamma/2)) )
 
             psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
             eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
-            wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+            self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
         else:
             pixel_size_mm = 26 / 1E3  # specs of PIXIS
-            focal_length_mm = 150  # specs of SP2150
+            focal_length_mm = 300  # specs of SP2150
             num_pixels = 1024  # specs of PIXIS
 
             # Calculate linear dispersion (nm/mm)
-            dispersion = 1e6 / (focal_length_mm * grating_lines_per_mm)
+            dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
 
             # Center pixel
             center_pixel = num_pixels // 2
@@ -211,10 +178,18 @@ class Pixis(QtCore.QThread):
             pixel_indices = np.arange(num_pixels)
 
             # Wavelength at each pixel
-            wavelengths = center_wavelength_nm + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
+            self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
 
-        return wavelengths
-
+    def attach_to_monochromator(self,monochromator):
+        """
+            Attaches the camera to a monochromator, letting the camera interface know where to get the monochromator parameters from.
+            input:
+                - monochromator (Monochromator QThread): The interface to the monochromator
+        """
+        self.monochromator=monochromator
+        self.type='Spectrometer'
+        self.hardware_params.update(self.monochromator.get_hardware_parameters('Pixis'))
+    
     def start_acquisition(self):
         """ Sets camera to continuous acquisition mode. """
         self.camera.start_acquisition()
@@ -229,6 +204,7 @@ class Pixis(QtCore.QThread):
         """ Gets the intensity. The example include the possibility of averaging several spectra and to
         perform a binning. Such functionalities might also be given by the camera.
         This function will be accessible from MeasurementClasses."""
+        self.start_acquisition()
         if self.avg_scan == 1:
             while not self.new_spectrum:
                 time.sleep(0.01)
@@ -243,35 +219,13 @@ class Pixis(QtCore.QThread):
                 spectrum = spectrum + self.spectrum
                 self.new_spectrum = False
             spectrum = spectrum / self.avg_scan
+        self.stop_acquisition()
+        spectrum = spectrum[0, :]
         return spectrum
 
-    def update_temperature(self,temperature):
+    def update_temperature(self, temperature):
         self.parameter_dict['sensor_T'] = temperature
-
-    def write_command(self, cmd):
-        """ Command to write to serial handles timeout by blocking serial commands
-        Args:
-            ser: serial object
-            cmd: write command as defined in PI API
-
-        Returns: read string with only digit content. For troubleshooting, consider printing
-        the entire answer string
-        """
-        cmd_bytes = cmd.encode('ASCII')
-        self.ser.write(cmd_bytes + b"\r")
-        out = bytearray()
-        char = b""
-        missed_char_count = 0
-        while char != b"k":
-            char = self.ser.read()
-            if char == b"":  # handles a timeout here
-                missed_char_count += 1
-                self.serial_busy = True
-                time.sleep(0.1)
-            out += char
-        self.serial_busy = False
-        return re.findall(r'\d+', out.decode().strip())
-
+        self.parameter_display_dict['sensor_T']['val'] = temperature
 
 
 class CameraWorker(QtCore.QThread):
@@ -288,7 +242,7 @@ class CameraWorker(QtCore.QThread):
 
         # definition of some parameters
         self.camera = camera
-        self.spec_length = (252,1024)
+        self.spec_length = 1024
         self.change_int_time = False
         self.spectrum = np.zeros(self.spec_length)
         self.int_time = int_time

@@ -91,8 +91,12 @@ class DataHandling(QtCore.QThread):
         hardware parameter is added to the deque"""
         self.parameter_queue['time'].append(time.time() - self.starttime)
         self.parameter_queue['absolute_time'].append(time.time())
+
         for idx, param in enumerate(self.parameter):
             self.parameter_queue[param].append(parameter[idx])
+
+        # for param, value in zip(self.parameter_queue, parameter):
+        #     self.parameter_queue[param].append(value)
         self.sendParameterarray.emit(np.array(self.parameter_queue[self.send_x_idx]), np.array(self.parameter_queue[self.send_y_idx]))
 
     def clear_data(self):
@@ -308,7 +312,10 @@ class DataHandling(QtCore.QThread):
         Parameters:
             new_length (int): The new number of pixels in the spectrum.
         """
-        self.speclength = new_length
+        if isinstance(new_length, tuple):
+            self.speclength = new_length[1]  # or [0], whichever is intended
+        else:
+            self.speclength = new_length
 
         # Reset spectrum buffer
         self.spec = np.zeros((self.speclength, 0))  # zero columns, rows = new_length
@@ -331,6 +338,47 @@ class DataHandling(QtCore.QThread):
 
         # Optional: log the update
         logger.info(f"Updated spec_length to {self.speclength} and reset buffers.")
+
+    def close(self):
+        """Safely stop Qt thread + worker before re-instantiating DataHandling."""
+
+        # 1. Stop worker thread safely (if it has a stop flag)
+        try:
+            if hasattr(self, "BufferWorker") and self.BufferWorker is not None:
+                self.BufferWorker.terminate = True  # your custom flag (optional)
+        except:
+            pass
+
+        # 2. Disconnect signals (VERY important)
+        try:
+            if hasattr(self, "bufferSaveSignal"):
+                self.bufferSaveSignal.disconnect()
+        except:
+            pass
+
+        # 3. Quit Qt thread event loop
+        try:
+            if hasattr(self, "thread") and self.thread is not None:
+                self.thread.quit()
+                self.thread.wait()   # blocks until fully stopped
+        except:
+            pass
+
+        # 4. Delete worker safely
+        try:
+            if hasattr(self, "BufferWorker") and self.BufferWorker is not None:
+                self.BufferWorker.deleteLater()
+                self.BufferWorker = None
+        except:
+            pass
+
+        # 5. Delete thread safely
+        try:
+            if hasattr(self, "thread") and self.thread is not None:
+                self.thread.deleteLater()
+                self.thread = None
+        except:
+            pass
 
 
 class BufferWorker(QtCore.QObject):

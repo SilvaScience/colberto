@@ -85,7 +85,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
                 self.vertical_calibration_data['intensities']=self.intensities
                 self.vertical_calibration_data['rows']=self.rows
                 if i>=1:
-                    self.send_intensities.emit(self.rows,self.intensities[1:])
+                    self.send_intensities.emit(self.rows,self.intensities)
         self.vertical_calibration_data['intensities']=self.intensities
         self.vertical_calibration_data['rows']=self.rows
         self.send_vertical_calibration_data.emit(('vertical_calibration_data',self.vertical_calibration_data))
@@ -423,11 +423,12 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                                 'data' : np.array(self.intensities)
                                 }
                             if i>=3:
-                                indexes = np.where(
-                                    (self.wls >= (self.carrierWls/2 - 100)) &
-                                    (self.wls <= (self.carrierWls/2 + 100))
-                                )[0]
-                                self.send_chirp.emit(self.chirp[3:i],self.wls[indexes],np.array(self.intensities)[3:i,indexes])
+                                # indexes = np.where(
+                                #     (self.wls >= (self.carrierWls/2 - 100)) &
+                                #     (self.wls <= (self.carrierWls/2 + 100))
+                                # )[0]
+                                # self.send_chirp.emit(self.chirp[3:i],self.wls[indexes],np.array(self.intensities)[3:i,indexes])
+                                self.send_chirp.emit(self.chirp[3:i],self.wls,np.array(self.intensities)[3:i,:])
         self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data',self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
@@ -563,13 +564,60 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         # Loop through each wavelength 
         max_chirp_values = []
         wavelength_values = []
-        for wls in range(self.data.shape[1]):
-            intensity_column = self.data[:, wls]
-            max_row_index = np.argmax(intensity_column)
-            if max_row_index == 0:
-                continue
-            max_chirp_values.append(self.chirp_array[max_row_index])
-            wavelength_values.append(self.wavelength_array[wls])
+        # for wls in range(self.data.shape[1]):
+        #     intensity_column = self.data[:, wls]
+        #     max_row_index = np.argmax(intensity_column)
+        #     if max_row_index == 0:
+        #         continue
+        #     max_chirp_values.append(self.chirp_array[max_row_index])
+        #     wavelength_values.append(self.wavelength_array[wls])
+
+
+        # ----- Find starting wavelength -----
+        # wavelength with the strongest overall signal
+        start_col = np.argmax(np.max(self.data, axis=0))
+
+        # maximum there
+        start_row = np.argmax(self.data[:, start_col])
+
+        indices = np.zeros(self.data.shape[1], dtype=int)
+        indices[start_col] = start_row
+
+        # Search window in chirp units
+        window = 1000   # fs²/rad²
+
+        dchirp = np.abs(self.chirp_array[1] - self.chirp_array[0])
+        N = int(window / dchirp)
+
+        # ---------- Track toward longer wavelengths ----------
+        for col in range(start_col + 1, self.data.shape[1]):
+
+            prev = indices[col-1]
+
+            lo = max(0, prev-N)
+            hi = min(self.data.shape[0], prev+N+1)
+
+            local = self.data[lo:hi, col]
+
+            indices[col] = lo + np.argmax(local)
+
+        # ---------- Track toward shorter wavelengths ----------
+        for col in range(start_col-1, -1, -1):
+
+            prev = indices[col+1]
+
+            lo = max(0, prev-N)
+            hi = min(self.data.shape[0], prev+N+1)
+
+            local = self.data[lo:hi, col]
+
+            indices[col] = lo + np.argmax(local)
+
+        # Final arrays
+        max_chirp_values = self.chirp_array[indices]
+        wavelength_values = self.wavelength_array
+
+
         max_chirp_values = np.array(max_chirp_values)
         wavelength_values = np.array(wavelength_values)
         omega_values = 0.5*co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz
@@ -775,6 +823,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
         data_filtered_region = data_filtered[1:-1, mask]
         data_integrated = np.sum(data_filtered_region, axis=1)
         data_integrated_normalized = data_integrated/np.max(data_integrated)
+        data_integrated_normalized = -(data_integrated_normalized-np.max(data_integrated_normalized))
 
         self.sendCrossCorrelationRegion.emit(delay_array_region, data_integrated_normalized)
         self.delay_calibration_processed_data={
@@ -799,7 +848,8 @@ class DelayCalibrationMeasurement(QtCore.QThread):
         C0 = np.min(self.intensity)
 
         p0 = [A0, mu0, sigma0, C0]
-        popt, pcov = curve_fit(lambda x, A, mu, sigma, C: A * np.exp(-(x - mu)**2 / (2 * sigma**2)) + C, self.delay, self.intensity, p0=p0)
+        bounds = ([-np.inf, self.delay.min(), 0, -np.inf], [ np.inf, self.delay.max(), np.inf, np.inf])
+        popt, pcov = curve_fit(lambda x, A, mu, sigma, C: A * np.exp(-(x - mu)**2 / (2 * sigma**2)) + C, self.delay, self.intensity, p0=p0, bounds=bounds)
         A, mu, sigma, C = popt
         self.fitted_intensity = (A * np.exp(-(self.delay - mu)**2 / (2 * sigma**2)) + C)
         self.sendCrossCorrelationRegionFit.emit(self.delay, self.fitted_intensity, mu, sigma)

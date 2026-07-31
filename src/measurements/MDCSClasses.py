@@ -191,20 +191,20 @@ class BoxcarGeometry(QtCore.QThread):
             self.group_delay = {
                 'A' : np.zeros(Nb_step),
                 'C' : self.t_secondary[i]*np.ones(Nb_step),
-                'B' : self.t_scanned,
+                'B' : self.t_scanned.copy(),
                 'LO' : self.t_scanned-self.t_LO*np.ones(Nb_step)
             }
         elif self.measurement_type == '1Q - rephasing':
             self.group_delay = {
                 'A' : np.zeros(Nb_step),
-                'C' : self.t_scanned,
+                'C' : self.t_scanned.copy(),
                 'B' : self.t_scanned+self.t_secondary[i]*np.ones(Nb_step),
                 'LO' : self.t_scanned+(self.t_secondary[i]-self.t_LO)*np.ones(Nb_step)
             }
         elif self.measurement_type == '1Q - non rephasing':
             self.group_delay = {
                 'C' : np.zeros(Nb_step),
-                'A' : self.t_scanned,
+                'A' : self.t_scanned.copy(),
                 'B' : self.t_scanned+self.t_secondary[i]*np.ones(Nb_step),
                 'LO' : self.t_scanned+(self.t_secondary[i]-self.t_LO)*np.ones(Nb_step)
             }
@@ -215,6 +215,17 @@ class BoxcarGeometry(QtCore.QThread):
                 'A' : self.t_scanned+self.t_secondary[i]*np.ones(Nb_step),
                 'LO' : self.t_scanned+(self.t_secondary[i]-self.t_LO)*np.ones(Nb_step)
             }
+        elif self.measurement_type == 'LO scan':
+            self.group_delay = {
+                'C' : np.zeros(Nb_step),
+                'B' : np.zeros(Nb_step),
+                'A' : np.zeros(Nb_step),
+                'LO' : self.t_scanned.copy()
+            }
+        
+        # To give the right delay between pulse
+        for key in self.group_delay:
+            self.group_delay[key] *= -1
 
     def phase_cycling(self, j):
         '''
