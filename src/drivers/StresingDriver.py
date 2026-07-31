@@ -166,12 +166,12 @@ def init_driver(self, path_dll, config):
     status = self.dll.DLLInitDriver(ptr_number_of_boards)
     # Check the status code after each DLL call. When it is not 0, which means there is no error, an exception is raised. The error message will be displayed and the script will stop.
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
 
     # Initialize the measurement.
     status = self.dll.DLLInitMeasurement(self.settings)
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
     
     return self
 
@@ -180,7 +180,7 @@ def init_measure(self):
     # Initialize the measurement.
     status = self.dll.DLLInitMeasurement(self.settings)
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
 
 def measure(self, use_blocking_call):
 
@@ -188,13 +188,13 @@ def measure(self, use_blocking_call):
     # Therefore it may not be used without a reset signal, or following readouts have a crosstalk.
     status = self.dll.DLLCloseShutter(self.drvno)
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
 
     if use_blocking_call:
         # Start the measurement. This is the blocking call, which means it will return when the measurement is finished. This is done to ensure that no data access happens before all data is collected.
         status = self.dll.DLLStartMeasurement_blocking()
         if(status != 0):
-            raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+            raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
     else:
         # Start the measurement. This is the nonblocking call, which means it will return immediately. 
         self.dll.DLLStartMeasurement_nonblocking()
@@ -214,11 +214,11 @@ def measure(self, use_blocking_call):
     status = self.dll.DLLCopyAllData(self.drvno, ptr_data_buffer)
 
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
     
     status = self.dll.DLLOpenShutter(self.drvno)
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
 
     # Convert ctypes array to numpy
     arr = np.ctypeslib.as_array(data_buffer)
@@ -245,4 +245,4 @@ def exit(self):
     # Exit the driver
     status = self.dll.DLLExitDriver()
     if(status != 0):
-        raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
