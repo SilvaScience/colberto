@@ -638,7 +638,12 @@ class MainInterface(QtWidgets.QMainWindow):
             wave = grp.attrs['xaxis']
 
         bg = data_set
-        self.DataHandling.background = bg[-self.spec_length:]
+        """ Routed through use_background() so the length is checked against the active spectrometer
+        and the background is marked as usable. Assigning the attribute directly left has_background
+        false, and a file of the wrong length was accepted without a word. """
+        if not self.DataHandling.use_background(bg):
+            self.bg_file_indicator.setText('rejected: wrong length')
+            return wave, bg
 
         # display measured spectra filepath
         idx = bg_path.rfind('/')
@@ -726,6 +731,10 @@ class MainInterface(QtWidgets.QMainWindow):
                                                      self.filename, self.comments_edit.toPlainText())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            """ Without this the measured background was only ever stored as ordinary data: nothing
+            assigned DataHandling.background except loading a file, so acquiring a background and
+            ticking the correction box subtracted an uninitialised array. """
+            self.measurement.sendSpectrum.connect(self.DataHandling.set_background)
             self.measurement.sendSave.connect(self.DataHandling.save_data)
             self.measurement.start()
         else:

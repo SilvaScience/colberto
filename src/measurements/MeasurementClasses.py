@@ -137,13 +137,18 @@ class BackgroundMeasurement(QtCore.QThread):
 
     def run(self):
         if not self.terminate:  # check whether stopping measurement is called
+            """ Wavelengths are read once, before the loop. They used to be assigned only inside it,
+            so a background of a single scan emitted an empty array and broke the receiving slot.
+            scans is clamped because its spin box declares no minimum and so allows 0, which also
+            divided by zero below. """
+            scans = max(int(self.scans), 1)
+            self.wls = np.array(self.spectrometer.get_wavelength())
             self.summedspec = np.array(self.spectrometer.get_intensities())
-            for i in range(self.scans - 1):
-                self.sendProgress.emit((i + 1) / self.scans * 100)
-                self.wls = np.array(self.spectrometer.get_wavelength())
+            for i in range(scans - 1):
+                self.sendProgress.emit((i + 1) / scans * 100)
                 self.spec = np.array(self.spectrometer.get_intensities())
                 self.summedspec = self.summedspec + self.spec
-            self.spec = self.summedspec / self.scans
+            self.spec = self.summedspec / scans
             self.sendSpectrum.emit(self.wls, self.spec)
             self.sendSave.emit(self.filename, self.comments)
             self.sendProgress.emit(100)
