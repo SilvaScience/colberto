@@ -27,6 +27,7 @@ from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeas
 from GUI.LUT_Calib_plot import LUT_Calib_plot, LUT_Calib_intensity_plot
 from GUI.SLMDisplay import SLMDisplay
 from GUI.CameraDisplay import CameraDisplay
+from GUI.AcquisitionSettings import AcquisitionSettings
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
@@ -233,9 +234,6 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # add items to GUI
         self.SpectrometerPlot = SpectrometerPlot()
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.SpectrometerPlot)
-        self.spectro_tab.setLayout(vbox)
         self.ParameterPlot = ParameterPlot(self.parameter_dic)
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.ParameterPlot)
@@ -257,13 +255,47 @@ class MainInterface(QtWidgets.QMainWindow):
         self.LUT_Calib_plot_2 = LUT_Calib_intensity_plot(self.LUT_calib_plot_layout_2)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
-        """ Camera view tab. Built in code rather than in main_GUI.ui: the .ui file is edited by
-        several people in Qt Designer and merges badly, so a self-contained tab avoids conflicts.
-        The view is fed straight from the camera worker and deliberately bypasses DataHandling,
-        since it shows live 2D frames for alignment rather than measurement data. """
+        """ The spectro tab is composed here rather than in main_GUI.ui: the .ui file is edited by
+        several people in Qt Designer and merges badly, so it leaves spectro_tab empty and everything
+        is assembled in code. Top row is the acquisition settings beside the live camera view, bottom
+        row is the spectrum. Splitters rather than a fixed grid, so the spectrum can be dragged to
+        take the whole height once alignment is done. """
         self.CameraDisplay = CameraDisplay()
-        self.tabWidget.addTab(self.CameraDisplay, 'Camera')
+        self.AcquisitionSettings = AcquisitionSettings()
+        self.AcquisitionSettings.is_busy = lambda: self.measurement_busy
+
+        """ The settings panel is laid out to fit without scrolling, so it goes in directly. It is
+        given the width its controls need rather than a fixed fraction: clipped labels made the first
+        version unreadable. """
+        top_splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        top_splitter.addWidget(self.AcquisitionSettings)
+        top_splitter.addWidget(self.CameraDisplay)
+        """ Equal halves rather than pixel sizes: the sizes are treated as proportions, so the split
+        holds on any screen instead of depending on the font metrics of one machine. """
+        top_splitter.setStretchFactor(0, 1)
+        top_splitter.setStretchFactor(1, 1)
+        top_splitter.setSizes([1000, 1000])
+
+        spectro_splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        spectro_splitter.addWidget(top_splitter)
+        spectro_splitter.addWidget(self.SpectrometerPlot)
+        spectro_splitter.setStretchFactor(0, 1)
+        spectro_splitter.setStretchFactor(1, 1)
+        spectro_splitter.setSizes([1000, 1000])
+
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.addWidget(spectro_splitter)
+        self.spectro_tab.setLayout(vbox)
+
+        """ Second tab holding nothing but the spectrum: in the lab the plot is read from across the
+        room, where the controls only get in the way. Two plot instances fed the same data, rather
+        than moving one widget between tabs. """
+        self.SpectrometerPlotFull = SpectrometerPlot()
+        self.tabWidget.insertTab(1, self.SpectrometerPlotFull, 'Spectrum')
+        self.spectrum_plots = [self.SpectrometerPlot, self.SpectrometerPlotFull]
+
         self.connect_camera_display()
+        self.connect_acquisition_settings()
 
         """ This initializes the parameter tree. It is constructed based on the device dict,
         that includes parameter information of each device """
@@ -282,8 +314,9 @@ class MainInterface(QtWidgets.QMainWindow):
         # self.spec_length = self.devices['spectrometer'].get_num_pixel()
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
-        self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
-        self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
+        for plot in self.spectrum_plots:
+            self.DataHandling.sendSpectrum.connect(plot.set_data)
+            self.DataHandling.sendMaximum.connect(plot.update_datareader)
 
         #start Beam explorer
         self.beam_explorer = BeamExplorer(self.DataHandling.get_beams())
@@ -409,10 +442,12 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.close()
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
-        self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
-        self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
+        for plot in self.spectrum_plots:
+            self.DataHandling.sendSpectrum.connect(plot.set_data)
+            self.DataHandling.sendMaximum.connect(plot.update_datareader)
 
         self.connect_camera_display()
+        self.connect_acquisition_settings()
 
         logger.info(
             f"Switched to spectrometer: {new_name} "
@@ -447,6 +482,20 @@ class MainInterface(QtWidgets.QMainWindow):
             self._camera_display_source = worker
             logger.info('%s Camera view connected to %s'
                         % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
+
+    def connect_acquisition_settings(self):
+        '''
+            Points the Acquisition tab at the active spectrometer. Cameras without a configurable
+            trigger leave the tab disabled, the same way the Camera tab handles sensors without a
+            configurable readout region.
+        '''
+        spectrometer = self.devices.get('spectrometer')
+        self.AcquisitionSettings.set_spectrometer(spectrometer)
+        self.AcquisitionSettings.set_monochromator(self.devices.get('Monochrom'))
+        if hasattr(spectrometer, 'set_acquisition_mode'):
+            logger.info('%s Acquisition settings connected to %s'
+                        % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
+
 
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
@@ -650,7 +699,8 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement = ViewMeasurement(self.devices, self.parameter)
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            self.measurement.sendClear.connect(self.SpectrometerPlot.clear_plot)
+            for plot in self.spectrum_plots:
+                self.measurement.sendClear.connect(plot.clear_plot)
             self.measurement.start()
         else:
             logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
