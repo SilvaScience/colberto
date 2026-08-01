@@ -13,6 +13,15 @@ Colberto uses many devices to perform its duty. Below are pages dedicated to the
 
 Before you start contributing, make sure you read through [our contribution guide](contributing.md)
 
+# Debugging reports
+
+Written after a debugging session, these record what was wrong, how it was found and what was left
+open. Useful when a symptom comes back, and as a warning about the failure modes this codebase is
+prone to.
+- [Acquisition chain, 1 August 2026](rapport_debogage_2026-08-01.pdf) — Stresing and Pixis cameras,
+  SpectraPro exit mirror, spectra that never reached the plot, background correction on
+  uninitialised memory.
+
 # Data Handling 
 General considerations for DataHandling:
 We decided to use .hdf5 files for data storage. These files are hierarchical files that contain structures that can include groups, attributes and datasets. In the following, it is discussed how to assign them to the requirements of Colbert measurements. 
