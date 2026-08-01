@@ -183,15 +183,22 @@ def init_measure(self):
     if(status != 0):
         raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
 
+def measurement_running(self):
+    """
+        Whether the board still considers a measurement to be in progress.
+    """
+    return bool(self.dll.DLLGetIsRunning())
+
+
 def abort_measure(self):
     """
-        Asks the board to drop a measurement that is still waiting for scans. Best effort: older DLL
-        builds do not export a stop function, in which case there is nothing to call.
+        Stops a measurement the board is still running.
+        The export is DLLAbortMeasurement. An earlier version of this called DLLStopMeasurement,
+        which this DLL does not export, and swallowed the resulting AttributeError: every timeout
+        therefore left the board running, and the next acquisition either failed with 'Measurement
+        is already running' or blocked with no way out.
     """
-    try:
-        self.dll.DLLStopMeasurement(self.drvno)
-    except AttributeError:
-        pass
+    self.dll.DLLAbortMeasurement()
 
 
 def measure(self, use_blocking_call, timeout_s=None):
@@ -204,6 +211,12 @@ def measure(self, use_blocking_call, timeout_s=None):
               board is still waiting for scans, instead of hanging forever on a trigger that never
               arrives. None waits indefinitely.
     """
+    """ Clear a measurement the board may still be running from a previous attempt. Without this an
+    acquisition that was aborted, timed out or killed leaves the board busy, and every later one
+    either fails with 'Measurement is already running' or never returns. """
+    if measurement_running(self):
+        abort_measure(self)
+
     # The sensor S14290 is a high speed sensor and is not completely cleared by one read out.
     # Therefore it may not be used without a reset signal, or following readouts have a crosstalk.
     status = self.dll.DLLCloseShutter(self.drvno)
