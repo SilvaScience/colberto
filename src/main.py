@@ -263,6 +263,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.CameraDisplay = CameraDisplay()
         self.AcquisitionSettings = AcquisitionSettings()
         self.AcquisitionSettings.is_busy = lambda: self.measurement_busy
+        self.AcquisitionSettings.parameter_changed = self.spectrometer_parameter_changed
 
         """ The settings panel is laid out to fit without scrolling, so it goes in directly. It is
         given the width its controls need rather than a fixed fraction: clipped labels made the first
@@ -483,6 +484,20 @@ class MainInterface(QtWidgets.QMainWindow):
             logger.info('%s Camera view connected to %s'
                         % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
 
+    def spectrometer_parameter_changed(self, parameter, value):
+        '''
+            Called by the Acquisition panel after it has set a camera parameter on the driver.
+            The tree row is read-only for the spectrometer, so nothing else would refresh it, and
+            self.parameter is what gets recorded alongside the data: both have to follow.
+            input:
+                - parameter (str): parameter name
+                - value (float): value that was applied
+        '''
+        self.parameter[parameter] = value
+        widget = self.parameter_widgets.get(parameter)
+        if widget is not None:
+            widget.setValue(value)
+
     def connect_acquisition_settings(self):
         '''
             Points the Acquisition tab at the active spectrometer. Cameras without a configurable
@@ -536,7 +551,11 @@ class MainInterface(QtWidgets.QMainWindow):
         self.parameter_widgets[param] = spin
 
         param_info = self.parameter_dic[device][param]
-        force_read_only = (device == 'cryostat')
+        """ The spectrometer joins the cryostat in being read-only here: its settings are edited in
+        the Acquisition panel of Spectrum View, beside the acquisition they affect, and this tree
+        shows them so the whole hardware state can be read at a glance. The SLM and the other devices
+        keep their editable rows. """
+        force_read_only = device in ('cryostat', 'spectrometer')
         spin.setReadOnly(param_info['read'] or force_read_only)
 
         try:
