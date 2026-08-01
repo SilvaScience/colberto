@@ -8,6 +8,7 @@ Created on Wed Jun  5 10:52:39 2024
 import ctypes
 import os
 import configparser
+import time
 import numpy as np
 
 # These are the settings structs. It must be the same like in EBST_CAM/shared_src/struct.h regarding order, data formats and size.
@@ -175,8 +176,27 @@ def init_measure(self):
     if(status != 0):
         raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
 
-def measure(self, use_blocking_call):
+def abort_measure(self):
+    """
+        Asks the board to drop a measurement that is still waiting for scans. Best effort: older DLL
+        builds do not export a stop function, in which case there is nothing to call.
+    """
+    try:
+        self.dll.DLLStopMeasurement(self.drvno)
+    except AttributeError:
+        pass
 
+
+def measure(self, use_blocking_call, timeout_s=None):
+    """
+        Runs one measurement and returns the spectrum averaged over samples and blocks.
+        input:
+            - use_blocking_call (bool): wait inside the DLL until every scan is collected. Only safe
+              when the scans are guaranteed to come, i.e. on the internal timer.
+            - timeout_s (float): non-blocking path only. Gives up after this many seconds if the
+              board is still waiting for scans, instead of hanging forever on a trigger that never
+              arrives. None waits indefinitely.
+    """
     # The sensor S14290 is a high speed sensor and is not completely cleared by one read out.
     # Therefore it may not be used without a reset signal, or following readouts have a crosstalk.
     status = self.dll.DLLCloseShutter(self.drvno)
@@ -189,7 +209,7 @@ def measure(self, use_blocking_call):
         if(status != 0):
             raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
     else:
-        # Start the measurement. This is the nonblocking call, which means it will return immediately. 
+        # Start the measurement. This is the nonblocking call, which means it will return immediately.
         self.dll.DLLStartMeasurement_nonblocking()
 
         cur_sample = ctypes.c_int64(-2)
@@ -197,9 +217,20 @@ def measure(self, use_blocking_call):
         cur_block = ctypes.c_int64(-2)
         ptr_cur_block = ctypes.pointer(cur_block)
 
+        deadline = None if timeout_s is None else time.monotonic() + timeout_s
         while cur_sample.value < self.settings.nos-1 or cur_block.value < self.settings.nob-1:
             self.dll.DLLGetCurrentScanNumber(self.drvno, ptr_cur_sample, ptr_cur_block)
-            print("sample: "+str(cur_sample.value)+" block: "+str(cur_block.value))
+            if deadline is not None and time.monotonic() > deadline:
+                abort_measure(self)
+                self.dll.DLLOpenShutter(self.drvno)
+                raise TimeoutError(
+                    'No scan received after %.1f s (scan %d of %d, block %d of %d). '
+                    'The board is waiting for a trigger that is not arriving.'
+                    % (timeout_s, cur_sample.value + 1, self.settings.nos,
+                       cur_block.value + 1, self.settings.nob))
+            """ Yield the CPU: this loop used to spin flat out on one core while printing every
+            poll. """
+            time.sleep(0.001)
 
     # This block is showing you how to get all data of the whole measurement with one DLL call
     data_buffer = (ctypes.c_uint16 * (self.settings.camera_settings[self.drvno].PIXEL * (self.settings.nos) * self.settings.camera_settings[self.drvno].CAMCNT * self.settings.nob))(0)

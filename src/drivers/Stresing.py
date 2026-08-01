@@ -14,7 +14,6 @@ set_parameter function (assign set functions)
 import numpy as np
 from PyQt5 import QtCore
 from collections import defaultdict
-import time
 from pathlib import Path
 import matplotlib.pyplot as plt
 from drivers.StresingDriver import camera_settings
@@ -27,6 +26,19 @@ import logging
 import datetime
 
 logger = logging.getLogger(__name__)
+
+""" Trigger sources the board understands, as documented in StresingDriver.init_driver(). sti and bti
+share the numbering for the external inputs but diverge above 4, so they are listed separately rather
+than exposed as raw numbers. """
+TRIGGER_INPUTS = {'I': 0, 'S1': 1, 'S2': 2, 'I gated by S2': 3}
+TRIGGER_TIMER = 4
+CHOPPER_INPUTS = {'S1': 5, 'S2': 6, 'S1 and S2': 7}
+
+CONTINUOUS = 'continuous'
+EXTERNAL = 'external'
+CHOPPER = 'chopper'
+
+
 class StresingCamera(QtCore.QThread):
 
     name = 'StresingCamera'
@@ -35,9 +47,11 @@ class StresingCamera(QtCore.QThread):
         super(StresingCamera, self).__init__()
 
         # initialize Worker
+        """ The worker is kept as the signal carrier that publishes each acquired spectrum, but its
+        thread is not started: the readout is a pull, driven by get_intensities() from the measurement
+        thread, so a polling loop has nothing to do. Not starting it also avoids leaving a thread
+        running at shutdown. """
         self.worker = StresingWorker()
-        self.worker.sendSpectrum.connect(self.update_spectrum) # connect where signals of worker go to.
-        self.worker.start()
         self.type = 'Camera'
 
         # This is the hardware parameters dictionnary. It is provided by hardware-specific configurations and are not changed in operation
@@ -84,6 +98,10 @@ class StresingCamera(QtCore.QThread):
         self.btimer = int(float(config.get("Board0","btimer")))
         self.stimer = int(config.get("Board0","stimer"))
         self.new_spectrum = False
+
+        """ Deadline used when the board is waiting on an external signal. Without it a trigger that
+        never arrives leaves the acquisition thread stuck inside the DLL with no way back. """
+        self.trigger_timeout_s = 5.0
 
         # set parameter dict
         self.parameter_dict = defaultdict()
@@ -248,10 +266,6 @@ class StresingCamera(QtCore.QThread):
             self.new_spectrum = False
         init_measure(self) # type: ignore
 
-    def update_spectrum(self, spectrum):
-        self.spectrum = spectrum
-        self.new_spectrum = True
-
     def calculate_wavelength_array(self):
         """
             Calculate the wavelength array for the pixels of the Stresing camera using the hardware parameters from the camera and the attached monochromator. 
@@ -321,6 +335,86 @@ class StresingCamera(QtCore.QThread):
         self.type='Spectrometer'
         self.hardware_params.update(self.monochromator.get_hardware_parameters('Stresing'))
 
+    def get_acquisition_mode(self):
+        """
+            Returns the current trigger setup in the vocabulary the interface uses, so a widget can
+            show the mode rather than the raw sti/bti register values.
+        """
+        if self.bti in CHOPPER_INPUTS.values():
+            mode = CHOPPER
+        elif self.sti == TRIGGER_TIMER and self.bti == TRIGGER_TIMER:
+            mode = CONTINUOUS
+        else:
+            mode = EXTERNAL
+        inputs = {v: k for k, v in TRIGGER_INPUTS.items()}
+        choppers = {v: k for k, v in CHOPPER_INPUTS.items()}
+        return {'mode': mode,
+                'scan_trigger': 'timer' if self.sti == TRIGGER_TIMER else inputs.get(self.sti, 'I'),
+                'chopper': choppers.get(self.bti, 'S1'),
+                'scan_interval_us': self.stimer,
+                'block_interval_us': self.btimer,
+                'timeout_s': self.trigger_timeout_s}
+
+    def set_acquisition_mode(self, mode, scan_trigger='I', chopper='S1',
+                             scan_interval_us=None, block_interval_us=None, timeout_s=None):
+        """
+            Sets sti, bti and their timers as one coherent choice instead of four loose registers.
+            input:
+                - mode (str): CONTINUOUS (the board drives itself), EXTERNAL (one readout per trigger
+                  pulse) or CHOPPER (blocks gated by a chopper signal)
+                - scan_trigger (str): key of TRIGGER_INPUTS, or 'timer', for what starts a readout.
+                  Ignored in CONTINUOUS.
+                - chopper (str): key of CHOPPER_INPUTS. Only used in CHOPPER.
+                - scan_interval_us (int): time between readouts, applied only when readouts run on
+                  the internal timer
+                - block_interval_us (int): time between blocks, applied only in CONTINUOUS
+                - timeout_s (float): how long to wait for an external signal before giving up
+        """
+        if mode == CONTINUOUS:
+            sti = bti = TRIGGER_TIMER
+        elif mode == EXTERNAL:
+            sti = bti = TRIGGER_INPUTS[scan_trigger]
+        elif mode == CHOPPER:
+            bti = CHOPPER_INPUTS[chopper]
+            sti = TRIGGER_TIMER if scan_trigger == 'timer' else TRIGGER_INPUTS[scan_trigger]
+        else:
+            raise ValueError('Unknown acquisition mode: %s' % mode)
+
+        cam = self.driver.settings.camera_settings[self.driver.drvno]
+        cam.sti_mode, cam.bti_mode = sti, bti
+        self.sti, self.bti = sti, bti
+
+        """ The board only reads a timer in the mode that uses it. Writing them in the other modes
+        would leave values on screen that have no effect, which is what made the old parameter table
+        misleading. """
+        if sti == TRIGGER_TIMER and scan_interval_us:
+            cam.stime_in_microsec = int(scan_interval_us)
+            self.stimer = int(scan_interval_us)
+        if bti == TRIGGER_TIMER and block_interval_us:
+            cam.btime_in_microsec = int(block_interval_us)
+            self.btimer = int(block_interval_us)
+        if timeout_s is not None:
+            self.trigger_timeout_s = float(timeout_s)
+
+        # Keep the generic parameter tree in step with what was set here.
+        for key, value in (('Scan_Trig', self.sti), ('Block_Trig', self.bti),
+                           ('Scan_Timer', self.stimer), ('Block_Timer', self.btimer)):
+            self.parameter_dict[key] = value
+            self.parameter_display_dict[key]['val'] = value
+
+        self.new_spectrum = False
+        init_measure(self) # type: ignore
+        logger.info('%s Stresing acquisition mode: %s (sti=%d, bti=%d)'
+                    % (datetime.datetime.now(), mode, sti, bti))
+
+    def waits_for_external_signal(self):
+        """
+            True when either trigger depends on a signal the board does not generate itself, i.e.
+            when an acquisition can legitimately never complete.
+        """
+        cam = self.driver.settings.camera_settings[self.driver.drvno]
+        return cam.sti_mode != TRIGGER_TIMER or cam.bti_mode != TRIGGER_TIMER
+
     def get_num_pixel(self):
         return self.hardware_params['num_pixels']
 
@@ -332,21 +426,34 @@ class StresingCamera(QtCore.QThread):
         return self.wavelengths
 
     def get_intensities(self):
-        use_blocking_call = True
-        self.spectrum = StresingWorker.worker_spectrum(self, use_blocking_call)
-        while not self.new_spectrum:
-            time.sleep(0.01)
-            self.new_spectrum = False
+        """ The blocking DLL call cannot be interrupted, so it is only used when the board drives
+        itself and the scans are guaranteed to come. Anything waiting on an external signal goes
+        through the polling path, which honours trigger_timeout_s. """
+        use_blocking_call = not self.waits_for_external_signal()
+        self.acquire_spectrum(use_blocking_call)
         self.spec = np.array(self.spectrum[13:-1])
         self.spec = self.spec[::-1]
         #self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
+        """ Publish the same data the caller gets, so a live view can follow the acquisition without
+        going through DataHandling. """
+        self.worker.sendSpectrum.emit(self.spec)
         return self.spec
 
+    def acquire_spectrum(self, use_blocking_call):
+        """
+            Reads one spectrum off the board, in the calling thread.
+            input:
+                - use_blocking_call (bool): whether to wait in the DLL until the readout is complete
+        """
+        init_measure(self) # type: ignore
+        timeout_s = None if use_blocking_call else self.trigger_timeout_s
+        self.spectrum = measure(self, use_blocking_call, timeout_s) # type: ignore
+        self.new_spectrum = True
+
 class StresingWorker(QtCore.QThread):
-    """ This is a DemoWorker for the Stresing Camera.
-    It continously acquires spectra and emits them to the Interface.
-    It interrupts data acquisition if an ac_time change is requested. Its important because most
-    hardware can only handle one command at a time, acquiring or changing settings.  """
+    """ Publishes the spectra acquired from the Stresing camera to the interface.
+    The camera is read synchronously by StresingCamera.acquire_spectrum() in the thread that asks for
+    a spectrum, so this worker carries the signal only and its thread is never started. """
     # These are signals that allow to send data from a child thread to the parent hierarchy.
     sendSpectrum = QtCore.pyqtSignal(np.ndarray)
 
@@ -354,20 +461,7 @@ class StresingWorker(QtCore.QThread):
         super(StresingWorker, self).__init__() # Elevates this thread to be independent.
         self.new_spectrum = False
 
-    def run(self):
-        while True:
-            time.sleep(0.01)
-            if self.new_spectrum:
-                self.new_spectrum = False
-                self.sendSpectrum.emit(self.spectrum)
-            pass
 
-    def worker_spectrum(self, use_blocking_call):
-        init_measure(self) # type: ignore
-        self.spectrum = measure(self, use_blocking_call) # type: ignore
-        self.new_spectrum = True
-        return self.spectrum
-    
 class CaseInsensitiveConfig(configparser.ConfigParser):
     """ This class extends Python’s built-in configparser.ConfigParser to make both section names and option names case-insensitive.
     Normally, ConfigParser is only case-insensitive for option names, not section names, so this subclass enforces lowercase normalization for both. """
