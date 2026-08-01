@@ -28,12 +28,21 @@ class SpectraPro2300i(QtCore.QThread):
         # get startup values
         self.grating = float(self.write_command('?GRATING')[0])
         numbers = self.write_command('?GRATINGS')
-        self.num_gratings = int((len(numbers)-8)/2)
-        self.grating_densities = np.zeros(self.num_gratings)
-        self.grating_blazes = np.zeros(self.num_gratings)
-        for i in range(self.num_gratings):
-            self.grating_densities[i] = numbers[i*3 + 1]
-            self.grating_blazes[i] = numbers[i * 3 + 2]
+        """ Uninstalled turret positions answer with their index and nothing else, so the number of
+        gratings cannot be derived from the length of the reply: (len - 8) / 2 counted 4 on a turret
+        holding 3, and invented a grating of 4 lines/mm. Walk the triples instead and stop at the
+        first implausible groove density. The parsing stays fragile because write_command() keeps
+        only the digits, which also splits a blaze written as "2.0UM" into 2 and 0. """
+        densities, blazes = [], []
+        for i in range(0, len(numbers) - 2, 3):
+            density = float(numbers[i + 1])
+            if density < 50:
+                break
+            densities.append(density)
+            blazes.append(float(numbers[i + 2]))
+        self.num_gratings = len(densities)
+        self.grating_densities = np.array(densities)
+        self.grating_blazes = np.array(blazes)
         self.center_wl = float(self.write_command('?NM')[0])
         self.mirror = float(self.write_command('?MIR')[0])
         print(self.center_wl)
@@ -95,7 +104,15 @@ class SpectraPro2300i(QtCore.QThread):
         out = bytearray()
         char = b""
         missed_char_count = 0
+        """ The loop used to wait for the terminating 'k' of "ok" with no way out: missed_char_count
+        was counted and never acted on, so a controller that stopped answering froze whoever called
+        this, which is the GUI thread. The deadline is generous rather than tight because a turret
+        move answers nothing at all until it has finished. """
+        deadline = time.time() + 60
         while char != b"k":
+            if time.time() > deadline:
+                self.serial_busy = False
+                raise TimeoutError('No reply to %r after 60 s (got %r)' % (cmd, bytes(out)))
             char = self.ser.read()
             if char == b"":  # handles a timeout here
                 missed_char_count += 1
@@ -111,7 +128,7 @@ class SpectraPro2300i(QtCore.QThread):
         if parameter == 'central_wave':
             cmd = f'{value:0.3f} GOTO'
             self.write_command(cmd)
-            self.parameter_dict['center_wave'] = value
+            self.parameter_dict['central_wave'] = value
             self.center_wl = value
         elif parameter == 'grating':
             cmd = f'{value:1.0f} GRATING'
@@ -119,8 +136,13 @@ class SpectraPro2300i(QtCore.QThread):
             self.parameter_dict['grating'] = value
             self.grating = value
         elif parameter == 'mirror':
-            cmd = f'{value:1.0f} MIRROR'
-            self.write_command(cmd)
+            """ The controller ignores "<n> MIRROR": it answers ok and leaves the mirror where it is,
+            so this silently did nothing. The exit mirror is selected with EXIT-MIRROR and then driven
+            with FRONT or SIDE. Checked on the SP-2-300i, serial 23581080: after moving to front,
+            "1 MIRROR" left ?MIRROR reading front, while EXIT-MIRROR followed by SIDE moved it.
+            ?MIR reports 0 for front and 1 for side. """
+            self.write_command('EXIT-MIRROR')
+            self.write_command('SIDE' if int(value) else 'FRONT')
             self.parameter_dict['mirror'] = value
             self.mirror = value
 
