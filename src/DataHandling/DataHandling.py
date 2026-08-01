@@ -128,8 +128,15 @@ class DataHandling(QtCore.QThread):
 
         else:
             self.spec = np.concatenate([self.spec, spec[np.newaxis, ...]])
+        """ A parameter only has a recorded value once update_parameter() has run for it. Reading
+        queue[-1] unconditionally raised IndexError on every spectrum, which killed this slot before
+        sendSpectrum was emitted: the measurement finished, the traceback went to stderr rather than
+        to the log, and no spectrum ever reached the plot. Parameters with nothing recorded keep
+        their previous value instead. """
         for idx, param in enumerate(self.parameter_queue.keys()):
-            self.param_from_deque[idx] = self.parameter_queue[param][-1]
+            queue = self.parameter_queue[param]
+            if queue:
+                self.param_from_deque[idx] = queue[-1]
         self.parameter_measured = np.c_[self.parameter_measured, self.param_from_deque]
         self.parameter_measured[0, -1] = curr_time
         self.parameter_measured[1, -1] = time.time()
