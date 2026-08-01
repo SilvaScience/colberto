@@ -574,6 +574,14 @@ class MainInterface(QtWidgets.QMainWindow):
                     # Si le paramètre est du texte (ex: "Stable"), on ignore l'erreur du spinbox
                     pass
 
+        """ Record the hardware state alongside the data. The Updater only carries the read-only
+        parameters, so it is merged over the settings held here to give the full picture. Nothing
+        called DataHandling.update_parameter() before, which is why saved files carried no hardware
+        settings at all. """
+        recorded = dict(self.parameter)
+        recorded.update(new_parameter)
+        self.DataHandling.update_parameter(recorded)
+
 
     def change_parameter(self, parameter, value):
         # change parameter when called from another script
