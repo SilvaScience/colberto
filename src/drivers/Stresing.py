@@ -426,11 +426,7 @@ class StresingCamera(QtCore.QThread):
         return self.wavelengths
 
     def get_intensities(self):
-        """ The blocking DLL call cannot be interrupted, so it is only used when the board drives
-        itself and the scans are guaranteed to come. Anything waiting on an external signal goes
-        through the polling path, which honours trigger_timeout_s. """
-        use_blocking_call = not self.waits_for_external_signal()
-        self.acquire_spectrum(use_blocking_call)
+        self.acquire_spectrum()
         self.spec = np.array(self.spectrum[13:-1])
         self.spec = self.spec[::-1]
         #self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
@@ -439,15 +435,35 @@ class StresingCamera(QtCore.QThread):
         self.worker.sendSpectrum.emit(self.spec)
         return self.spec
 
-    def acquire_spectrum(self, use_blocking_call):
+    def expected_duration_s(self):
+        """
+            How long one acquisition should take when the board drives itself, from the timers it was
+            given. Used to size the deadline, so a stalled board is caught in proportion to what the
+            settings actually ask for.
+        """
+        cam = self.driver.settings.camera_settings[self.driver.drvno]
+        scans, blocks = max(int(self.sample), 1), max(int(self.block), 1)
+        seconds = 0.0
+        if cam.sti_mode == TRIGGER_TIMER:
+            seconds += scans * blocks * self.stimer / 1e6
+        if cam.bti_mode == TRIGGER_TIMER:
+            seconds += blocks * self.btimer / 1e6
+        return seconds
+
+    def acquire_spectrum(self):
         """
             Reads one spectrum off the board, in the calling thread.
-            input:
-                - use_blocking_call (bool): whether to wait in the DLL until the readout is complete
+            Always polls with a deadline. The blocking DLL call cannot be interrupted and has been
+            seen never to return when the board is in a bad state, which hangs whichever thread asked
+            for the spectrum with no way back -- including the interface itself. Waiting on the board
+            is not worth losing the ability to give up.
         """
         init_measure(self) # type: ignore
-        timeout_s = None if use_blocking_call else self.trigger_timeout_s
-        self.spectrum = measure(self, use_blocking_call, timeout_s) # type: ignore
+        if self.waits_for_external_signal():
+            timeout_s = self.trigger_timeout_s
+        else:
+            timeout_s = max(self.expected_duration_s() * 3, 5.0)
+        self.spectrum = measure(self, False, timeout_s) # type: ignore
         self.new_spectrum = True
 
 class StresingWorker(QtCore.QThread):
