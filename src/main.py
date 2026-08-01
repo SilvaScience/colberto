@@ -590,10 +590,10 @@ class MainInterface(QtWidgets.QMainWindow):
     def acquire_measurement(self):
         # take one spectrum with spectrometer
         if self.measurement_busy:
-            try:
-                self.measurement.take_spectrum()
-            except AttributeError:
-                logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
+            """ take_spectrum() runs the blocking hardware readout, and this is the GUI thread: calling
+            it here froze the whole interface for as long as the camera took to answer. Let the running
+            measurement finish instead. """
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
         else:
             self.measurement_busy = True
             self.DataHandling.clear_data()
