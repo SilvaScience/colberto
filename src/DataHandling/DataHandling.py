@@ -49,14 +49,19 @@ class DataHandling(QtCore.QThread):
         self.parameter_measured = np.zeros([len(self.parameter) + 2, 0])
 
         # preallocate data arrays depending on data dimension (1D or 2D).
+        """ The background is zeroed, not np.empty: an np.empty array holds whatever was in memory,
+        and subtracting it corrupts every spectrum silently. has_background says whether a real
+        background was ever measured or loaded; until then correct_background subtracts nothing. """
         if self.data_dim  == 1:
             self.spec = np.empty([self.speclength, 0])
-            self.background = np.empty([self.speclength, 1])
+            self.background = np.zeros([self.speclength, 1])
             self.wls = np.empty([self.speclength, 1])
         else:
             self.spec = np.empty([0,self.speclength[0],self.speclength[1]])
-            self.background = np.empty([0,self.speclength[0],self.speclength[1]])
+            self.background = np.zeros([1,self.speclength[0],self.speclength[1]])
             self.wls = np.empty([self.speclength[1], 1])
+        self.has_background = False
+        self.background_warned = False
 
         # set initial values
         self.maximum = np.zeros([3])
@@ -123,7 +128,7 @@ class DataHandling(QtCore.QThread):
         self.wls = wls
         if self.data_dim == 1:
             if self.correct_background:
-                spec = spec - self.background.ravel()
+                spec = self.subtract_background(spec)
             self.spec = np.c_[self.spec, spec]
 
         else:
@@ -155,6 +160,65 @@ class DataHandling(QtCore.QThread):
             self.maximum[2] = wls[np.unravel_index(spec.argmax(), spec.shape)[1]]
         self.maximum[0] = curr_time
         self.sendMaximum.emit(self.maximum)
+
+    def subtract_background(self, spec):
+        """
+            Subtracts the stored background, and refuses to do anything else.
+            Returns the spectrum unchanged, with one warning, when no background has been measured or
+            loaded, or when the stored one does not match the current spectrum length. Both used to go
+            through unnoticed: the background array was allocated with np.empty and no measurement ever
+            filled it, so ticking background correction subtracted uninitialised memory.
+            input:
+                - spec (np.ndarray): spectrum to correct
+            output:
+                - np.ndarray: corrected spectrum, or the original one if no valid background
+        """
+        reason = None
+        if not self.has_background:
+            reason = 'no background has been acquired or loaded'
+        elif self.background.size != np.size(spec):
+            reason = ('background is %d points, spectrum is %d'
+                      % (self.background.size, np.size(spec)))
+        if reason is not None:
+            if not self.background_warned:
+                logger.warning('%s Background correction is on but was not applied: %s'
+                               % (datetime.datetime.now(), reason))
+                self.background_warned = True
+            return spec
+        return spec - self.background.ravel()
+
+    def use_background(self, spec):
+        """
+            Adopts a spectrum as the background to subtract.
+            input:
+                - spec (np.ndarray): background spectrum. A file holding several spectra is accepted,
+                  in which case the last one is used, matching how load_bg used to slice it.
+            output:
+                - bool: whether a usable background was stored
+        """
+        flat = np.asarray(spec, dtype=float).ravel()
+        if self.data_dim == 1 and flat.size != self.speclength:
+            if self.speclength and flat.size % self.speclength == 0:
+                flat = flat[-self.speclength:]
+            else:
+                logger.error('%s Background rejected: %d points for a %s point spectrum'
+                             % (datetime.datetime.now(), flat.size, self.speclength))
+                return False
+        self.background = flat.reshape(-1, 1) if self.data_dim == 1 else np.asarray(spec, dtype=float)
+        self.has_background = True
+        self.background_warned = False
+        logger.info('%s Background stored (%d points)' % (datetime.datetime.now(), flat.size))
+        return True
+
+    @QtCore.pyqtSlot(np.ndarray, np.ndarray)
+    def set_background(self, wls, spec):
+        """
+            Slot for a background measurement, which emits wavelengths and intensities together.
+            input:
+                - wls (np.ndarray): wavelengths, unused
+                - spec (np.ndarray): measured background
+        """
+        self.use_background(spec)
 
     # save data to temp file and clear data in memory
     def save_buffer(self):
@@ -334,14 +398,21 @@ class DataHandling(QtCore.QThread):
         # preallocate data arrays depending on data dimension (1D or 2D).
         if self.data_dim == 1:
             self.spec = np.empty([self.speclength, 0])
-
-            self.background = np.empty([self.speclength, 1])
+            self.background = np.zeros([self.speclength, 1])
             self.wls = np.empty([self.speclength, 1])
         else:
             self.spec = np.empty([0, self.speclength[0], self.speclength[1]])
-
-            self.background = np.empty([0, self.speclength[0], self.speclength[1]])
+            self.background = np.zeros([1, self.speclength[0], self.speclength[1]])
             self.wls = np.empty([self.speclength[1], 1])
+
+        """ A background belongs to the spectrometer it was taken on, so changing spectrometer drops
+        it. It used to be reallocated with np.empty while the correction checkbox stayed ticked,
+        which silently turned a valid background into uninitialised memory. """
+        if self.has_background:
+            logger.warning('%s Background dropped: the spectrum length changed to %s'
+                           % (datetime.datetime.now(), self.speclength))
+        self.has_background = False
+        self.background_warned = False
 
         # Optional: log the update
         logger.info(f"Updated spec_length to {self.speclength} and reset buffers.")
