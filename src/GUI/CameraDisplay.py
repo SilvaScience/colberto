@@ -252,13 +252,20 @@ class CameraDisplay(QtWidgets.QWidget):
         try:
             if self.mode_full_frame.isChecked():
                 self.spectrometer.set_full_frame()
-                self.status_label.setText('Full frame readout applied (alignment mode).')
+                y0, height = 0, int(getattr(self.spectrometer, 'sensor_height', 1))
+                self.status_label.setText(
+                    'Full frame readout applied (alignment mode). Counts are the sum of every row, '
+                    'so they are far larger than in binned mode.')
             else:
                 y0, height = self.y0_spin.value(), self.height_spin.value()
                 self.spectrometer.set_binned_roi(y0, height)
                 self.status_label.setText(
-                    f'Binned readout applied: rows {y0} to {y0 + height - 1} summed on chip.')
-                self.roi_applied.emit(y0, height)
+                    f'Binned readout applied: rows {y0} to {y0 + height - 1} summed on chip. '
+                    'The on-chip sum saturates at the converter limit, so counts are much lower '
+                    'than the full frame sum and the two must not be compared.')
+            """ Announced for both modes: the spectrum plot has to be cleared, since the counts of
+            one mode dwarf the other and a leftover curve makes the new one look flat at zero. """
+            self.roi_applied.emit(y0, height)
             self._auto_levels_pending = True
         except Exception as e:
             logger.error('Failed to apply Pixis ROI: %s', e)

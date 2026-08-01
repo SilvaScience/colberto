@@ -261,6 +261,10 @@ class MainInterface(QtWidgets.QMainWindow):
         row is the spectrum. Splitters rather than a fixed grid, so the spectrum can be dragged to
         take the whole height once alignment is done. """
         self.CameraDisplay = CameraDisplay()
+        """ Changing the readout region changes the scale of the counts by the number of rows summed,
+        so a curve taken under the previous region would dominate the axes and make the new one read
+        as flat at zero. """
+        self.CameraDisplay.roi_applied.connect(self.readout_region_changed)
         self.AcquisitionSettings = AcquisitionSettings()
         self.AcquisitionSettings.is_busy = lambda: self.measurement_busy
         self.AcquisitionSettings.parameter_changed = self.spectrometer_parameter_changed
@@ -483,6 +487,18 @@ class MainInterface(QtWidgets.QMainWindow):
             self._camera_display_source = worker
             logger.info('%s Camera view connected to %s'
                         % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
+
+    def readout_region_changed(self, y0, height):
+        '''
+            Clears the spectrum plots after the camera readout region changed.
+            input:
+                - y0 (int): first sensor row now read
+                - height (int): number of rows now covered
+        '''
+        for plot in self.spectrum_plots:
+            plot.clear_plot()
+        logger.info('%s Readout region changed to rows %d-%d, spectrum plots cleared'
+                    % (datetime.datetime.now(), y0, y0 + height - 1))
 
     def spectrometer_parameter_changed(self, parameter, value):
         '''
