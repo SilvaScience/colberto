@@ -459,11 +459,11 @@ class StresingCamera(QtCore.QThread):
             is not worth losing the ability to give up.
         """
         init_measure(self) # type: ignore
-        if self.waits_for_external_signal():
-            timeout_s = self.trigger_timeout_s
-        else:
-            timeout_s = max(self.expected_duration_s() * 3, 5.0)
-        self.spectrum = measure(self, False, timeout_s) # type: ignore
+        """ Only an acquisition that depends on an external signal needs the trigger watch. On the
+        internal timer the board drives itself and the readouts are guaranteed, so waiting for a
+        trigger there would just add a delay to every spectrum. """
+        timeout_s = self.trigger_timeout_s if self.waits_for_external_signal() else None
+        self.spectrum = measure(self, True, timeout_s) # type: ignore
         self.new_spectrum = True
 
 class StresingWorker(QtCore.QThread):
