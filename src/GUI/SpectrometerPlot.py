@@ -97,10 +97,16 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
 
     def update_crosshair(self, e):
         pos = e[0]
-        if self.graphWidget.sceneBoundingRect().contains(pos):
-            mousePoint = self.graphWidget.getPlotItem().vb.mapSceneToView(pos)
-            self.crosshair_v.setPos(mousePoint.x())
-            self.crosshair_h.setPos(mousePoint.y())
+        """ Everything below needs mousePoint, which only exists while the pointer is over this plot.
+        The label was updated unconditionally, so every mouse move outside the plot raised
+        UnboundLocalError. Harmless in itself, but it floods stderr and buries real tracebacks, and
+        there are now two spectrum plots, so the one that is not under the cursor raised on every
+        move. """
+        if not self.graphWidget.sceneBoundingRect().contains(pos):
+            return
+        mousePoint = self.graphWidget.getPlotItem().vb.mapSceneToView(pos)
+        self.crosshair_v.setPos(mousePoint.x())
+        self.crosshair_h.setPos(mousePoint.y())
         calibration_mode = False
         if calibration_mode:
             pixel = np.argmin(abs(self.wls - mousePoint.x()))
