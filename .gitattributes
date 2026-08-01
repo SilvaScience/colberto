@@ -1,0 +1,9 @@
+# Binary files must never go through line-ending conversion. Committing the debugging report as a
+# PDF made git warn that LF would be replaced by CRLF, which would corrupt the file on checkout.
+*.pdf binary
+*.h5 binary
+*.dll binary
+*.png binary
+*.jpg binary
+*.stl binary
+*.lut binary
