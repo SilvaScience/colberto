@@ -13,6 +13,7 @@ Timers are entered with a unit and their effect is shown in Hz and in total acqu
 """
 
 from PyQt5 import QtWidgets, QtCore
+from functools import partial
 import logging
 
 from drivers.Stresing import (TRIGGER_INPUTS, CHOPPER_INPUTS,
@@ -21,6 +22,10 @@ from drivers.Stresing import (TRIGGER_INPUTS, CHOPPER_INPUTS,
 logger = logging.getLogger(__name__)
 
 UNITS_US = {'us': 1, 'ms': 1000, 's': 1000000}
+
+""" Parameters this panel already presents in a friendlier form, and which must therefore not be
+repeated as raw spin boxes in the camera group. """
+PANEL_OWNED = ('No_Sample', 'No_Block', 'Scan_Trig', 'Block_Trig', 'Scan_Timer', 'Block_Timer')
 
 
 class AcquisitionSettings(QtWidgets.QWidget):
@@ -177,6 +182,19 @@ class AcquisitionSettings(QtWidgets.QWidget):
         mono_layout.setColumnStretch(2, 1)
         self.mono_box.setLayout(mono_layout)
 
+        # ---- camera parameters ----
+        """ The camera's own settings, built from the driver's parameter_display_dict so this works
+        for any spectrometer without naming its parameters here. The Hardware tree shows the same
+        values read-only: control belongs next to the acquisition settings it affects, not in a tree
+        shared with every other device. """
+        self.camera_box = QtWidgets.QGroupBox('Camera')
+        self.camera_layout = QtWidgets.QGridLayout()
+        self.camera_box.setLayout(self.camera_layout)
+        self.camera_widgets = {}
+        """ Set by the main window so a change made here also reaches the value it records with the
+        data and the read-only row in the tree. """
+        self.parameter_changed = None
+
         # ---- summary and actions ----
         self.summary_label = QtWidgets.QLabel()
         self.summary_label.setWordWrap(True)
@@ -215,10 +233,11 @@ class AcquisitionSettings(QtWidgets.QWidget):
         layout.addWidget(self.structure_box, 1, 1)
         layout.addWidget(self.source_box, 2, 0)
         layout.addWidget(self.mono_box, 2, 1)
-        layout.addWidget(self.summary_label, 3, 0, 1, 2)
-        layout.addWidget(self.registers_label, 4, 0, 1, 2)
-        layout.addLayout(actions, 5, 0, 1, 2)
-        layout.setRowStretch(6, 1)
+        layout.addWidget(self.camera_box, 3, 0, 1, 2)
+        layout.addWidget(self.summary_label, 4, 0, 1, 2)
+        layout.addWidget(self.registers_label, 5, 0, 1, 2)
+        layout.addLayout(actions, 6, 0, 1, 2)
+        layout.setRowStretch(7, 1)
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
         self.setLayout(layout)
@@ -249,6 +268,10 @@ class AcquisitionSettings(QtWidgets.QWidget):
                 - spectrometer: camera driver, or None to disable the panel
         """
         self.spectrometer = spectrometer
+        """ Built for every camera, including those with no configurable trigger: the trigger boxes
+        below may end up disabled, the camera's own settings stay usable. """
+        self.build_camera_parameters(spectrometer)
+
         supported = spectrometer is not None and hasattr(spectrometer, 'set_acquisition_mode')
         """ Only the camera side is disabled: the monochromator is shared by every spectrometer and
         stays usable whichever camera is selected. """
@@ -280,6 +303,69 @@ class AcquisitionSettings(QtWidgets.QWidget):
         self.scans_per_block.setValue(getattr(spectrometer, 'sample', 10))
         self.blocks.setValue(getattr(spectrometer, 'block', 1))
         self.mode_changed()
+
+    def build_camera_parameters(self, spectrometer):
+        """
+            Rebuilds the camera controls from the driver's own parameter declaration.
+            input:
+                - spectrometer: camera driver, or None to leave the group empty
+        """
+        while self.camera_layout.count():
+            widget = self.camera_layout.takeAt(0).widget()
+            if widget is not None:
+                widget.deleteLater()
+        self.camera_widgets = {}
+
+        display = getattr(spectrometer, 'parameter_display_dict', None) or {}
+        row = 0
+        for name, info in display.items():
+            if name in PANEL_OWNED:
+                continue
+            spin = QtWidgets.QDoubleSpinBox()
+            spin.setMinimumWidth(90)
+            spin.setMaximumWidth(140)
+            for key, setter in (('unit', spin.setSuffix), ('max', spin.setMaximum),
+                                ('min', spin.setMinimum), ('val', spin.setValue)):
+                try:
+                    setter(info[key])
+                except (KeyError, TypeError):
+                    pass
+            if info.get('read'):
+                """ A reading, not a setting: shown so the value is visible next to the controls that
+                depend on it, but the driver has nothing to set it to. """
+                spin.setReadOnly(True)
+                spin.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+            else:
+                spin.editingFinished.connect(partial(self.apply_camera_parameter, name))
+            self.camera_layout.addWidget(QtWidgets.QLabel('%s:' % name), row // 2, (row % 2) * 2)
+            self.camera_layout.addWidget(spin, row // 2, (row % 2) * 2 + 1)
+            self.camera_widgets[name] = spin
+            row += 1
+
+        self.camera_layout.setColumnStretch(4, 1)
+        self.camera_box.setVisible(bool(self.camera_widgets))
+
+    def apply_camera_parameter(self, name):
+        """
+            Pushes one camera parameter to the driver.
+            input:
+                - name (str): parameter name as the driver declares it
+        """
+        if self.spectrometer is None or name not in self.camera_widgets:
+            return
+        if callable(self.is_busy) and self.is_busy():
+            self.status_label.setText('A measurement is running. Stop it before changing %s.' % name)
+            return
+        value = self.camera_widgets[name].value()
+        try:
+            self.spectrometer.set_parameter(name, value)
+        except Exception as e:
+            logger.error('Could not set %s: %s', name, e)
+            self.status_label.setText('Could not set %s: %s' % (name, e))
+            return
+        self.status_label.setText('%s set to %g.' % (name, value))
+        if callable(self.parameter_changed):
+            self.parameter_changed(name, value)
 
     def set_monochromator(self, monochromator):
         """

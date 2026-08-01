@@ -65,7 +65,10 @@ class Pixis(QtCore.QThread):
         self.parameter_display_dict['sensor_T']['unit'] = ' celsius'
         self.parameter_display_dict['sensor_T']['min'] = -100
         self.parameter_display_dict['sensor_T']['max'] = 100
-        self.parameter_display_dict['sensor_T']['read'] = False
+        """ A reading, not a setting: set_parameter() has no branch for it, and the worker is what
+        updates it. Declaring it writable put it among the parameters the updater does not poll, so
+        the temperature on screen never changed after startup. """
+        self.parameter_display_dict['sensor_T']['read'] = True
 
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
