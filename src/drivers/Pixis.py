@@ -116,7 +116,7 @@ class Pixis(QtCore.QThread):
         self.worker.start()
 
         # set int time once
-        self.camera.set_attribute_value("Exposure Time", int(self.int_time))
+        self.camera.set_attribute_value("Exposure Time", float(self.int_time))
 
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
@@ -126,10 +126,10 @@ class Pixis(QtCore.QThread):
             self.worker.int_time = value
             if self.worker.acquiring: # stops acquisition before changing int time if currently acquiring.
                 self.stop_acquisition()
-                self.camera.set_attribute_value("Exposure Time", int(value))
+                self.camera.set_attribute_value("Exposure Time", float(value))
                 self.start_acquisition()
             else:
-                self.camera.set_attribute_value("Exposure Time", int(value))
+                self.camera.set_attribute_value("Exposure Time", float(value))
             self.int_time = value
         elif parameter == 'avg_scan':
             self.parameter_dict['avg_scan'] = value
@@ -299,6 +299,12 @@ class Pixis(QtCore.QThread):
             view, because set_roi() and get_intensities() drive the camera from two different threads.
         """
         with self.camera_lock:
+            """ If the camera reports an acquisition while the worker was not reading, the two are
+            out of step: that acquisition was set up under the previous readout region and delivers
+            nothing here. Stop it and start again rather than adopting it, which is what left
+            get_intensities() waiting for a frame that never came after a region change. """
+            if self.acquisition_running() and not self.worker.acquiring:
+                self.camera.stop_acquisition()
             if not self.acquisition_running():
                 self.camera.start_acquisition()
             self.worker.acquiring = True
@@ -338,6 +344,10 @@ class Pixis(QtCore.QThread):
         perform a binning. Such functionalities might also be given by the camera.
         This function will be accessible from MeasurementClasses."""
         self.start_acquisition()
+        """ Drop anything the worker delivered before this call. A frame can arrive just after the
+        previous acquisition was stopped, and it was taken with the readout region in force then:
+        consuming it here would return the old region's data for the new one. """
+        self.new_spectrum = False
         try:
             if self.avg_scan == 1:
                 spectrum = self.wait_for_frame()
