@@ -14,6 +14,7 @@ import numpy as np
 import os.path
 from collections import deque
 import shutil
+import threading
 import logging
 import datetime
 from numpy.polynomial import Polynomial as P
@@ -80,8 +81,12 @@ class DataHandling(QtCore.QThread):
         self.calibration = {}
 
         # initialize BufferWorker
+        """ The worker writes the buffer in its own thread. save_data() has to know when that write
+        has actually finished before it copies the file, so the worker signals completion through
+        this event. It used to sleep 0.5 s and hope. """
+        self.buffer_written = threading.Event()
         self.thread = QtCore.QThread()
-        self.BufferWorker = BufferWorker(self.temp_filename,self.data_dim)
+        self.BufferWorker = BufferWorker(self.temp_filename, self.data_dim, self.buffer_written)
         self.BufferWorker.moveToThread(self.thread)
         self.thread.start()
         self.bufferSaveSignal.connect(self.BufferWorker.save_buffer)
@@ -93,15 +98,27 @@ class DataHandling(QtCore.QThread):
         """ This is an important part of hardware parameter control. We use "deque" as efficient First-In-First-Out
         Queues that allow to have a continuous acces to the last 100.000 hardware parameters. Each parameter has their
         on deque object. Each time the update parameter function is called by the updater, the most updated value of the
-        hardware parameter is added to the deque"""
+        hardware parameter is added to the deque.
+            input:
+                - parameter (dict): parameter name -> current value. Names absent from the dictionary,
+                  and values that are not numbers such as the cryostat reporting "Stable", repeat the
+                  last recorded value so the columns stay aligned with the spectra.
+
+        This used to take a sequence indexed positionally, and nothing in the code ever called it.
+        The queues therefore stayed empty, which left parameter_measured full of zeros: no hardware
+        setting was ever stored beside the data it belongs to.
+        """
         self.parameter_queue['time'].append(time.time() - self.starttime)
         self.parameter_queue['absolute_time'].append(time.time())
 
-        for idx, param in enumerate(self.parameter):
-            self.parameter_queue[param].append(parameter[idx])
+        for param in self.parameter:
+            queue = self.parameter_queue[param]
+            try:
+                value = float(parameter[param])
+            except (KeyError, TypeError, ValueError):
+                value = queue[-1] if queue else 0.0
+            queue.append(value)
 
-        # for param, value in zip(self.parameter_queue, parameter):
-        #     self.parameter_queue[param].append(value)
         self.sendParameterarray.emit(np.array(self.parameter_queue[self.send_x_idx]), np.array(self.parameter_queue[self.send_y_idx]))
 
     def clear_data(self):
@@ -225,6 +242,7 @@ class DataHandling(QtCore.QThread):
         """ Saves data to a temporary file and populates it each time more than 100 spectra have been acquired.
         If the file is created, some attributes such as yaxis and parameter keys are added."""
         t1 = time.time()
+        self.buffer_written.clear()
         self.bufferSaveSignal.emit(self.spec, self.wls, self.parameter_queue, self.parameter_measured)
 
         # clear arrays in memory
@@ -253,7 +271,13 @@ class DataHandling(QtCore.QThread):
     def save_data(self, filename, comments):
         """saves data. Each time data is saved, parameters are saved aswell. """
         self.save_buffer()
-        time.sleep(0.5) # allow for BufferWorker to create temp file
+        """ Wait for the worker to finish writing rather than sleeping a fixed 0.5 s: on a large
+        buffer or a slow disk that sleep expired first and the file below was copied half written.
+        The timeout is long because it only has to cover a genuinely slow write. """
+        if not self.buffer_written.wait(timeout=60):
+            logger.error('%s Not saved: the buffer was still being written after 60 s'
+                         % datetime.datetime.now())
+            return
         with h5py.File(self.temp_filename, 'a') as hf:
             hf.attrs["comments"] = comments
             if len(self.calibration) > 0 :
@@ -463,10 +487,11 @@ class BufferWorker(QtCore.QObject):
     """ Buffer worker saves data to a temp file.
     It is started every time a given amount of data has been acquired and receives signals with the corresponding data"""
 
-    def __init__(self,temp_filename, data_dim):
+    def __init__(self, temp_filename, data_dim, done_event=None):
         super(BufferWorker, self).__init__()
         self.temp_filename = temp_filename
         self.data_dim = data_dim
+        self.done_event = done_event
         self.firstbuffer = True
         self.terminate = False
         # check if folder for buffer exists
@@ -511,3 +536,7 @@ class BufferWorker(QtCore.QObject):
                     hf["parameter"][:, -parameter_measured.shape[1]:] = parameter_measured
             except TypeError:
                 logger.warning('% s Saving failed. Did you already save?' %datetime.datetime.now())
+        """ Release save_data(). Left unset if the write above raised, so save_data() times out and
+        refuses to copy rather than copying a half-written file. """
+        if self.done_event is not None:
+            self.done_event.set()

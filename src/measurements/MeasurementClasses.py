@@ -28,11 +28,18 @@ class AcquireMeasurement(QtCore.QThread):
 
     def run(self):
         logger.info(time.strftime('%H:%M:%S') + ' Begin single spectrum acquisition')
-        if not self.terminate:  # check whether stopping measurement is called
-            self.sendProgress.emit(50)
-            self.wls = np.array(self.spectrometer.get_wavelength())
-            self.take_spectrum()
-            logger.info(time.strftime('%H:%M:%S') + ' Finished')
+        try:
+            if not self.terminate:  # check whether stopping measurement is called
+                self.sendProgress.emit(50)
+                self.wls = np.array(self.spectrometer.get_wavelength())
+                self.take_spectrum()
+                logger.info(time.strftime('%H:%M:%S') + ' Finished')
+        except Exception:
+            logger.exception('Single spectrum acquisition failed')
+        finally:
+            """ Progress 100 is what releases measurement_busy in the main window. Emitting it here
+            rather than only on success means a failed or stopped measurement no longer leaves the
+            interface stuck on "devices are busy" until the software is restarted. """
             self.sendProgress.emit(100)
 
     def take_spectrum(self):
@@ -59,21 +66,25 @@ class ViewMeasurement(QtCore.QThread):
         self.terminate = False
 
     def run(self):
-        while not self.terminate:  # check whether stopping measurement is called
-            t = time.time()
-            self.sendProgress.emit(50)
-            self.wls = np.array(self.spectrometer.get_wavelength())
-            self.spec = np.array(self.spectrometer.get_intensities())
-            self.sendClear.emit()
-            self.sendSpectrum.emit(self.wls, self.spec)
+        try:
+            while not self.terminate:  # check whether stopping measurement is called
+                t = time.time()
+                self.sendProgress.emit(50)
+                self.wls = np.array(self.spectrometer.get_wavelength())
+                self.spec = np.array(self.spectrometer.get_intensities())
+                self.sendClear.emit()
+                self.sendSpectrum.emit(self.wls, self.spec)
 
-            # limit too fast acquistion for computation
-            if time.time() - t < 0.02:
-                time.sleep(0.02)
+                # limit too fast acquistion for computation
+                if time.time() - t < 0.02:
+                    time.sleep(0.02)
 
-        # Finish measurement when loop is terminated
-        logger.info(time.strftime('%H:%M:%S') + ' Finished')
-        self.sendProgress.emit(100)
+            # Finish measurement when loop is terminated
+            logger.info(time.strftime('%H:%M:%S') + ' Finished')
+        except Exception:
+            logger.exception('Continuous view failed')
+        finally:
+            self.sendProgress.emit(100)
 
     def stop(self):
         self.terminate = True
@@ -95,21 +106,25 @@ class RunMeasurement(QtCore.QThread):
 
     def run(self):
         logger.info(time.strftime('%H:%M:%S') + ' Begin continuous acquisition')
-        while not self.terminate:  # loop runs until requested stop
-            t1 = time.time()
-            self.wls = np.array(self.spectrometer.get_wavelength())
-            self.spec = np.array(self.spectrometer.get_intensities())
+        try:
+            while not self.terminate:  # loop runs until requested stop
+                t1 = time.time()
+                self.wls = np.array(self.spectrometer.get_wavelength())
+                self.spec = np.array(self.spectrometer.get_intensities())
 
-            # send data
-            self.sendSpectrum.emit(self.wls, self.spec)
-            progress = 50
-            self.sendProgress.emit(progress)
+                # send data
+                self.sendSpectrum.emit(self.wls, self.spec)
+                progress = 50
+                self.sendProgress.emit(progress)
 
-            # limit too fast acquistion for computation
-            if time.time() - t1 < 0.02:
-                time.sleep(0.02)
-        logger.info(time.strftime('%H:%M:%S') + ' Finished')
-        self.sendProgress.emit(100)
+                # limit too fast acquistion for computation
+                if time.time() - t1 < 0.02:
+                    time.sleep(0.02)
+            logger.info(time.strftime('%H:%M:%S') + ' Finished')
+        except Exception:
+            logger.exception('Continuous acquisition failed')
+        finally:
+            self.sendProgress.emit(100)
         return
 
     #  initiate controlled stop by enableing terminate statement, that is frequently queried in run code
@@ -136,23 +151,27 @@ class BackgroundMeasurement(QtCore.QThread):
         self.terminate = False
 
     def run(self):
-        if not self.terminate:  # check whether stopping measurement is called
-            """ Wavelengths are read once, before the loop. They used to be assigned only inside it,
-            so a background of a single scan emitted an empty array and broke the receiving slot.
-            scans is clamped because its spin box declares no minimum and so allows 0, which also
-            divided by zero below. """
-            scans = max(int(self.scans), 1)
-            self.wls = np.array(self.spectrometer.get_wavelength())
-            self.summedspec = np.array(self.spectrometer.get_intensities())
-            for i in range(scans - 1):
-                self.sendProgress.emit((i + 1) / scans * 100)
-                self.spec = np.array(self.spectrometer.get_intensities())
-                self.summedspec = self.summedspec + self.spec
-            self.spec = self.summedspec / scans
-            self.sendSpectrum.emit(self.wls, self.spec)
-            self.sendSave.emit(self.filename, self.comments)
+        try:
+            if not self.terminate:  # check whether stopping measurement is called
+                """ Wavelengths are read once, before the loop. They used to be assigned only inside
+                it, so a background of a single scan emitted an empty array and broke the receiving
+                slot. scans is clamped because its spin box declares no minimum and so allows 0,
+                which also divided by zero below. """
+                scans = max(int(self.scans), 1)
+                self.wls = np.array(self.spectrometer.get_wavelength())
+                self.summedspec = np.array(self.spectrometer.get_intensities())
+                for i in range(scans - 1):
+                    self.sendProgress.emit((i + 1) / scans * 100)
+                    self.spec = np.array(self.spectrometer.get_intensities())
+                    self.summedspec = self.summedspec + self.spec
+                self.spec = self.summedspec / scans
+                self.sendSpectrum.emit(self.wls, self.spec)
+                self.sendSave.emit(self.filename, self.comments)
+                logger.info(time.strftime('%H:%M:%S') + 'Background acquired')
+        except Exception:
+            logger.exception('Background acquisition failed')
+        finally:
             self.sendProgress.emit(100)
-            logger.info(time.strftime('%H:%M:%S') + 'Background acquired')
 
     def stop(self):
         self.terminate = True
