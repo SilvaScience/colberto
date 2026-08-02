@@ -31,6 +31,8 @@ from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,Ba
 from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, AcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
+from measurements.TGFROGClasses import TGFROGMeasurement
+from GUI.PulseCharacterization import PulseCharacterization
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
 from drivers.Instruments import load_instruments
@@ -256,7 +258,12 @@ class MainInterface(QtWidgets.QMainWindow):
         self.LUT_Calib_plot_2 = LUT_Calib_intensity_plot(self.LUT_calib_plot_layout_2)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
-        """ This initializes the parameter tree. It is constructed based on the device dict, 
+        """ Built and added the same way as the spectro tab above, rather than as a placeholder
+        in main_GUI.ui, for the same reason: the .ui file merges badly between contributors. """
+        self.PulseCharacterization = PulseCharacterization()
+        self.tabWidget.addTab(self.PulseCharacterization, 'Pulse characterization')
+
+        """ This initializes the parameter tree. It is constructed based on the device dict,
         that includes parameter information of each device """
         self.parameter_tree.setColumnCount(2)
         self.parameter_tree.setHeaderLabels(["Name", "Value"])
@@ -341,6 +348,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.delay_fit_delay_button.clicked.connect(self.delayFitMeaserement)
         self.delay_apply_delay_button.clicked.connect(lambda: self.assignDelayCalibration(1))
         self.delay_remove_delay_button.clicked.connect(lambda: self.assignDelayCalibration(-1))
+
+        self.PulseCharacterization.start_button.clicked.connect(self.tgfrogAcquireMeasurement)
         # Measurement tab connect events
         self.MDCS_getLO_button.clicked.connect(self.getLOSpectrum)
         self.MDCS_acquire_button.clicked.connect(self.MDCSacquireMeasurement)
@@ -350,6 +359,7 @@ class MainInterface(QtWidgets.QMainWindow):
         # Beam update connection
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
         self.DataHandling.sendBeams.connect(self.update_beam_name_list)
+        self.DataHandling.sendBeams.connect(self.PulseCharacterization.update_beam_names)
         #Beam Explorer related
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
@@ -970,6 +980,65 @@ class MainInterface(QtWidgets.QMainWindow):
             self.DataHandling.set_beam((self.delay_second_beam_name_box.currentText(), beam))
         else:
             logger.warning('%s Delay calibration fit has not been processed. Processed the calibration fit first'%datetime.datetime.now())
+
+    def tgfrogAcquireMeasurement(self):
+        """
+            Starts a TG-FROG delay scan using the beam roles and scan parameters set in the
+            Pulse characterization tab.
+        """
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            probeBeamName = self.PulseCharacterization.probe_beam_box.currentText()
+            gratingBeam1Name = self.PulseCharacterization.grating_beam1_box.currentText()
+            gratingBeam2Name = self.PulseCharacterization.grating_beam2_box.currentText()
+            if len({probeBeamName, gratingBeam1Name, gratingBeam2Name}) < 3:
+                print('Measurement not started, the three beams need to be different')
+                self.measurement_busy = False
+                return
+
+            beam_dict = self.DataHandling.get_beams()
+            probeBeam = beam_dict[probeBeamName] if probeBeamName in beam_dict else Beam(self.devices['SLM'].get_width(), self.devices['SLM'].get_height())
+            gratingBeam1 = beam_dict[gratingBeam1Name] if gratingBeam1Name in beam_dict else Beam(self.devices['SLM'].get_width(), self.devices['SLM'].get_height())
+            gratingBeam2 = beam_dict[gratingBeam2Name] if gratingBeam2Name in beam_dict else Beam(self.devices['SLM'].get_width(), self.devices['SLM'].get_height())
+
+            self.DataHandling.clear_data()
+            if hasattr(self, 'background'):
+                tgfrogBackground = self.DataHandling.calibration['background_data']
+                background = tgfrogBackground['spec']
+            else:
+                background = 0
+
+            try:
+                spectral_calib_dict = self.DataHandling.calibration['spectral_calibration_fit']
+            except KeyError:
+                spectral_calib_dict = None
+
+            self.measurement = TGFROGMeasurement(
+                self.devices, background, self.grating_period_edit.value(),
+                self.PulseCharacterization.probe_wavelength_spin.value(),
+                self.PulseCharacterization.delay_step_spin.value(),
+                self.PulseCharacterization.delay_max_spin.value(),
+                self.PulseCharacterization.delay_min_spin.value(),
+                probeBeamName, gratingBeam1Name, gratingBeam2Name,
+                probeBeam, gratingBeam1, gratingBeam2,
+                spectral_calib_dict,
+                demo=self.PulseCharacterization.demo_mode_checkbox.isChecked())
+
+            """ sendSpectrum is deliberately not wired to DataHandling.concatenate_data here,
+            unlike other measurements: that buffer assumes every emitted spectrum has the same
+            length as DataHandling.spec_length (the currently configured spectrometer's pixel
+            count), but demo mode synthesizes its own wavelength axis at a different length,
+            which crashed concatenate_data's np.c_ concatenation when tested. The 2D trace is
+            already fully captured below via sendTraceData, which is what matters for retrieval. """
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendBeam.connect(self.DataHandling.set_beam)
+            self.measurement.sendTrace.connect(self.PulseCharacterization.set_data)
+            self.measurement.sendTraceData.connect(self.DataHandling.add_calibration)
+            self.measurement.finished.connect(lambda: self.PulseCharacterization.set_running(False))
+            self.PulseCharacterization.set_running(True)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
 
     def getLOSpectrum(self):
         if not self.measurement_busy:
