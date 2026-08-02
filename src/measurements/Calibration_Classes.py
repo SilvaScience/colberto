@@ -148,6 +148,7 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
         sendPhase = QtCore.pyqtSignal(np.ndarray, np.ndarray)
         sendProgress = QtCore.pyqtSignal(float)
         sendParameter = QtCore.pyqtSignal(str, float)
+        sendSavedPath = QtCore.pyqtSignal(str)
 
         def __init__(self, devices, parameter, region, grayscale, intensity):
             '''
@@ -348,6 +349,7 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
                     f.write(f"{int(g)}\t{int(round(v))}\n")
 
             print(f"LUT saved to: {output_file}")
+            self.sendSavedPath.emit(output_file)
         
         def generate_phase_greyscale_LUT(self, wave, phase_shift_array, greyscale_values):
             """

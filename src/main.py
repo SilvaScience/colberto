@@ -408,6 +408,14 @@ class MainInterface(QtWidgets.QMainWindow):
         # run some functions once to define default values
         self.change_filename()
 
+        """ Persistent readout of which .lut file is currently loaded, since the wavelength it was
+        calibrated at isn't recoverable from the file itself (no header, just greyscale/voltage
+        pairs -- see the LUT calibration discussion) and is usually only known from the filename.
+        addPermanentWidget rather than showMessage: stays visible until the next LUT is loaded, not
+        just transiently. """
+        self.lut_file_label = QtWidgets.QLabel('LUT: none loaded')
+        self.statusbar.addPermanentWidget(self.lut_file_label)
+
         # show GUI, to be executed at the end of init.
         self.show()
 
@@ -1019,6 +1027,15 @@ class MainInterface(QtWidgets.QMainWindow):
             beam_dict[key].set_beamHorizontalDelimiters(self.DataHandling.calibration['spectral_calibration_fit'].domain.astype(int))
             self.DataHandling.set_beam((key,beam_dict[key]))
 
+        """ Gives the SLM driver the per-column wavelength axis, so it can correct the
+        phase-to-greyscale LUT (calibrated at a single reference wavelength) for the diffraction
+        efficiency loss at every other wavelength in the pulse. See manual/beam_management.md /
+        the LUT calibration discussion. No-op on the driver side until a calibration wavelength is
+        also set (Generate_LUT_PhasetoGreyscale / Load_LUT_PhasetoGrayscale). """
+        wavelength_axis = self.DataHandling.calibration['spectral_calibration_fit'](
+            np.arange(self.devices['SLM'].get_width()))
+        self.devices['SLM'].set_wavelength_axis(wavelength_axis)
+
     def delayAcquireMeasurement(self):
         """
             Start a cross correlation measurement between two beams
@@ -1203,9 +1220,16 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.measurement_busy = True
                 self.DataHandling.clear_data()
                 self.measurement = Generate_LUT_PhasetoGreyscale(self.devices, self.parameter, [self.LUT_calib_0.value(), self.LUT_calib_2pi.value()], grayscale, intensity)
+                """ The freshly generated LUT is calibrated at this wavelength (spinbox is in nm,
+                driver expects meters). This is what lets the SLM correct other columns for the
+                diffraction efficiency they lose away from it -- see assign_spectral_calibration()
+                for the other half (the per-column wavelength axis). """
+                self.devices['SLM'].set_calibration_wavelength(self.LUT_calib_central_wavelength.value() * 1e-9)
                 self.measurement.sendProgress.connect(self.set_progress)
                 self.measurement.sendLine.connect(self.LUT_Calib_plot_2.draw_line)
                 self.measurement.sendPhase.connect(self.LUT_Calib_plot_2.add_data)
+                self.measurement.sendSavedPath.connect(
+                    lambda path: self.lut_file_label.setText(f'LUT: {os.path.basename(path)}'))
                 self.measurement.start()
         else:
             logger.info('%s Measurement not started, devices are busy' % datetime.datetime.now())
@@ -1213,11 +1237,17 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def Load_LUT_PhasetoGrayscale(self):
         '''
-                    Ask the user which LUT file to load. 
+                    Ask the user which LUT file to load.
         '''
         LUT_FilePath = self.devices['SLM'].load_LUT()
-        LUT_FilePath = ('LUT_FilePath', LUT_FilePath)
-        self.DataHandling.add_calibration(LUT_FilePath)
+        if LUT_FilePath:
+            self.lut_file_label.setText(f'LUT: {os.path.basename(LUT_FilePath)}')
+        self.DataHandling.add_calibration(('LUT_FilePath', LUT_FilePath))
+        """ .lut files have no room for metadata, so a manually loaded file carries no record of
+        which wavelength it was calibrated at. Fall back to whatever is currently in the central
+        wavelength spinbox -- set it to match the loaded file before clicking Load if it differs
+        from the last generated calibration. """
+        self.devices['SLM'].set_calibration_wavelength(self.LUT_calib_central_wavelength.value() * 1e-9)
     
     def show_beam_explorer(self):
         """
