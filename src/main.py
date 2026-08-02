@@ -1147,11 +1147,28 @@ class MainInterface(QtWidgets.QMainWindow):
         """
         if not self.measurement_busy:
             self.measurement_busy = True
-            probeBeamName = self.PulseCharacterization.probe_beam_box.currentText()
-            gratingBeam1Name = self.PulseCharacterization.grating_beam1_box.currentText()
-            gratingBeam2Name = self.PulseCharacterization.grating_beam2_box.currentText()
-            if len({probeBeamName, gratingBeam1Name, gratingBeam2Name}) < 3:
-                print('Measurement not started, the three beams need to be different')
+            pc = self.PulseCharacterization
+            is_demo = pc.demo_mode_checkbox.isChecked()
+
+            probeBeamName = pc.probe_beam_box.currentText()
+            gratingBeam1Name = pc.grating_beam1_box.currentText()
+            gratingBeam2Name = pc.grating_beam2_box.currentText()
+
+            if is_demo:
+                """ TGFROGMeasurement._run_demo never touches the beam objects it is given --
+                the synthetic trace only depends on the simulator parameters below -- so demo
+                mode should not require three real, distinct beams to already exist in
+                BeamExplorer. Falling back to distinct placeholder names keeps the exported
+                calibration key (TGFROG_raw_data_<probe>_<g1>_<g2>) meaningful even with the
+                dropdowns empty, which is what made "Simulate trace" silently no-op with
+                nothing set up yet. """
+                probeBeamName = probeBeamName or 'SimProbe'
+                gratingBeam1Name = gratingBeam1Name or 'SimGrating1'
+                gratingBeam2Name = gratingBeam2Name or 'SimGrating2'
+            elif ('' in (probeBeamName, gratingBeam1Name, gratingBeam2Name)
+                  or len({probeBeamName, gratingBeam1Name, gratingBeam2Name}) < 3):
+                pc.status_label.setText(
+                    'Error: select three different beams for a real acquisition.')
                 self.measurement_busy = False
                 return
 
@@ -1174,14 +1191,19 @@ class MainInterface(QtWidgets.QMainWindow):
 
             self.measurement = TGFROGMeasurement(
                 self.devices, background, self.grating_period_edit.value(),
-                self.PulseCharacterization.probe_wavelength_spin.value(),
-                self.PulseCharacterization.delay_step_spin.value(),
-                self.PulseCharacterization.delay_max_spin.value(),
-                self.PulseCharacterization.delay_min_spin.value(),
+                pc.probe_wavelength_spin.value(),
+                pc.delay_step_spin.value(),
+                pc.delay_max_spin.value(),
+                pc.delay_min_spin.value(),
                 probeBeamName, gratingBeam1Name, gratingBeam2Name,
                 probeBeam, gratingBeam1, gratingBeam2,
                 spectral_calib_dict,
-                demo=self.PulseCharacterization.demo_mode_checkbox.isChecked())
+                demo=is_demo,
+                demo_fwhm=pc.sim_fwhm_spin.value() * 1e-15,
+                demo_gdd=pc.sim_gdd_spin.value() * 1e-30,
+                demo_tod=pc.sim_tod_spin.value() * 1e-45,
+                demo_noise_level=pc.sim_noise_spin.value() / 100.0,
+                demo_window_nm=pc.sim_window_spin.value())
 
             """ sendSpectrum is deliberately not wired to DataHandling.concatenate_data here,
             unlike other measurements: that buffer assumes every emitted spectrum has the same

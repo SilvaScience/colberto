@@ -65,6 +65,53 @@ class PulseCharacterization(QtWidgets.QWidget):
         scan_layout.addRow(self.demo_mode_checkbox)
         scan_box.setLayout(scan_layout)
 
+        # ---- simulator (demo mode) parameters ----
+        """ Feeds TGFROGMeasurement's demo_* constructor arguments (see TGFROGClasses.py),
+        which were previously only reachable by editing code. Only meaningful when demo mode is
+        checked, since real acquisitions get their trace from the spectrometer, not these. """
+        self.sim_fwhm_spin = QtWidgets.QDoubleSpinBox()
+        self.sim_fwhm_spin.setRange(1, 500)
+        self.sim_fwhm_spin.setValue(12)
+        self.sim_fwhm_spin.setSuffix(' fs')
+
+        self.sim_window_hint_label = QtWidgets.QLabel()
+        self.sim_window_hint_label.setWordWrap(True)
+
+        self.sim_gdd_spin = QtWidgets.QDoubleSpinBox()
+        self.sim_gdd_spin.setRange(-100000, 100000)
+        self.sim_gdd_spin.setValue(50)
+        self.sim_gdd_spin.setSuffix(' fs^2')
+
+        self.sim_tod_spin = QtWidgets.QDoubleSpinBox()
+        self.sim_tod_spin.setRange(-1000000, 1000000)
+        self.sim_tod_spin.setValue(100)
+        self.sim_tod_spin.setSuffix(' fs^3')
+
+        self.sim_noise_spin = QtWidgets.QDoubleSpinBox()
+        self.sim_noise_spin.setRange(0, 100)
+        self.sim_noise_spin.setValue(0)
+        self.sim_noise_spin.setSuffix(' %')
+
+        self.sim_window_spin = QtWidgets.QDoubleSpinBox()
+        self.sim_window_spin.setRange(10, 2000)
+        self.sim_window_spin.setValue(600)
+        self.sim_window_spin.setSuffix(' nm')
+        self.sim_window_spin.setToolTip(
+            'Wavelength window kept in the synthetic trace, mimicking a spectrometer window. '
+            'Narrow it towards a real grating\'s ~50 nm to see the accuracy loss from '
+            'insufficient spectral coverage discussed for the current OPA / future NOPA.')
+
+        self.simulator_box = QtWidgets.QGroupBox('Simulator (demo mode) parameters')
+        simulator_layout = QtWidgets.QFormLayout()
+        simulator_layout.addRow('Pulse FWHM:', self.sim_fwhm_spin)
+        simulator_layout.addRow(self.sim_window_hint_label)
+        simulator_layout.addRow('GDD:', self.sim_gdd_spin)
+        simulator_layout.addRow('TOD:', self.sim_tod_spin)
+        simulator_layout.addRow('Noise level:', self.sim_noise_spin)
+        simulator_layout.addRow('Trace spectral window:', self.sim_window_spin)
+        self.simulator_box.setLayout(simulator_layout)
+        self.simulator_box.setEnabled(False)
+
         # ---- controls ----
         """ No local Stop button: the main window already has one global stop_pushButton wired
         to stop_measurement(), shared by every measurement type. A second one here would either
@@ -80,6 +127,7 @@ class PulseCharacterization(QtWidgets.QWidget):
         left_panel = QtWidgets.QVBoxLayout()
         left_panel.addWidget(beam_box)
         left_panel.addWidget(scan_box)
+        left_panel.addWidget(self.simulator_box)
         left_panel.addWidget(self.start_button)
         left_panel.addWidget(self.status_label)
         left_panel.addWidget(self.export_hint_label)
@@ -105,6 +153,30 @@ class PulseCharacterization(QtWidgets.QWidget):
         layout.addWidget(left_widget)
         layout.addWidget(self.graphLayoutWidget, stretch=1)
         self.setLayout(layout)
+
+        # ---- simulator wiring ----
+        self.demo_mode_checkbox.toggled.connect(self.simulator_box.setEnabled)
+        self.demo_mode_checkbox.toggled.connect(self._update_demo_button_text)
+        self.sim_fwhm_spin.valueChanged.connect(self._update_window_hint)
+        self._update_demo_button_text(self.demo_mode_checkbox.isChecked())
+        self._update_window_hint()
+
+    def _update_demo_button_text(self, demo_checked):
+        self.start_button.setText('Simulate trace' if demo_checked else 'Start TG-FROG scan')
+
+    def _update_window_hint(self):
+        """
+            Live estimate of the spectral window the TG signal needs for the current FWHM,
+            from the Phase 0 relation: TG signal is sqrt(3) narrower in time than the
+            fundamental, hence sqrt(3) wider in frequency; combined with the Fourier-limit
+            relation for a Gaussian (dnu*dt = 0.441), this gives approximately
+            d_lambda_signal[nm] = 1625 / dt[fs] around 800 nm.
+        """
+        fwhm = self.sim_fwhm_spin.value()
+        required_nm = 1625.0 / fwhm if fwhm > 0 else float('inf')
+        self.sim_window_hint_label.setText(
+            f'-> TG signal needs ~{required_nm:.0f} nm FWHM; good retrieval typically wants '
+            f'several times that in the window below.')
 
     @QtCore.pyqtSlot(object)
     def update_beam_names(self, beam_dict):
