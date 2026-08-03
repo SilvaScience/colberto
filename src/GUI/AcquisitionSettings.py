@@ -221,23 +221,29 @@ class AcquisitionSettings(QtWidgets.QWidget):
 
         actions = QtWidgets.QHBoxLayout()
         actions.addWidget(self.apply_button)
-        actions.addWidget(self.status_label, stretch=1)
 
         """ Two columns rather than one tall stack: the panel shares its row with the camera view, so
         it has to stay short enough to need no scrolling, and it is the width that is available. Boxes
         that are only shown in some modes sit in the left column, so hiding them does not leave a gap
-        in the middle of the panel. """
+        in the middle of the panel.
+
+        status_label used to sit at the very bottom, sharing a row with apply_button after every
+        other box -- for the message it shows most often ("Active spectrometer has no configurable
+        trigger", set as soon as a non-Stresing camera is attached, in set_spectrometer below), that
+        put it past everything it's actually explaining. Moved up to its own row right under the
+        trigger boxes it describes, still above the camera box so it never overlaps it. """
         layout = QtWidgets.QGridLayout()
         layout.addWidget(self.mode_box, 0, 0, 2, 1)
         layout.addWidget(self.timing_box, 0, 1)
         layout.addWidget(self.structure_box, 1, 1)
         layout.addWidget(self.source_box, 2, 0)
         layout.addWidget(self.mono_box, 2, 1)
-        layout.addWidget(self.camera_box, 3, 0, 1, 2)
-        layout.addWidget(self.summary_label, 4, 0, 1, 2)
-        layout.addWidget(self.registers_label, 5, 0, 1, 2)
-        layout.addLayout(actions, 6, 0, 1, 2)
-        layout.setRowStretch(7, 1)
+        layout.addWidget(self.status_label, 3, 0, 1, 2)
+        layout.addWidget(self.camera_box, 4, 0, 1, 2)
+        layout.addWidget(self.summary_label, 5, 0, 1, 2)
+        layout.addWidget(self.registers_label, 6, 0, 1, 2)
+        layout.addLayout(actions, 7, 0, 1, 2)
+        layout.setRowStretch(8, 1)
         layout.setColumnStretch(0, 1)
         layout.setColumnStretch(1, 1)
         self.setLayout(layout)
@@ -337,12 +343,14 @@ class AcquisitionSettings(QtWidgets.QWidget):
                 spin.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
             else:
                 spin.editingFinished.connect(partial(self.apply_camera_parameter, name))
-            self.camera_layout.addWidget(QtWidgets.QLabel('%s:' % name), row // 2, (row % 2) * 2)
-            self.camera_layout.addWidget(spin, row // 2, (row % 2) * 2 + 1)
+            """ All on row 0 instead of wrapping every 2 items: with the 3 Stresing parameters
+            (int_time, binning, avg_scan) that used to mean 2 on one row and 1 alone on the next. """
+            self.camera_layout.addWidget(QtWidgets.QLabel('%s:' % name), 0, row * 2)
+            self.camera_layout.addWidget(spin, 0, row * 2 + 1)
             self.camera_widgets[name] = spin
             row += 1
 
-        self.camera_layout.setColumnStretch(4, 1)
+        self.camera_layout.setColumnStretch(row * 2, 1)
         self.camera_box.setVisible(bool(self.camera_widgets))
 
     def apply_camera_parameter(self, name):

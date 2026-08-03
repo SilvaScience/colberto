@@ -62,9 +62,13 @@ class CameraDisplay(QtWidgets.QWidget):
 
         # ---- vertical profile ----
         self.profile_plot = pg.PlotWidget()
-        self.profile_plot.setLabel('bottom', 'Counts (summed over wavelength)')
+        self.profile_plot.setLabel('bottom', 'Counts (summed)')
         self.profile_plot.setLabel('left', 'Row')
-        self.profile_plot.setMaximumWidth(260)
+        """ pyqtgraph's default SI-prefix scaling (showing e.g. "500" as "0.5" with a "x1000"
+        multiplier on the axis) makes sense for physical units but not for a plain row index or
+        pixel count -- disable it so the axis just shows the actual numbers. """
+        self.profile_plot.getAxis('left').enableAutoSIPrefix(False)
+        self.profile_plot.getAxis('bottom').enableAutoSIPrefix(False)
         self.profile_curve = self.profile_plot.plot([], [])
 
         # ---- controls ----
@@ -95,20 +99,30 @@ class CameraDisplay(QtWidgets.QWidget):
         controls.addWidget(mode_box)
 
         region_box = QtWidgets.QGroupBox('Rows to bin')
-        region_layout = QtWidgets.QHBoxLayout()
-        region_layout.addWidget(QtWidgets.QLabel('First row:'))
-        region_layout.addWidget(self.y0_spin)
-        region_layout.addWidget(QtWidgets.QLabel('Number of rows:'))
-        region_layout.addWidget(self.height_spin)
-        region_layout.addWidget(self.auto_button)
-        region_layout.addWidget(self.apply_button)
-        region_layout.addWidget(self.fit_button)
+        """ Was one QHBoxLayout with all 7 widgets (2 labels, 2 spinboxes, 3 buttons) -- too
+        narrow to fit on one line without wrapping/overlapping. Split into two rows: the numeric
+        inputs, then the three action buttons together on their own line. """
+        region_spins = QtWidgets.QHBoxLayout()
+        region_spins.addWidget(QtWidgets.QLabel('First row:'))
+        region_spins.addWidget(self.y0_spin)
+        region_spins.addWidget(QtWidgets.QLabel('Number of rows:'))
+        region_spins.addWidget(self.height_spin)
+        region_buttons = QtWidgets.QHBoxLayout()
+        region_buttons.addWidget(self.auto_button)
+        region_buttons.addWidget(self.apply_button)
+        region_buttons.addWidget(self.fit_button)
+        region_layout = QtWidgets.QVBoxLayout()
+        region_layout.addLayout(region_spins)
+        region_layout.addLayout(region_buttons)
         region_box.setLayout(region_layout)
         controls.addWidget(region_box, stretch=1)
 
         graphs = QtWidgets.QHBoxLayout()
-        graphs.addWidget(self.graphLayoutWidget, stretch=1)
-        graphs.addWidget(self.profile_plot)
+        """ Explicit 3:1 stretch (75%/25%) instead of a stretch factor paired with a fixed pixel
+        max-width on the profile plot: a hard pixel cap doesn't scale with window size or DPI,
+        so it stopped giving the main camera view its intended share once the layout resized. """
+        graphs.addWidget(self.graphLayoutWidget, stretch=3)
+        graphs.addWidget(self.profile_plot, stretch=1)
 
         layout = QtWidgets.QVBoxLayout()
         layout.addLayout(controls)
@@ -123,6 +137,18 @@ class CameraDisplay(QtWidgets.QWidget):
         self.fit_button.clicked.connect(self.fit_view)
         self.y0_spin.valueChanged.connect(self.spins_changed)
         self.height_spin.valueChanged.connect(self.spins_changed)
+
+        """ Set sensible default ranges now, after every item (image, histogram) has already
+        been added to the plots: pyqtgraph recomputes auto-range when an item is added, which
+        was silently overriding a range set earlier in __init__. Without this, an empty
+        ImageItem's undefined bounds left the Row axis spanning roughly -100000 to 400000
+        before any real frame arrived. set_data()'s own autoRange() takes over once one does. """
+        self.plot.getAxis('left').enableAutoSIPrefix(False)
+        self.plot.getAxis('bottom').enableAutoSIPrefix(False)
+        self.plot.setXRange(0, 1024)
+        self.plot.setYRange(0, 256)
+        self.profile_plot.setXRange(0, 65535)
+        self.profile_plot.setYRange(0, 256)
 
         self.set_spectrometer(spectrometer)
 
