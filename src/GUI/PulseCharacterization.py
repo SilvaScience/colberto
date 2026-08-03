@@ -119,16 +119,38 @@ class PulseCharacterization(QtWidgets.QWidget):
         self.start_button = QtWidgets.QPushButton('Start TG-FROG scan')
         self.status_label = QtWidgets.QLabel('Idle.')
         self.export_hint_label = QtWidgets.QLabel(
-            'When the scan finishes, use the "Save calibration" button (not the plain "Save" '
-            'button, which does not handle nested calibration data) to export the trace, then '
-            'run samples/retrieval/tgfrog_retrieval.py offline to reconstruct the pulse.')
+            'To save this trace to a file (e.g. to compare later or re-run retrieval with '
+            'different settings), use the "Save calibration" button -- not the plain "Save" '
+            'button, which does not handle nested calibration data.')
         self.export_hint_label.setWordWrap(True)
+
+        # ---- retrieval ----
+        self.retrieve_button = QtWidgets.QPushButton('Run retrieval')
+        self.retrieve_button.setToolTip(
+            'Retrieves the most recently generated/acquired trace (COPRA via pypret, 5 '
+            'independent restarts). Equivalent to samples/retrieval/tgfrog_retrieval.py, which '
+            'also lets you tune --maxiter/--n-starts or re-analyze an exported file later.')
+
+        self.result_trace_error_label = QtWidgets.QLabel('-')
+        self.result_gd_label = QtWidgets.QLabel('-')
+        self.result_gdd_label = QtWidgets.QLabel('-')
+        self.result_tod_label = QtWidgets.QLabel('-')
+
+        results_box = QtWidgets.QGroupBox('Retrieved parameters')
+        results_layout = QtWidgets.QFormLayout()
+        results_layout.addRow("Trace error G':", self.result_trace_error_label)
+        results_layout.addRow('GD:', self.result_gd_label)
+        results_layout.addRow('GDD:', self.result_gdd_label)
+        results_layout.addRow('TOD:', self.result_tod_label)
+        results_box.setLayout(results_layout)
 
         left_panel = QtWidgets.QVBoxLayout()
         left_panel.addWidget(beam_box)
         left_panel.addWidget(scan_box)
         left_panel.addWidget(self.simulator_box)
         left_panel.addWidget(self.start_button)
+        left_panel.addWidget(self.retrieve_button)
+        left_panel.addWidget(results_box)
         left_panel.addWidget(self.status_label)
         left_panel.addWidget(self.export_hint_label)
         left_panel.addStretch(1)
@@ -211,6 +233,10 @@ class PulseCharacterization(QtWidgets.QWidget):
             self.image.setImage(data, autoLevels=True)
             self.image.setRect(rect)
             self.histogram.setLevels(*self.image.getLevels())
+            """ Without this, the view keeps whatever zoom level it had on the very first
+            (2-point) call and never re-fits as the trace grows during a scan, leaving the
+            plot mostly black with the actual trace squeezed into a corner. """
+            self.plot.getViewBox().autoRange()
 
     def set_running(self, running):
         """
@@ -220,3 +246,35 @@ class PulseCharacterization(QtWidgets.QWidget):
         """
         self.start_button.setEnabled(not running)
         self.status_label.setText('Scanning...' if running else 'Idle.')
+
+    def set_retrieval_running(self, running):
+        """
+            Updates button/status state while a retrieval is in progress.
+            input:
+                - running: (bool)
+        """
+        self.retrieve_button.setEnabled(not running)
+        self.retrieve_button.setText('Retrieving...' if running else 'Run retrieval')
+        if running:
+            self.status_label.setText('Running retrieval (COPRA, up to ~1 min)...')
+
+    def set_retrieval_result(self, result):
+        """
+            Displays a finished retrieval's results.
+            input:
+                - result: dict with trace_error, GD, GDD, TOD (fs, fs^2, fs^3), as emitted by
+                  TGFROGRetrievalWorker.sendResult
+        """
+        self.result_trace_error_label.setText(f"{result['trace_error']:.4e}")
+        self.result_gd_label.setText(f"{result['GD']:.3f} fs")
+        self.result_gdd_label.setText(f"{result['GDD']:.3f} fs^2")
+        self.result_tod_label.setText(f"{result['TOD']:.3f} fs^3")
+        self.status_label.setText('Retrieval done.')
+
+    def set_retrieval_error(self, message):
+        """
+            Displays a failed retrieval's error.
+            input:
+                - message: (str)
+        """
+        self.status_label.setText(f'Retrieval failed: {message}')
