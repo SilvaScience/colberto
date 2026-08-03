@@ -259,3 +259,50 @@ class TGFROGMeasurement(QtCore.QThread):
     def stop(self):
         self.terminate = True
         logger.info(time.strftime('%H:%M:%S') + ' Request Stop')
+
+
+class TGFROGRetrievalWorker(QtCore.QThread):
+    """
+        Runs offline TG-FROG retrieval (COPRA via pypret, samples/retrieval/tgfrog_retrieval.py)
+        in a background thread so the GUI stays responsive -- a multi-start retrieval can take
+        up to a minute. Wraps that script's functions instead of duplicating them so the GUI
+        button and the command-line script can't drift apart.
+
+        Signals:
+            - sendResult: dict with trace_error, GD, GDD, TOD (fs, fs^2, fs^3)
+            - sendError: str, if retrieval raised an exception
+    """
+    sendResult = QtCore.pyqtSignal(dict)
+    sendError = QtCore.pyqtSignal(str)
+
+    def __init__(self, trace, maxiter=300, n_starts=5):
+        """
+            input:
+                - trace: dict with 'delay' (fs), 'wavelengths' (nm), 'intensities',
+                  'probe_carrier_wavelength' (nm) -- the same shape TGFROGMeasurement exports
+                - maxiter, n_starts: passed to the retrieval script's retrieve()
+        """
+        super(TGFROGRetrievalWorker, self).__init__()
+        self.trace = trace
+        self.maxiter = maxiter
+        self.n_starts = n_starts
+
+    def run(self):
+        logger.info(time.strftime('%H:%M:%S') + ' Begin TG-FROG retrieval')
+        try:
+            from samples.retrieval.tgfrog_retrieval import (
+                build_measurement, retrieve, extract_taylor_coefficients)
+            pulse, pnps, measured = build_measurement(self.trace)
+            result = retrieve(pulse, pnps, measured, max_iter=self.maxiter,
+                               verbose=False, n_starts=self.n_starts)
+            taylor = extract_taylor_coefficients(pulse, result.pulse_retrieved)
+            self.sendResult.emit({
+                'trace_error': float(result.trace_error),
+                'GD': float(taylor[0]),
+                'GDD': float(taylor[1]),
+                'TOD': float(taylor[2]),
+            })
+            logger.info(time.strftime('%H:%M:%S') + ' Retrieval finished')
+        except Exception as e:
+            logger.exception('TG-FROG retrieval failed')
+            self.sendError.emit(str(e))

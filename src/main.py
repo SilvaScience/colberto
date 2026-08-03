@@ -31,7 +31,7 @@ from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,Ba
 from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, AcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
-from measurements.TGFROGClasses import TGFROGMeasurement
+from measurements.TGFROGClasses import TGFROGMeasurement, TGFROGRetrievalWorker
 from GUI.PulseCharacterization import PulseCharacterization
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
@@ -350,6 +350,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.delay_remove_delay_button.clicked.connect(lambda: self.assignDelayCalibration(-1))
 
         self.PulseCharacterization.start_button.clicked.connect(self.tgfrogAcquireMeasurement)
+        self.PulseCharacterization.retrieve_button.clicked.connect(self.tgfrogRetrieveMeasurement)
         # Measurement tab connect events
         self.MDCS_getLO_button.clicked.connect(self.getLOSpectrum)
         self.MDCS_acquire_button.clicked.connect(self.MDCSacquireMeasurement)
@@ -981,6 +982,35 @@ class MainInterface(QtWidgets.QMainWindow):
         else:
             logger.warning('%s Delay calibration fit has not been processed. Processed the calibration fit first'%datetime.datetime.now())
 
+    def _resolve_tgfrog_beam_names(self, is_demo):
+        """
+            Reads the three beam-role dropdowns in the Pulse characterization tab. In demo
+            mode, empty/duplicate selections fall back to placeholder names since
+            TGFROGMeasurement's demo mode never touches the beam objects; for real hardware,
+            the three must be distinct and selected. Shared by the acquire and retrieve
+            handlers so the two can't drift out of sync on what counts as valid.
+            output:
+                - (probeBeamName, gratingBeam1Name, gratingBeam2Name), or None (with an error
+                  already shown in the status label) if invalid for the current mode
+        """
+        pc = self.PulseCharacterization
+        probeBeamName = pc.probe_beam_box.currentText()
+        gratingBeam1Name = pc.grating_beam1_box.currentText()
+        gratingBeam2Name = pc.grating_beam2_box.currentText()
+
+        if is_demo:
+            probeBeamName = probeBeamName or 'SimProbe'
+            gratingBeam1Name = gratingBeam1Name or 'SimGrating1'
+            gratingBeam2Name = gratingBeam2Name or 'SimGrating2'
+            return probeBeamName, gratingBeam1Name, gratingBeam2Name
+
+        if ('' in (probeBeamName, gratingBeam1Name, gratingBeam2Name)
+                or len({probeBeamName, gratingBeam1Name, gratingBeam2Name}) < 3):
+            pc.status_label.setText(
+                'Error: select three different beams for a real acquisition.')
+            return None
+        return probeBeamName, gratingBeam1Name, gratingBeam2Name
+
     def tgfrogAcquireMeasurement(self):
         """
             Starts a TG-FROG delay scan using the beam roles and scan parameters set in the
@@ -991,27 +1021,11 @@ class MainInterface(QtWidgets.QMainWindow):
             pc = self.PulseCharacterization
             is_demo = pc.demo_mode_checkbox.isChecked()
 
-            probeBeamName = pc.probe_beam_box.currentText()
-            gratingBeam1Name = pc.grating_beam1_box.currentText()
-            gratingBeam2Name = pc.grating_beam2_box.currentText()
-
-            if is_demo:
-                """ TGFROGMeasurement._run_demo never touches the beam objects it is given --
-                the synthetic trace only depends on the simulator parameters below -- so demo
-                mode should not require three real, distinct beams to already exist in
-                BeamExplorer. Falling back to distinct placeholder names keeps the exported
-                calibration key (TGFROG_raw_data_<probe>_<g1>_<g2>) meaningful even with the
-                dropdowns empty, which is what made "Simulate trace" silently no-op with
-                nothing set up yet. """
-                probeBeamName = probeBeamName or 'SimProbe'
-                gratingBeam1Name = gratingBeam1Name or 'SimGrating1'
-                gratingBeam2Name = gratingBeam2Name or 'SimGrating2'
-            elif ('' in (probeBeamName, gratingBeam1Name, gratingBeam2Name)
-                  or len({probeBeamName, gratingBeam1Name, gratingBeam2Name}) < 3):
-                pc.status_label.setText(
-                    'Error: select three different beams for a real acquisition.')
+            names = self._resolve_tgfrog_beam_names(is_demo)
+            if names is None:
                 self.measurement_busy = False
                 return
+            probeBeamName, gratingBeam1Name, gratingBeam2Name = names
 
             beam_dict = self.DataHandling.get_beams()
             probeBeam = beam_dict[probeBeamName] if probeBeamName in beam_dict else Beam(self.devices['SLM'].get_width(), self.devices['SLM'].get_height())
@@ -1061,6 +1075,35 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.start()
         else:
             print('Measurement not started, devices are busy')
+
+    def tgfrogRetrieveMeasurement(self):
+        """
+            Runs offline TG-FROG retrieval (TGFROGRetrievalWorker) on the trace matching the
+            beam roles currently selected in the Pulse characterization tab. Not gated on
+            measurement_busy: retrieval is pure computation on an already-acquired trace, it
+            does not touch the SLM or spectrometer, so it neither needs nor should block a
+            hardware acquisition running at the same time.
+        """
+        pc = self.PulseCharacterization
+        is_demo = pc.demo_mode_checkbox.isChecked()
+        names = self._resolve_tgfrog_beam_names(is_demo)
+        if names is None:
+            return
+        probeBeamName, gratingBeam1Name, gratingBeam2Name = names
+
+        key = f'TGFROG_raw_data_{probeBeamName}_{gratingBeam1Name}_{gratingBeam2Name}'
+        if key not in self.DataHandling.calibration:
+            pc.status_label.setText(
+                f'No trace found for these beam roles ({key}). Run a scan or simulation first.')
+            return
+
+        trace = self.DataHandling.calibration[key]
+        self.tgfrog_retrieval_worker = TGFROGRetrievalWorker(trace)
+        self.tgfrog_retrieval_worker.sendResult.connect(pc.set_retrieval_result)
+        self.tgfrog_retrieval_worker.sendError.connect(pc.set_retrieval_error)
+        self.tgfrog_retrieval_worker.finished.connect(lambda: pc.set_retrieval_running(False))
+        pc.set_retrieval_running(True)
+        self.tgfrog_retrieval_worker.start()
 
     def getLOSpectrum(self):
         if not self.measurement_busy:
