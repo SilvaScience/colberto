@@ -172,7 +172,7 @@ class BoxcarGeometry(QtCore.QThread):
                             'intensities' : self.intensities #np.array(self.intensities)
                         }
                         #self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j+1], np.array(self.intensities[i]).T)
-                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], np.abs(self.intensities[i, :j + 1, :].T))
+                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], self.intensities[i, :j + 1, :].T)
 
                         self.sendMDCSRaw.emit(('MDCS_raw_data', self.measurement_data))
                         self.sendProgress.emit(((i * len(self.t_scanned)) + (j + 1)) / (len(self.t_secondary) * len(self.t_scanned)) * 100)
@@ -234,16 +234,25 @@ class BoxcarGeometry(QtCore.QThread):
         '''
         self.intensity = np.zeros(len(self.wls))
         if getattr(self, "isPhaseCycling", True):
-            operations = np.array([1, -1, -1, 1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1])
+            operations = np.array([1, -1, -1, 1, -1, 1, 1, -1])
+            #operations = np.array([1, -1, -1, 1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1])
         else:
             operations = np.array([1])  # single step, no phase cycling
 
+
         self.cep = {
-            'A':  np.array([0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi, 0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi]),
-            'B':  np.array([0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi]),
-            'C':  np.array([0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi]),
-            'LO': np.array([0, np.pi, np.pi, 0, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, 0, np.pi, np.pi, 0])
-        }
+                    'A':  np.array([0, 0, 0, 0, 0, 0, 0, 0]),
+                    'B':  np.array([0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi]),
+                    'C':  np.array([0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi]),
+                    'LO': np.array([0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi])
+                }
+        
+        # self.cep = {
+        #     'A':  np.array([0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi, 0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi]),
+        #     'B':  np.array([0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi]),
+        #     'C':  np.array([0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi]),
+        #     'LO': np.array([0, np.pi, np.pi, 0, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, 0, np.pi, np.pi, 0])
+        # }
 
         self.specs = []
         for i in range(len(operations)):
@@ -269,12 +278,12 @@ class BoxcarGeometry(QtCore.QThread):
             self.specs.append(self.spec.copy())
         
         # Total signal
-        S_total = np.zeros_like(self.wls, dtype=complex)
+        S_total = np.zeros_like(self.wls, dtype=float)
         for i in range(len(operations)):
             S_total += operations[i] * self.specs[i]
-        self.intensity = S_total/np.sum(np.abs(operations))
+        self.intensity = S_total
 
-        self.sendPhaseCycling.emit(self.wls, np.abs(self.intensity))
+        self.sendPhaseCycling.emit(self.wls, self.intensity)
     
     def take_spectrum(self, max_iter=10):
         '''
