@@ -13,6 +13,17 @@ import pyqtgraph as pg
 import numpy as np
 
 
+def _labeled_field(label_text, widget):
+    """ Stacks a label above a field instead of QFormLayout's default of beside it. In a narrow
+    column, a long label and a spinbox competing for one line left the spinbox with almost no
+    width to show its own value -- stacking gives each its own full-width line instead. """
+    container = QtWidgets.QVBoxLayout()
+    container.setSpacing(1)
+    container.addWidget(QtWidgets.QLabel(label_text))
+    container.addWidget(widget)
+    return container
+
+
 class PulseCharacterization(QtWidgets.QWidget):
     """
         Controls and live display for a TG-FROG delay scan.
@@ -26,9 +37,11 @@ class PulseCharacterization(QtWidgets.QWidget):
         self.grating_beam1_box = QtWidgets.QComboBox()
         self.grating_beam2_box = QtWidgets.QComboBox()
 
+        self.probe_beam_box.setToolTip('Scanned in delay; appears conjugated in the TG signal.')
+
         beam_box = QtWidgets.QGroupBox('Beam roles')
         beam_layout = QtWidgets.QFormLayout()
-        beam_layout.addRow('Probe (scanned, conjugated):', self.probe_beam_box)
+        beam_layout.addRow('Probe beam:', self.probe_beam_box)
         beam_layout.addRow('Grating beam 1:', self.grating_beam1_box)
         beam_layout.addRow('Grating beam 2:', self.grating_beam2_box)
         beam_box.setLayout(beam_layout)
@@ -57,12 +70,12 @@ class PulseCharacterization(QtWidgets.QWidget):
         self.demo_mode_checkbox = QtWidgets.QCheckBox('Demo mode (synthetic trace, no hardware)')
 
         scan_box = QtWidgets.QGroupBox('Delay scan')
-        scan_layout = QtWidgets.QFormLayout()
-        scan_layout.addRow('Probe carrier wavelength:', self.probe_wavelength_spin)
-        scan_layout.addRow('Delay min:', self.delay_min_spin)
-        scan_layout.addRow('Delay max:', self.delay_max_spin)
-        scan_layout.addRow('Delay step:', self.delay_step_spin)
-        scan_layout.addRow(self.demo_mode_checkbox)
+        scan_layout = QtWidgets.QVBoxLayout()
+        scan_layout.addLayout(_labeled_field('Probe carrier wavelength:', self.probe_wavelength_spin))
+        scan_layout.addLayout(_labeled_field('Delay min:', self.delay_min_spin))
+        scan_layout.addLayout(_labeled_field('Delay max:', self.delay_max_spin))
+        scan_layout.addLayout(_labeled_field('Delay step:', self.delay_step_spin))
+        scan_layout.addWidget(self.demo_mode_checkbox)
         scan_box.setLayout(scan_layout)
 
         # ---- simulator (demo mode) parameters ----
@@ -102,13 +115,13 @@ class PulseCharacterization(QtWidgets.QWidget):
             'insufficient spectral coverage discussed for the current OPA / future NOPA.')
 
         self.simulator_box = QtWidgets.QGroupBox('Simulator (demo mode) parameters')
-        simulator_layout = QtWidgets.QFormLayout()
-        simulator_layout.addRow('Pulse FWHM:', self.sim_fwhm_spin)
-        simulator_layout.addRow(self.sim_window_hint_label)
-        simulator_layout.addRow('GDD:', self.sim_gdd_spin)
-        simulator_layout.addRow('TOD:', self.sim_tod_spin)
-        simulator_layout.addRow('Noise level:', self.sim_noise_spin)
-        simulator_layout.addRow('Trace spectral window:', self.sim_window_spin)
+        simulator_layout = QtWidgets.QVBoxLayout()
+        simulator_layout.addLayout(_labeled_field('Pulse FWHM:', self.sim_fwhm_spin))
+        simulator_layout.addWidget(self.sim_window_hint_label)
+        simulator_layout.addLayout(_labeled_field('GDD:', self.sim_gdd_spin))
+        simulator_layout.addLayout(_labeled_field('TOD:', self.sim_tod_spin))
+        simulator_layout.addLayout(_labeled_field('Noise level:', self.sim_noise_spin))
+        simulator_layout.addLayout(_labeled_field('Spectral window:', self.sim_window_spin))
         self.simulator_box.setLayout(simulator_layout)
         self.simulator_box.setEnabled(False)
 
@@ -156,7 +169,7 @@ class PulseCharacterization(QtWidgets.QWidget):
         left_panel.addStretch(1)
         left_widget = QtWidgets.QWidget()
         left_widget.setLayout(left_panel)
-        left_widget.setMaximumWidth(320)
+        left_widget.setMaximumWidth(360)
 
         # ---- 2D trace plot ----
         """ Same (delay, wavelength) data convention and column-major ImageItem as
@@ -182,6 +195,22 @@ class PulseCharacterization(QtWidgets.QWidget):
         self.sim_fwhm_spin.valueChanged.connect(self._update_window_hint)
         self._update_demo_button_text(self.demo_mode_checkbox.isChecked())
         self._update_window_hint()
+
+        """ pyqtgraph's default SI-prefix scaling doesn't make sense for delay in fs or
+        wavelength in nm at these magnitudes (shows e.g. a "x0.001" multiplier). """
+        self.plot.getAxis('left').enableAutoSIPrefix(False)
+        self.plot.getAxis('bottom').enableAutoSIPrefix(False)
+
+        """ Manually setting the view range here (setXRange/setYRange) at various points in
+        __init__ never rendered correctly -- the axis ticks stayed compressed into a fraction
+        of the plot instead of spanning it. Rather than keep fighting pyqtgraph's own range
+        recalculation with a separate manual codepath, seed the plot through set_data() itself,
+        the exact same method a real trace uses. This guarantees the idle state renders exactly
+        like the active one, just showing zeros. """
+        placeholder_delay = np.linspace(-200, 200, 5)
+        placeholder_wavelength = np.linspace(700, 900, 5)
+        placeholder_data = np.zeros((5, 5))
+        self.set_data(placeholder_delay, placeholder_wavelength, placeholder_data)
 
     def _update_demo_button_text(self, demo_checked):
         self.start_button.setText('Simulate trace' if demo_checked else 'Start TG-FROG scan')

@@ -59,7 +59,12 @@ class MainInterface(QtWidgets.QMainWindow):
         # fancy name
         self.setWindowTitle('COLBERTo')
 
-        
+        """ main_GUI.ui does not set tab overflow behaviour, so once enough tabs are added
+        (11 as of this branch) neighbouring labels overlap instead of scrolling or eliding --
+        seen between "LUT Calibration" and "Spatial Calibration". """
+        self.tabWidget.setUsesScrollButtons(True)
+        self.tabWidget.setElideMode(QtCore.Qt.ElideRight)
+
         self.devices, self.spectrometers = load_instruments()
 
         # find items to complement in GUI
@@ -286,9 +291,11 @@ class MainInterface(QtWidgets.QMainWindow):
         spectro_splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
         spectro_splitter.addWidget(top_splitter)
         spectro_splitter.addWidget(self.SpectrometerPlot)
+        """ 40/60 still wasn't enough vertical room for the 1D spectrum on a laptop screen;
+        give it roughly two thirds instead. """
         spectro_splitter.setStretchFactor(0, 1)
-        spectro_splitter.setStretchFactor(1, 1)
-        spectro_splitter.setSizes([1000, 1000])
+        spectro_splitter.setStretchFactor(1, 2)
+        spectro_splitter.setSizes([600, 1400])
 
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(spectro_splitter)
@@ -1621,6 +1628,15 @@ class UpdateWorker(QtCore.QThread):
                         self.updated_param[param] = self.devices[devices].parameter_dict[param]
                 self.new_parameter.emit(self.updated_param)
             time.sleep(self.update_interval)
+
+""" Every fixed pixel width/height in this app's widgets (spin boxes, panels, splitter sizes)
+was chosen assuming Qt renders logical pixels 1:1 with the display. Without HiDPI awareness,
+Qt5 on Windows does exactly that regardless of the monitor's actual scale factor, so the same
+layout looks fine on a display running at 100% scaling and cramped/overlapping on a laptop
+screen or any monitor scaled above that -- which is what made this so inconsistent to debug
+from screenshots taken on different screens. Must be set before QApplication is constructed. """
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 
 app = QtWidgets.QApplication(sys.argv)
 window = MainInterface()
