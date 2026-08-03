@@ -609,6 +609,14 @@ class MainInterface(QtWidgets.QMainWindow):
                     # Si le paramètre est du texte (ex: "Stable"), on ignore l'erreur du spinbox
                     pass
 
+        """ Record the hardware state alongside the data. The Updater only carries the read-only
+        parameters, so it is merged over the settings held here to give the full picture. Nothing
+        called DataHandling.update_parameter() before, which is why saved files carried no hardware
+        settings at all. """
+        recorded = dict(self.parameter)
+        recorded.update(new_parameter)
+        self.DataHandling.update_parameter(recorded)
+
 
     def change_parameter(self, parameter, value):
         # change parameter when called from another script
@@ -673,7 +681,12 @@ class MainInterface(QtWidgets.QMainWindow):
             wave = grp.attrs['xaxis']
 
         bg = data_set
-        self.DataHandling.background = bg[-self.spec_length:]
+        """ Routed through use_background() so the length is checked against the active spectrometer
+        and the background is marked as usable. Assigning the attribute directly left has_background
+        false, and a file of the wrong length was accepted without a word. """
+        if not self.DataHandling.use_background(bg):
+            self.bg_file_indicator.setText('rejected: wrong length')
+            return wave, bg
 
         # display measured spectra filepath
         idx = bg_path.rfind('/')
@@ -714,10 +727,10 @@ class MainInterface(QtWidgets.QMainWindow):
     def acquire_measurement(self):
         # take one spectrum with spectrometer
         if self.measurement_busy:
-            try:
-                self.measurement.take_spectrum()
-            except AttributeError:
-                logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
+            """ take_spectrum() runs the blocking hardware readout, and this is the GUI thread: calling
+            it here froze the whole interface for as long as the camera took to answer. Let the running
+            measurement finish instead. """
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
         else:
             self.measurement_busy = True
             self.DataHandling.clear_data()
@@ -761,6 +774,10 @@ class MainInterface(QtWidgets.QMainWindow):
                                                      self.filename, self.comments_edit.toPlainText())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            """ Without this the measured background was only ever stored as ordinary data: nothing
+            assigned DataHandling.background except loading a file, so acquiring a background and
+            ticking the correction box subtracted an uninitialised array. """
+            self.measurement.sendSpectrum.connect(self.DataHandling.set_background)
             self.measurement.sendSave.connect(self.DataHandling.save_data)
             self.measurement.start()
         else:
