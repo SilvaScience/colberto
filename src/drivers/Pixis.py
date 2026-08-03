@@ -77,9 +77,27 @@ class Pixis(QtCore.QThread):
         self.camera = PrincetonInstruments.PicamCamera()
         print('Camera connected')
 
-        # set the ROI so the camera is acting like a 1D array of 1024 pixels
-        roi = {"x": 0, "width": 1024, "x_binning": 1, "y": 0, "height": 1, "y_binning": 1}
-        self.camera.set_attribute_value("ROIs", [roi])
+        # Determine the number of sensor rows available for vertical binning.
+        # The PIXIS used here is 1024 x 256, but ask the camera rather than assume.
+        self.sensor_height = int(self.hardware_params.get('sensor_height', 256))
+        try:
+            detector_size = self.camera.get_detector_size()  # (width, height)
+            if detector_size is not None and len(detector_size) == 2:
+                self.sensor_height = int(detector_size[1])
+        except Exception as e:
+            print(f'Pixis: could not query detector size, assuming {self.sensor_height} rows. {e}')
+
+        """ Vertical readout configuration.
+        The sensor is 2D: the horizontal axis is wavelength, the vertical axis is position along the
+        spectrograph entrance slit. Reading a single row therefore only samples one height in the slit
+        and discards the signal collected on every other row.
+        set_binned_roi() sums rows ON CHIP (charge is summed before the readout amplifier), so the read
+        noise is paid once instead of once per row. That is what makes weak signals usable.
+        Defaults come from hardware_params so each setup can record its own alignment. """
+        self.roi_y0 = int(self.hardware_params.get('roi_y0', 0))
+        self.roi_height = int(self.hardware_params.get('roi_height', self.sensor_height))
+        self.roi_binning = int(self.hardware_params.get('roi_binning', self.roi_height))
+        self.set_roi(self.roi_y0, self.roi_height, self.roi_binning, restart=False)
 
         # initialize camera
         self.worker = CameraWorker(self.camera,self.int_time)
@@ -190,6 +208,65 @@ class Pixis(QtCore.QThread):
         self.type='Spectrometer'
         self.hardware_params.update(self.monochromator.get_hardware_parameters('Pixis'))
     
+    def set_roi(self, y0, height, binning=None, restart=True):
+        """
+            Sets the vertical region of the sensor that is read out, and how many of its rows are
+            summed on chip.
+            input:
+                - y0 (int): index of the first sensor row to read
+                - height (int): number of sensor rows covered by the region
+                - binning (int, default None): number of rows summed on chip. None means sum the whole
+                  region into a single row (the high signal-to-noise mode used for measurements).
+                  Pass 1 to keep every row separate (the 2D mode used for alignment).
+                - restart (bool, default True): restart continuous acquisition if it was running
+            output:
+                - dict: the region of interest actually applied
+        """
+        y0 = int(np.clip(y0, 0, max(self.sensor_height - 1, 0)))
+        height = int(np.clip(height, 1, self.sensor_height - y0))
+        binning = height if binning is None else int(np.clip(binning, 1, height))
+        # PICam requires the region height to be an exact multiple of the binning factor
+        height = max((height // binning) * binning, binning)
+
+        was_acquiring = getattr(self, 'worker', None) is not None and self.worker.acquiring
+        if was_acquiring:
+            self.stop_acquisition()
+
+        roi = {"x": 0, "width": 1024, "x_binning": 1,
+               "y": y0, "height": height, "y_binning": binning}
+        self.camera.set_attribute_value("ROIs", [roi])
+        self.roi_y0, self.roi_height, self.roi_binning = y0, height, binning
+        print(f'Pixis ROI: rows {y0}-{y0 + height - 1} of {self.sensor_height}, '
+              f'binning {binning} -> {height // binning} row(s) read out')
+
+        if was_acquiring and restart:
+            self.start_acquisition()
+        return roi
+
+    def set_binned_roi(self, y0, height):
+        """
+            Measurement mode: sum `height` sensor rows starting at `y0` into a single row on chip.
+            input:
+                - y0 (int): index of the first sensor row of the signal
+                - height (int): number of rows the signal spans
+        """
+        return self.set_roi(y0, height, binning=height)
+
+    def set_full_frame(self):
+        """
+            Alignment mode: read every sensor row separately, giving the full 2D image.
+            Slower and noisier per row, but shows where the signal actually sits on the slit.
+        """
+        return self.set_roi(0, self.sensor_height, binning=1)
+
+    def get_roi(self):
+        """
+            Returns the currently applied vertical readout configuration.
+            output:
+                - tuple (y0, height, binning)
+        """
+        return self.roi_y0, self.roi_height, self.roi_binning
+
     def start_acquisition(self):
         """ Sets camera to continuous acquisition mode. """
         self.camera.start_acquisition()
@@ -220,7 +297,13 @@ class Pixis(QtCore.QThread):
                 self.new_spectrum = False
             spectrum = spectrum / self.avg_scan
         self.stop_acquisition()
-        spectrum = spectrum[0, :]
+        """ The camera returns one row per binning group: a single row in binned (measurement) mode,
+        every sensor row in full frame (alignment) mode. Any remaining rows are summed here so both
+        modes hand back a 1D spectrum. Counts therefore scale with the number of rows summed, which
+        matters when comparing a spectrum to a background taken with a different region. """
+        spectrum = np.asarray(spectrum)
+        if spectrum.ndim > 1:
+            spectrum = spectrum.sum(axis=0)
         return spectrum
 
     def update_temperature(self, temperature):
