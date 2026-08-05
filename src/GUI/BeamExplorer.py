@@ -99,6 +99,7 @@ class BeamWidget(QWidget):
         self.graphlayout.setLabel('bottom', 'Wavelength (nm)', **self.styles)
         self.graphlayout.setLabel('left', 'Phase (pi)', **self.styles)
         # connect events
+        self.relative_checkbox.clicked.connect(self.switch_relative_absolute)
         self.plot_relative_checkbox.clicked.connect(self.plot_phase)
         self.mask_pushbutton.clicked.connect(self.toggle_beam_on_off_display)
         self.clear_optimal_pushbutton.clicked.connect(self.clear_optimal)
@@ -156,7 +157,7 @@ class BeamWidget(QWidget):
 
         self.phase_coeff_table.blockSignals(True) # Avoid going into set_phase_manually
         [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef)]
-        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(mode='absolute', units_to_return='fs').coef)]
+        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(units_to_return='fs').coef)]
         self.phase_coeff_table.blockSignals(False)
         self.plot_phase()
     def plot_phase(self):
@@ -182,8 +183,8 @@ class BeamWidget(QWidget):
         '''
             Clear the current phase coefficients
         '''
-        coefs = self.beam.get_currentPhase(mode='absolute').coef
-        self.beam.set_currentPhase(P([0] * len(coefs)), mode='absolute')
+        coefs = self.beam.get_currentPhase().coef
+        self.beam.set_currentPhase(P([0] * len(coefs)))
         self.update_display_from_beam()
 
     def set_phase_manually(self):
@@ -217,9 +218,19 @@ class BeamWidget(QWidget):
         self.beam.set_beamVerticalDelimiters([int(self.delimiter_table.item(0,0).text()),int(self.delimiter_table.item(0,1).text())])
         self.beam.set_beamHorizontalDelimiters([int(self.delimiter_table.item(1,0).text()),int(self.delimiter_table.item(1,1).text())])
         self.beam.set_optimalPhase(P([float(self.phase_coeff_table.item(0,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(0,i) is not None]))
-        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]), mode='absolute')
+        self.beam.set_currentPhase(P([float(self.phase_coeff_table.item(1,i).text()) for i in range(self.phase_coeff_table.columnCount()) if self.phase_coeff_table.item(1,i) is not None]))
 
         return self.name,self.beam
+    def switch_relative_absolute(self):
+        """
+            Switches the current phase display to relative or absolute mode depending on the status of the relative checkbox
+        """
+        if self.relative_checkbox.isChecked():
+            # Change the state of the current phase from absolute to relative so substract the optimal phase
+            [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%(float(self.phase_coeff_table.item(1,i).text())-float(self.phase_coeff_table.item(0,i).text())))) for i in range(self.phase_coeff_table.columnCount()) ]
+        else:
+            # Change the state of the current from relative to absolute by adding the optimal phase
+            [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%(float(self.phase_coeff_table.item(1,i).text())+float(self.phase_coeff_table.item(0,i).text())))) for i in range(self.phase_coeff_table.columnCount()) ]
 
     @QtCore.pyqtSlot()
     def stop(self):
