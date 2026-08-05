@@ -264,9 +264,13 @@ class StresingCamera(QtCore.QThread):
 
             if self.hardware_params['calibrated']:
 
+                pixel_size_mm = 24 / 1E3  # specs of Sresing
+                focal_length_mm = 300  # specs of SP2300i
+                num_pixels = 1010  # specs of stresing
+
                 wl_center = self.center_wavelength
                 m_order = 1
-                px = np.linspace(1,1024,1024)
+                px = np.linspace(1,1010,1010)
 
                 # calibration from notebook
                 f=self.hardware_params['f']
@@ -280,14 +284,17 @@ class StresingCamera(QtCore.QThread):
 
                 n = px - (n0 + offset_adjust * wl_center)
 
-                # print('psi top', m_order* wl_center)
-                # print('psi bottom', (2*d_grating*np.cos(gamma/2)) )
-
                 psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
                 eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
                 self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+
             else:
+
+                pixel_size_mm = 24 / 1E3  # specs of Stresing
+                focal_length_mm = 300  # specs of SP2300i
+                num_pixels = 1010  # specs of Stresing
+
                 # Calculate linear dispersion (nm/mm)
                 dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
 
@@ -299,8 +306,7 @@ class StresingCamera(QtCore.QThread):
 
                 # Wavelength at each pixel
                 self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-                # Refine the calibration using a mercury spectral lamp
-                self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + self.hardware_params['calibrationSlope']*self.wavelengths + self.hardware_params['calibrationOffset']
+
         else:
             self.wavelengths= self.hardware_params['num_pixels']
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength'%datetime.datetime.now())
@@ -313,7 +319,7 @@ class StresingCamera(QtCore.QThread):
         """
         self.monochromator=monochromator
         self.type='Spectrometer'
-        self.hardware_params.update(self.monochromator.get_hardware_parameters())
+        self.hardware_params.update(self.monochromator.get_hardware_parameters('Stresing'))
 
     def get_num_pixel(self):
         return self.hardware_params['num_pixels']
@@ -332,6 +338,7 @@ class StresingCamera(QtCore.QThread):
             time.sleep(0.01)
             self.new_spectrum = False
         self.spec = np.array(self.spectrum[13:-1])
+        self.spec = self.spec[::-1]
         #self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
         return self.spec
 

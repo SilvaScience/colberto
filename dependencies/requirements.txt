@@ -1,6 +1,6 @@
 pyqtgraph
 numpy
-PyQt5
+PyQt
 matplotlib
 pip
 pillow
@@ -9,3 +9,7 @@ pandas
 h5py
 scipy
 seabreeze
+pyvisa
+pylablib
+OpenCV
+screeninfo

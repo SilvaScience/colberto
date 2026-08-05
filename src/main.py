@@ -267,29 +267,7 @@ class MainInterface(QtWidgets.QMainWindow):
             item = QtWidgets.QTreeWidgetItem([device.capitalize()])
             self.parameter_tree.addTopLevelItem(item)
             for param in self.parameter_dic[device].keys():
-                child =QtWidgets.QTreeWidgetItem()
-                item.addChild(child)
-                name_widget = QtWidgets.QLabel(param)
-                self.parameter_widgets[param] = QtWidgets.QDoubleSpinBox()
-                #self.parameter_widgets[param].setFixedSize(self.parameter_widgets[param].__sizeof__(), 16)
-                self.parameter_widgets[param].setReadOnly(self.parameter_dic[device][param]['read'])
-                try:
-                    self.parameter_widgets[param].setSuffix(self.parameter_dic[device][param]['unit'])
-                    self.parameter_widgets[param].setMaximum(self.parameter_dic[device][param]['max'])
-                except:
-                    pass
-                try:
-                    self.parameter_widgets[param].setMinimum(self.parameter_dic[device][param]['min'])
-                except:
-                    pass
-                if self.parameter_dic[device][param]['read']:
-                    self.readonly_parameter.append(param)
-                else:
-                    self.parameter_widgets[param].setValue(self.parameter_dic[device][param]['val'])
-                    self.parameter_widgets[param].editingFinished.connect(partial(self.set_parameter,param))
-                    self.writeonly_parameter.append(param)
-                self.parameter_tree.setItemWidget(child, 0, name_widget)
-                self.parameter_tree.setItemWidget(child, 1, self.parameter_widgets[param])
+                self._build_parameter_tree_item(item, device, param)
 
         # start DataHandling
         # self.spec_length = self.devices['spectrometer'].get_num_pixel()
@@ -415,6 +393,16 @@ class MainInterface(QtWidgets.QMainWindow):
         # Rebuild parameter tree UI (existing code)
         self.create_parameter_array()
 
+        self.parameter = {}
+        for device in self.parameter_dic:
+            for param in self.parameter_dic[device]:
+                self.parameter[param] = self.parameter_dic[device][param]['val']
+        self.DataHandling.close()
+        self.DataHandling = DataHandling(self.parameter, self.spec_length)
+        self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
+        self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
+        self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
+
         logger.info(
             f"Switched to spectrometer: {new_name} "
             f"(spec_length={self.spec_length})"
@@ -440,39 +428,53 @@ class MainInterface(QtWidgets.QMainWindow):
             self.parameter_tree.addTopLevelItem(item)
 
             for param in self.parameter_dic[device].keys():
-                child = QtWidgets.QTreeWidgetItem()
-                item.addChild(child)
+                self._build_parameter_tree_item(item, device, param)
 
-                name_widget = QtWidgets.QLabel(param)
-                spin = QtWidgets.QDoubleSpinBox()
-                self.parameter_widgets[param] = spin
+    def _build_parameter_tree_item(self, item, device, param):
+        '''
+            Builds one row of the parameter tree (name label + value spinbox) for a
+            single device parameter and registers the resulting widget in
+            self.parameter_widgets/readonly_parameter/writeonly_parameter.
+            Cryostat parameters are always shown read-only here regardless of the
+            driver's 'read' flag: control of the cryostat must go through the
+            dedicated CryostatTab page. This tree only displays/logs its value.
+        '''
+        child = QtWidgets.QTreeWidgetItem()
+        item.addChild(child)
 
-                spin.setReadOnly(self.parameter_dic[device][param]['read'])
+        name_widget = QtWidgets.QLabel(param)
+        spin = QtWidgets.QDoubleSpinBox()
+        self.parameter_widgets[param] = spin
 
-                try:
-                    spin.setSuffix(self.parameter_dic[device][param]['unit'])
-                    spin.setMaximum(self.parameter_dic[device][param]['max'])
-                except Exception:
-                    pass
+        param_info = self.parameter_dic[device][param]
+        force_read_only = (device == 'cryostat')
+        spin.setReadOnly(param_info['read'] or force_read_only)
 
-                try:
-                    spin.setMinimum(self.parameter_dic[device][param]['min'])
-                except Exception:
-                    pass
+        try:
+            spin.setSuffix(param_info['unit'])
+            spin.setMaximum(param_info['max'])
+        except Exception:
+            pass
 
-                if self.parameter_dic[device][param]['read']:
-                    self.readonly_parameter.append(param)
-                else:
-                    spin.setValue(self.parameter_dic[device][param]['val'])
-                    spin.editingFinished.connect(
-                        partial(self.set_parameter, param)
-                    )
-                    self.writeonly_parameter.append(param)
+        try:
+            spin.setMinimum(param_info['min'])
+        except Exception:
+            pass
 
-                self.parameter_tree.setItemWidget(child, 0, name_widget)
-                self.parameter_tree.setItemWidget(child, 1, spin)
+        if param_info['read']:
+            self.readonly_parameter.append(param)
+        elif force_read_only:
+            spin.setValue(param_info['val'])
+            self.readonly_parameter.append(param)
+        else:
+            spin.setValue(param_info['val'])
+            spin.editingFinished.connect(partial(self.set_parameter, param))
+            self.writeonly_parameter.append(param)
 
-    
+        self.parameter_tree.setItemWidget(child, 0, name_widget)
+        self.parameter_tree.setItemWidget(child, 1, spin)
+
+
 
     def update_read_parameter(self, new_parameter):
         for param in new_parameter.keys():
