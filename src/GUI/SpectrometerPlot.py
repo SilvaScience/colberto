@@ -14,8 +14,8 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
         self.graphWidget = pg.PlotWidget()
         self.clear_button = QtWidgets.QPushButton('Clear')
         vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.clear_button)
         vbox.addWidget(self.graphWidget)
+        vbox.addWidget(self.clear_button)
         widget = QtWidgets.QWidget()
         widget.setLayout(vbox)
         self.setCentralWidget(widget)
@@ -30,15 +30,10 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
         # add firstplot for Acquire mode
         self.first_plot = True
 
-        # create random example data set
-        sigma = 40
-        mu = 2
-        wls = np.array(np.linspace(177.2218, 884.00732139, 512))
-        spec = np.random.randint(0, 100, 512) + 20000./ (sigma * np.sqrt(2. * np.pi)) * np.exp(- (wls - mu - 620.) ** 2. / (2. * sigma ** 2.)) - 50,
-        flatspec = np.array(spec)
-
-        # plot data: x, y values
-        self.graphWidget.plot(wls.reshape(-1), flatspec.reshape(-1),pen =pg.mkPen([200,200,200], width = 2))
+        """ The plot starts empty. It used to be seeded with a random gaussian spanning 177 to 884 nm,
+        which stayed on the plot and stretched the axes over that whole range: a real spectrum from
+        the Stresing covers about 48 nm, so it was squeezed into a narrow strip and read as nothing
+        being displayed. """
         self.graphWidget.getAxis('left').setStyle(tickFont = fontForTickValues)
         self.graphWidget.getAxis('bottom').setStyle(tickFont = fontForTickValues)
         self.graphWidget.setLabel('left', 'Intensity (counts)', **styles)
@@ -102,10 +97,16 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
 
     def update_crosshair(self, e):
         pos = e[0]
-        if self.graphWidget.sceneBoundingRect().contains(pos):
-            mousePoint = self.graphWidget.getPlotItem().vb.mapSceneToView(pos)
-            self.crosshair_v.setPos(mousePoint.x())
-            self.crosshair_h.setPos(mousePoint.y())
+        """ Everything below needs mousePoint, which only exists while the pointer is over this plot.
+        The label was updated unconditionally, so every mouse move outside the plot raised
+        UnboundLocalError. Harmless in itself, but it floods stderr and buries real tracebacks, and
+        there are now two spectrum plots, so the one that is not under the cursor raised on every
+        move. """
+        if not self.graphWidget.sceneBoundingRect().contains(pos):
+            return
+        mousePoint = self.graphWidget.getPlotItem().vb.mapSceneToView(pos)
+        self.crosshair_v.setPos(mousePoint.x())
+        self.crosshair_h.setPos(mousePoint.y())
         calibration_mode = False
         if calibration_mode:
             pixel = np.argmin(abs(self.wls - mousePoint.x()))

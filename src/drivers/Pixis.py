@@ -21,6 +21,7 @@ import numpy as np
 from PyQt5 import QtCore
 from collections import defaultdict
 from pylablib.devices import PrincetonInstruments
+import threading
 import time
 import re
 
@@ -64,7 +65,10 @@ class Pixis(QtCore.QThread):
         self.parameter_display_dict['sensor_T']['unit'] = ' celsius'
         self.parameter_display_dict['sensor_T']['min'] = -100
         self.parameter_display_dict['sensor_T']['max'] = 100
-        self.parameter_display_dict['sensor_T']['read'] = False
+        """ A reading, not a setting: set_parameter() has no branch for it, and the worker is what
+        updates it. Declaring it writable put it among the parameters the updater does not poll, so
+        the temperature on screen never changed after startup. """
+        self.parameter_display_dict['sensor_T']['read'] = True
 
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
@@ -77,9 +81,33 @@ class Pixis(QtCore.QThread):
         self.camera = PrincetonInstruments.PicamCamera()
         print('Camera connected')
 
-        # set the ROI so the camera is acting like a 1D array of 1024 pixels
-        roi = {"x": 0, "width": 1024, "x_binning": 1, "y": 0, "height": 1, "y_binning": 1}
-        self.camera.set_attribute_value("ROIs", [roi])
+        """ The camera is driven from two threads: the measurement thread through get_intensities(),
+        and the GUI thread through set_roi() when a readout region is applied. Interleaving those
+        made PICam fail with AcquisitionInProgress. Reentrant because set_roi() starts and stops the
+        acquisition while already holding the lock. """
+        self.camera_lock = threading.RLock()
+
+        # Determine the number of sensor rows available for vertical binning.
+        # The PIXIS used here is 1024 x 256, but ask the camera rather than assume.
+        self.sensor_height = int(self.hardware_params.get('sensor_height', 256))
+        try:
+            detector_size = self.camera.get_detector_size()  # (width, height)
+            if detector_size is not None and len(detector_size) == 2:
+                self.sensor_height = int(detector_size[1])
+        except Exception as e:
+            print(f'Pixis: could not query detector size, assuming {self.sensor_height} rows. {e}')
+
+        """ Vertical readout configuration.
+        The sensor is 2D: the horizontal axis is wavelength, the vertical axis is position along the
+        spectrograph entrance slit. Reading a single row therefore only samples one height in the slit
+        and discards the signal collected on every other row.
+        set_binned_roi() sums rows ON CHIP (charge is summed before the readout amplifier), so the read
+        noise is paid once instead of once per row. That is what makes weak signals usable.
+        Defaults come from hardware_params so each setup can record its own alignment. """
+        self.roi_y0 = int(self.hardware_params.get('roi_y0', 0))
+        self.roi_height = int(self.hardware_params.get('roi_height', self.sensor_height))
+        self.roi_binning = int(self.hardware_params.get('roi_binning', self.roi_height))
+        self.set_roi(self.roi_y0, self.roi_height, self.roi_binning, restart=False)
 
         # initialize camera
         self.worker = CameraWorker(self.camera,self.int_time)
@@ -88,7 +116,7 @@ class Pixis(QtCore.QThread):
         self.worker.start()
 
         # set int time once
-        self.camera.set_attribute_value("Exposure Time", int(self.int_time))
+        self.camera.set_attribute_value("Exposure Time", float(self.int_time))
 
     def set_parameter(self, parameter, value):
         """REQUIRED. This function defines how changes in the parameter tree are handled.
@@ -98,10 +126,10 @@ class Pixis(QtCore.QThread):
             self.worker.int_time = value
             if self.worker.acquiring: # stops acquisition before changing int time if currently acquiring.
                 self.stop_acquisition()
-                self.camera.set_attribute_value("Exposure Time", int(value))
+                self.camera.set_attribute_value("Exposure Time", float(value))
                 self.start_acquisition()
             else:
-                self.camera.set_attribute_value("Exposure Time", int(value))
+                self.camera.set_attribute_value("Exposure Time", float(value))
             self.int_time = value
         elif parameter == 'avg_scan':
             self.parameter_dict['avg_scan'] = value
@@ -190,37 +218,154 @@ class Pixis(QtCore.QThread):
         self.type='Spectrometer'
         self.hardware_params.update(self.monochromator.get_hardware_parameters('Pixis'))
     
+    def set_roi(self, y0, height, binning=None, restart=True):
+        """
+            Sets the vertical region of the sensor that is read out, and how many of its rows are
+            summed on chip.
+            input:
+                - y0 (int): index of the first sensor row to read
+                - height (int): number of sensor rows covered by the region
+                - binning (int, default None): number of rows summed on chip. None means sum the whole
+                  region into a single row (the high signal-to-noise mode used for measurements).
+                  Pass 1 to keep every row separate (the 2D mode used for alignment).
+                - restart (bool, default True): restart continuous acquisition if it was running
+            output:
+                - dict: the region of interest actually applied
+        """
+        y0 = int(np.clip(y0, 0, max(self.sensor_height - 1, 0)))
+        height = int(np.clip(height, 1, self.sensor_height - y0))
+        binning = height if binning is None else int(np.clip(binning, 1, height))
+        # PICam requires the region height to be an exact multiple of the binning factor
+        height = max((height // binning) * binning, binning)
+
+        """ Held for the whole sequence: stopping, reconfiguring and restarting must not interleave
+        with the measurement thread starting its own acquisition. """
+        with self.camera_lock:
+            was_acquiring = getattr(self, 'worker', None) is not None and self.worker.acquiring
+            if was_acquiring:
+                self.stop_acquisition()
+
+            roi = {"x": 0, "width": 1024, "x_binning": 1,
+                   "y": y0, "height": height, "y_binning": binning}
+            self.camera.set_attribute_value("ROIs", [roi])
+            self.roi_y0, self.roi_height, self.roi_binning = y0, height, binning
+            print(f'Pixis ROI: rows {y0}-{y0 + height - 1} of {self.sensor_height}, '
+                  f'binning {binning} -> {height // binning} row(s) read out')
+
+            if was_acquiring and restart:
+                self.start_acquisition()
+        return roi
+
+    def set_binned_roi(self, y0, height):
+        """
+            Measurement mode: sum `height` sensor rows starting at `y0` into a single row on chip.
+            input:
+                - y0 (int): index of the first sensor row of the signal
+                - height (int): number of rows the signal spans
+        """
+        return self.set_roi(y0, height, binning=height)
+
+    def set_full_frame(self):
+        """
+            Alignment mode: read every sensor row separately, giving the full 2D image.
+            Slower and noisier per row, but shows where the signal actually sits on the slit.
+        """
+        return self.set_roi(0, self.sensor_height, binning=1)
+
+    def get_roi(self):
+        """
+            Returns the currently applied vertical readout configuration.
+            output:
+                - tuple (y0, height, binning)
+        """
+        return self.roi_y0, self.roi_height, self.roi_binning
+
+    def acquisition_running(self):
+        """
+            Whether the camera itself considers an acquisition to be running. Falls back to the
+            worker flag if the driver does not expose the query.
+        """
+        try:
+            return bool(self.camera.acquisition_in_progress())
+        except Exception:
+            # set_roi() runs once before the worker exists, hence the nested getattr.
+            return bool(getattr(getattr(self, 'worker', None), 'acquiring', False))
+
     def start_acquisition(self):
-        """ Sets camera to continuous acquisition mode. """
-        self.camera.start_acquisition()
-        self.worker.acquiring = True
+        """
+            Sets camera to continuous acquisition mode.
+            Idempotent and serialised: PICam raises AcquisitionInProgress when asked to start while
+            it is already running. That happened whenever a readout region was applied during a live
+            view, because set_roi() and get_intensities() drive the camera from two different threads.
+        """
+        with self.camera_lock:
+            """ If the camera reports an acquisition while the worker was not reading, the two are
+            out of step: that acquisition was set up under the previous readout region and delivers
+            nothing here. Stop it and start again rather than adopting it, which is what left
+            get_intensities() waiting for a frame that never came after a region change. """
+            if self.acquisition_running() and not self.worker.acquiring:
+                self.camera.stop_acquisition()
+            if not self.acquisition_running():
+                self.camera.start_acquisition()
+            self.worker.acquiring = True
 
     def stop_acquisition(self):
-        """ Disable continuous acquisition mode of camera. """
-        self.worker.acquiring = False
-        self.camera.stop_acquisition()
+        """
+            Disable continuous acquisition mode of camera.
+        """
+        with self.camera_lock:
+            self.worker.acquiring = False
+            if self.acquisition_running():
+                self.camera.stop_acquisition()
+
+    def wait_for_frame(self):
+        """
+            Blocks until the worker delivers the next frame, and returns it.
+            The wait used to be an unbounded `while not self.new_spectrum`, so a readout region
+            applied mid-acquisition, or a camera that simply stopped delivering, hung the measurement
+            thread with no way back. The allowance is ten exposures plus five seconds, which is
+            generous next to the 150 ms the camera normally needs.
+            output:
+                - np.ndarray: the frame received
+        """
+        allowance = max(self.int_time / 1000.0, 0.1) * 10 + 5
+        deadline = time.time() + allowance
+        while not self.new_spectrum:
+            if time.time() > deadline:
+                raise TimeoutError('Pixis delivered no frame within %.1f s (exposure %s ms)'
+                                   % (allowance, self.int_time))
+            time.sleep(0.01)
+        frame = self.spectrum
+        self.new_spectrum = False
+        return frame
 
     def get_intensities(self):
         """ Gets the intensity. The example include the possibility of averaging several spectra and to
         perform a binning. Such functionalities might also be given by the camera.
         This function will be accessible from MeasurementClasses."""
         self.start_acquisition()
-        if self.avg_scan == 1:
-            while not self.new_spectrum:
-                time.sleep(0.01)
-            spectrum = self.spectrum
-            self.new_spectrum = False
-        else:
-            spectrum = self.image
-            for i in range(self.avg_scan):
-                time.sleep(self.int_time / 1000 + 0.01)
-                while not self.new_spectrum:
-                    time.sleep(0.01)
-                spectrum = spectrum + self.spectrum
-                self.new_spectrum = False
-            spectrum = spectrum / self.avg_scan
-        self.stop_acquisition()
-        spectrum = spectrum[0, :]
+        """ Drop anything the worker delivered before this call. A frame can arrive just after the
+        previous acquisition was stopped, and it was taken with the readout region in force then:
+        consuming it here would return the old region's data for the new one. """
+        self.new_spectrum = False
+        try:
+            if self.avg_scan == 1:
+                spectrum = self.wait_for_frame()
+            else:
+                spectrum = self.image
+                for i in range(self.avg_scan):
+                    time.sleep(self.int_time / 1000 + 0.01)
+                    spectrum = spectrum + self.wait_for_frame()
+                spectrum = spectrum / self.avg_scan
+        finally:
+            self.stop_acquisition()
+        """ The camera returns one row per binning group: a single row in binned (measurement) mode,
+        every sensor row in full frame (alignment) mode. Any remaining rows are summed here so both
+        modes hand back a 1D spectrum. Counts therefore scale with the number of rows summed, which
+        matters when comparing a spectrum to a background taken with a different region. """
+        spectrum = np.asarray(spectrum)
+        if spectrum.ndim > 1:
+            spectrum = spectrum.sum(axis=0)
         return spectrum
 
     def update_temperature(self, temperature):
@@ -262,10 +407,14 @@ class CameraWorker(QtCore.QThread):
                 while not type(image) == np.ndarray and not time.time() > timeout_start + self.int_time/1E3 + 0.5:
                     time.sleep(0.02)
                     image = self.camera.read_newest_image()
-                try:
+                """ read_newest_image() returns None when nothing arrived before the deadline above.
+                Emitting that raised TypeError, which was caught and reported as "Spectrum not sent
+                from Worker" -- a message that named neither the cause nor the camera state. """
+                if isinstance(image, np.ndarray):
                     self.sendSpectrum.emit(image, self.int_time)
-                except TypeError:
-                    print('WARNING: Spectrum not sent from Worker')
+                else:
+                    print('Pixis: no frame within %.2f s (exposure %s ms). Is the acquisition running?'
+                          % (self.int_time / 1E3 + 0.5, self.int_time))
             else:
                 time.sleep(1)
             temperature = self.camera.get_attribute_value("Sensor Temperature Reading")

@@ -8,6 +8,7 @@ Created on Wed Jun  5 10:52:39 2024
 import ctypes
 import os
 import configparser
+import time
 import numpy as np
 
 # These are the settings structs. It must be the same like in EBST_CAM/shared_src/struct.h regarding order, data formats and size.
@@ -175,7 +176,66 @@ def init_measure(self):
     if(status != 0):
         raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
 
-def measure(self, use_blocking_call):
+def measurement_running(self):
+    """
+        Whether the board still considers a measurement to be in progress.
+    """
+    return bool(self.dll.DLLGetIsRunning())
+
+
+def abort_measure(self):
+    """
+        Stops a measurement the board is still running.
+        The export is DLLAbortMeasurement. An earlier version of this called DLLStopMeasurement,
+        which this DLL does not export, and swallowed the resulting AttributeError: every timeout
+        therefore left the board running, and the next acquisition either failed with 'Measurement
+        is already running' or blocked with no way out.
+    """
+    self.dll.DLLAbortMeasurement()
+
+
+def wait_for_trigger(self, timeout_s):
+    """
+        Waits until the board reports a scan trigger, and raises if none appears.
+        Used before committing to the blocking start, which cannot be interrupted: this way an
+        input with no signal on it is reported instead of freezing the caller.
+        input:
+            - timeout_s (float): how long to wait for the first trigger
+    """
+    """ Both take a pointer to the flag as their second argument. Calling them with the board number
+    alone compiles and runs, and corrupts memory: it cost an access violation to find out. """
+    detected = ctypes.c_uint8(0)
+    ptr_detected = ctypes.pointer(detected)
+    self.dll.DLLResetScanTriggerDetected(self.drvno, ptr_detected)
+    deadline = time.monotonic() + timeout_s
+    while True:
+        self.dll.DLLGetScanTriggerDetected(self.drvno, ptr_detected)
+        if detected.value:
+            break
+        if time.monotonic() > deadline:
+            self.dll.DLLOpenShutter(self.drvno)
+            raise TimeoutError(
+                'No trigger detected after %.1f s. The board is configured to start its readouts '
+                'on an external signal (sti=%d) and nothing is arriving on that input.'
+                % (timeout_s, self.settings.camera_settings[self.drvno].sti_mode))
+        time.sleep(0.001)
+
+
+def measure(self, use_blocking_call=True, timeout_s=None):
+    """
+        Runs one measurement and returns the spectrum averaged over samples and blocks.
+        input:
+            - use_blocking_call (bool): kept for compatibility. The non-blocking start returns
+              'An unknown error occurred' on this board, checked against the instrument, so the
+              blocking call is the only one that actually starts a measurement.
+            - timeout_s (float): when set, wait this long for a trigger before starting. Leave None
+              when the board drives itself, where the readouts are guaranteed to come.
+    """
+    """ Clear a measurement the board may still be running from a previous attempt. Without this an
+    acquisition that was aborted, timed out or killed leaves the board busy, and every later one
+    either fails with 'Measurement is already running' or never returns. """
+    if measurement_running(self):
+        abort_measure(self)
 
     # The sensor S14290 is a high speed sensor and is not completely cleared by one read out.
     # Therefore it may not be used without a reset signal, or following readouts have a crosstalk.
@@ -183,23 +243,16 @@ def measure(self, use_blocking_call):
     if(status != 0):
         raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
 
-    if use_blocking_call:
-        # Start the measurement. This is the blocking call, which means it will return when the measurement is finished. This is done to ensure that no data access happens before all data is collected.
-        status = self.dll.DLLStartMeasurement_blocking()
-        if(status != 0):
-            raise BaseException(self.dll.DLLConvertErrorCodeToMsg(status))
-    else:
-        # Start the measurement. This is the nonblocking call, which means it will return immediately. 
-        self.dll.DLLStartMeasurement_nonblocking()
+    """ The blocking call has no way out, so anything that depends on an external signal waits for a
+    trigger to actually appear first. On the internal timer the measurement takes as long as the
+    timers say -- 0.11 s for ten readouts at 10 ms, measured -- and is entered directly. """
+    if timeout_s is not None:
+        wait_for_trigger(self, timeout_s)
 
-        cur_sample = ctypes.c_int64(-2)
-        ptr_cur_sample = ctypes.pointer(cur_sample)
-        cur_block = ctypes.c_int64(-2)
-        ptr_cur_block = ctypes.pointer(cur_block)
-
-        while cur_sample.value < self.settings.nos-1 or cur_block.value < self.settings.nob-1:
-            self.dll.DLLGetCurrentScanNumber(self.drvno, ptr_cur_sample, ptr_cur_block)
-            print("sample: "+str(cur_sample.value)+" block: "+str(cur_block.value))
+    # This is the blocking call: it returns once the measurement is finished, so no data is read before it is all collected.
+    status = self.dll.DLLStartMeasurement_blocking()
+    if(status != 0):
+        raise RuntimeError(self.dll.DLLConvertErrorCodeToMsg(status))
 
     # This block is showing you how to get all data of the whole measurement with one DLL call
     data_buffer = (ctypes.c_uint16 * (self.settings.camera_settings[self.drvno].PIXEL * (self.settings.nos) * self.settings.camera_settings[self.drvno].CAMCNT * self.settings.nob))(0)

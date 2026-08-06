@@ -12,6 +12,7 @@ from drivers.Shamrock import Shamrock
 from drivers.Optidry250 import CryoPasqal
 from drivers.Pixis import Pixis
 from drivers.SpectraPro2300i import SpectraPro2300i
+from drivers.SpectraPro2300iDemo import SpectraPro2300iDemo
 
 logger = logging.getLogger(__name__)
 
@@ -87,12 +88,15 @@ def load_instruments():
         'Stresing': grating_params_stresing,
         'Pixis': grating_params_pixis
     }
-    Monochrom = SpectraPro2300i(grating_params) 
+    try:
+        Monochrom = SpectraPro2300i(grating_params)
+        logger.info('%s SpectraPro2300i connected' % datetime.datetime.now())
+    except Exception as e:
+        Monochrom = SpectraPro2300iDemo(grating_params)
+        logger.error('%s SpectraPro2300i initialization failed at interface startup. Error type %s' % (datetime.datetime.now(),str(e)))
+        logger.info('%s SpectraPro2300iDemo connected' % datetime.datetime.now())
 
-    
-    
-    devices['Monochrom'] = Monochrom 
-    logger.info('%s Monochrom DEMO connected' % datetime.datetime.now())
+    devices['Monochrom'] = Monochrom
 
     # initialize Cameras
     stresing_params={

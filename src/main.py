@@ -26,11 +26,15 @@ from GUI.DelayCalibrationPlot import DelayCalibrationPlot, DelaySelectionPlot, D
 from GUI.MeasurementPlot import LOmeasurementPlot, MDCSmeasurementPlot, MDCSmeasurementFourierPlot
 from GUI.LUT_Calib_plot import LUT_Calib_plot, LUT_Calib_intensity_plot
 from GUI.SLMDisplay import SLMDisplay
+from GUI.CameraDisplay import CameraDisplay
+from GUI.AcquisitionSettings import AcquisitionSettings
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
 from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, AcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
+from measurements.TGFROGClasses import TGFROGMeasurement, TGFROGRetrievalWorker
+from GUI.PulseCharacterization import PulseCharacterization
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
 from drivers.Instruments import load_instruments
@@ -55,7 +59,12 @@ class MainInterface(QtWidgets.QMainWindow):
         # fancy name
         self.setWindowTitle('COLBERTo')
 
-        
+        """ main_GUI.ui does not set tab overflow behaviour, so once enough tabs are added
+        (11 as of this branch) neighbouring labels overlap instead of scrolling or eliding --
+        seen between "LUT Calibration" and "Spatial Calibration". """
+        self.tabWidget.setUsesScrollButtons(True)
+        self.tabWidget.setElideMode(QtCore.Qt.ElideRight)
+
         self.devices, self.spectrometers = load_instruments()
 
         # find items to complement in GUI
@@ -232,9 +241,6 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # add items to GUI
         self.SpectrometerPlot = SpectrometerPlot()
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.SpectrometerPlot)
-        self.spectro_tab.setLayout(vbox)
         self.ParameterPlot = ParameterPlot(self.parameter_dic)
         vbox = QtWidgets.QVBoxLayout()
         vbox.addWidget(self.ParameterPlot)
@@ -256,7 +262,61 @@ class MainInterface(QtWidgets.QMainWindow):
         self.LUT_Calib_plot_2 = LUT_Calib_intensity_plot(self.LUT_calib_plot_layout_2)
         self.slm_display_plot= SLMDisplay(self.slm_display)
 
-        """ This initializes the parameter tree. It is constructed based on the device dict, 
+        """ The spectro tab is composed here rather than in main_GUI.ui: the .ui file is edited by
+        several people in Qt Designer and merges badly, so it leaves spectro_tab empty and everything
+        is assembled in code. Top row is the acquisition settings beside the live camera view, bottom
+        row is the spectrum. Splitters rather than a fixed grid, so the spectrum can be dragged to
+        take the whole height once alignment is done. """
+        self.CameraDisplay = CameraDisplay()
+        """ Changing the readout region changes the scale of the counts by the number of rows summed,
+        so a curve taken under the previous region would dominate the axes and make the new one read
+        as flat at zero. """
+        self.CameraDisplay.roi_applied.connect(self.readout_region_changed)
+        self.AcquisitionSettings = AcquisitionSettings()
+        self.AcquisitionSettings.is_busy = lambda: self.measurement_busy
+        self.AcquisitionSettings.parameter_changed = self.spectrometer_parameter_changed
+
+        """ The settings panel is laid out to fit without scrolling, so it goes in directly. It is
+        given the width its controls need rather than a fixed fraction: clipped labels made the first
+        version unreadable. """
+        top_splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        top_splitter.addWidget(self.AcquisitionSettings)
+        top_splitter.addWidget(self.CameraDisplay)
+        """ Equal halves rather than pixel sizes: the sizes are treated as proportions, so the split
+        holds on any screen instead of depending on the font metrics of one machine. """
+        top_splitter.setStretchFactor(0, 1)
+        top_splitter.setStretchFactor(1, 1)
+        top_splitter.setSizes([1000, 1000])
+
+        spectro_splitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        spectro_splitter.addWidget(top_splitter)
+        spectro_splitter.addWidget(self.SpectrometerPlot)
+        """ 40/60 still wasn't enough vertical room for the 1D spectrum on a laptop screen;
+        give it roughly two thirds instead. """
+        spectro_splitter.setStretchFactor(0, 1)
+        spectro_splitter.setStretchFactor(1, 2)
+        spectro_splitter.setSizes([600, 1400])
+
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.addWidget(spectro_splitter)
+        self.spectro_tab.setLayout(vbox)
+
+        """ Built and added the same way as the spectro tab above, rather than as a placeholder
+        in main_GUI.ui, for the same reason: the .ui file merges badly between contributors. """
+        self.PulseCharacterization = PulseCharacterization()
+        self.tabWidget.addTab(self.PulseCharacterization, 'Pulse characterization')
+
+        """ Second tab holding nothing but the spectrum: in the lab the plot is read from across the
+        room, where the controls only get in the way. Two plot instances fed the same data, rather
+        than moving one widget between tabs. """
+        self.SpectrometerPlotFull = SpectrometerPlot()
+        self.tabWidget.insertTab(1, self.SpectrometerPlotFull, 'Spectrum')
+        self.spectrum_plots = [self.SpectrometerPlot, self.SpectrometerPlotFull]
+
+        self.connect_camera_display()
+        self.connect_acquisition_settings()
+
+        """ This initializes the parameter tree. It is constructed based on the device dict,
         that includes parameter information of each device """
         self.parameter_tree.setColumnCount(2)
         self.parameter_tree.setHeaderLabels(["Name", "Value"])
@@ -273,8 +333,9 @@ class MainInterface(QtWidgets.QMainWindow):
         # self.spec_length = self.devices['spectrometer'].get_num_pixel()
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
-        self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
-        self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
+        for plot in self.spectrum_plots:
+            self.DataHandling.sendSpectrum.connect(plot.set_data)
+            self.DataHandling.sendMaximum.connect(plot.update_datareader)
 
         #start Beam explorer
         self.beam_explorer = BeamExplorer(self.DataHandling.get_beams())
@@ -341,6 +402,9 @@ class MainInterface(QtWidgets.QMainWindow):
         self.delay_fit_delay_button.clicked.connect(self.delayFitMeaserement)
         self.delay_apply_delay_button.clicked.connect(lambda: self.assignDelayCalibration(1))
         self.delay_remove_delay_button.clicked.connect(lambda: self.assignDelayCalibration(-1))
+
+        self.PulseCharacterization.start_button.clicked.connect(self.tgfrogAcquireMeasurement)
+        self.PulseCharacterization.retrieve_button.clicked.connect(self.tgfrogRetrieveMeasurement)
         # Measurement tab connect events
         self.MDCS_getLO_button.clicked.connect(self.getLOSpectrum)
         self.MDCS_acquire_button.clicked.connect(self.MDCSacquireMeasurement)
@@ -350,6 +414,7 @@ class MainInterface(QtWidgets.QMainWindow):
         # Beam update connection
         self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
         self.DataHandling.sendBeams.connect(self.update_beam_name_list)
+        self.DataHandling.sendBeams.connect(self.PulseCharacterization.update_beam_names)
         #Beam Explorer related
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
@@ -400,14 +465,87 @@ class MainInterface(QtWidgets.QMainWindow):
         self.DataHandling.close()
         self.DataHandling = DataHandling(self.parameter, self.spec_length)
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
-        self.DataHandling.sendSpectrum.connect(self.SpectrometerPlot.set_data)
-        self.DataHandling.sendMaximum.connect(self.SpectrometerPlot.update_datareader)
+        for plot in self.spectrum_plots:
+            self.DataHandling.sendSpectrum.connect(plot.set_data)
+            self.DataHandling.sendMaximum.connect(plot.update_datareader)
+
+        self.connect_camera_display()
+        self.connect_acquisition_settings()
 
         logger.info(
             f"Switched to spectrometer: {new_name} "
             f"(spec_length={self.spec_length})"
-        )    
-        
+        )
+
+    def connect_camera_display(self):
+        '''
+            Points the Camera tab at the active spectrometer.
+            Cameras with a 2D sensor expose their raw frames through a worker signal; those frames are
+            routed straight to the view so alignment can be checked without going through DataHandling,
+            which only carries the 1D spectra used for measurements. Spectrometers without a
+            configurable readout region (checked via set_binned_roi, the same test CameraDisplay
+            uses to enable its controls) simply leave the tab disabled: their worker's sendSpectrum
+            signal is not guaranteed to share Pixis's (image, int_time) signature, and CameraDisplay
+            is only meaningful for a 2D sensor in the first place.
+        '''
+        previous = getattr(self, '_camera_display_source', None)
+        if previous is not None:
+            try:
+                previous.sendSpectrum.disconnect(self.CameraDisplay.set_data)
+            except (TypeError, RuntimeError):
+                pass  # already disconnected or worker gone
+        self._camera_display_source = None
+
+        spectrometer = self.devices.get('spectrometer')
+        self.CameraDisplay.set_spectrometer(spectrometer)
+
+        worker = getattr(spectrometer, 'worker', None)
+        if worker is not None and hasattr(spectrometer, 'set_binned_roi') and hasattr(worker, 'sendSpectrum'):
+            worker.sendSpectrum.connect(self.CameraDisplay.set_data)
+            self._camera_display_source = worker
+            logger.info('%s Camera view connected to %s'
+                        % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
+
+    def readout_region_changed(self, y0, height):
+        '''
+            Clears the spectrum plots after the camera readout region changed.
+            input:
+                - y0 (int): first sensor row now read
+                - height (int): number of rows now covered
+        '''
+        for plot in self.spectrum_plots:
+            plot.clear_plot()
+        logger.info('%s Readout region changed to rows %d-%d, spectrum plots cleared'
+                    % (datetime.datetime.now(), y0, y0 + height - 1))
+
+    def spectrometer_parameter_changed(self, parameter, value):
+        '''
+            Called by the Acquisition panel after it has set a camera parameter on the driver.
+            The tree row is read-only for the spectrometer, so nothing else would refresh it, and
+            self.parameter is what gets recorded alongside the data: both have to follow.
+            input:
+                - parameter (str): parameter name
+                - value (float): value that was applied
+        '''
+        self.parameter[parameter] = value
+        widget = self.parameter_widgets.get(parameter)
+        if widget is not None:
+            widget.setValue(value)
+
+    def connect_acquisition_settings(self):
+        '''
+            Points the Acquisition tab at the active spectrometer. Cameras without a configurable
+            trigger leave the tab disabled, the same way the Camera tab handles sensors without a
+            configurable readout region.
+        '''
+        spectrometer = self.devices.get('spectrometer')
+        self.AcquisitionSettings.set_spectrometer(spectrometer)
+        self.AcquisitionSettings.set_monochromator(self.devices.get('Monochrom'))
+        if hasattr(spectrometer, 'set_acquisition_mode'):
+            logger.info('%s Acquisition settings connected to %s'
+                        % (datetime.datetime.now(), getattr(spectrometer, 'name', spectrometer)))
+
+
     def create_parameter_array(self):
         # initialization function to store all parameters in one array
 
@@ -447,7 +585,11 @@ class MainInterface(QtWidgets.QMainWindow):
         self.parameter_widgets[param] = spin
 
         param_info = self.parameter_dic[device][param]
-        force_read_only = (device == 'cryostat')
+        """ The spectrometer joins the cryostat in being read-only here: its settings are edited in
+        the Acquisition panel of Spectrum View, beside the acquisition they affect, and this tree
+        shows them so the whole hardware state can be read at a glance. The SLM and the other devices
+        keep their editable rows. """
+        force_read_only = device in ('cryostat', 'spectrometer')
         spin.setReadOnly(param_info['read'] or force_read_only)
 
         try:
@@ -484,6 +626,14 @@ class MainInterface(QtWidgets.QMainWindow):
                 except TypeError:
                     # Si le paramètre est du texte (ex: "Stable"), on ignore l'erreur du spinbox
                     pass
+
+        """ Record the hardware state alongside the data. The Updater only carries the read-only
+        parameters, so it is merged over the settings held here to give the full picture. Nothing
+        called DataHandling.update_parameter() before, which is why saved files carried no hardware
+        settings at all. """
+        recorded = dict(self.parameter)
+        recorded.update(new_parameter)
+        self.DataHandling.update_parameter(recorded)
 
 
     def change_parameter(self, parameter, value):
@@ -549,7 +699,12 @@ class MainInterface(QtWidgets.QMainWindow):
             wave = grp.attrs['xaxis']
 
         bg = data_set
-        self.DataHandling.background = bg[-self.spec_length:]
+        """ Routed through use_background() so the length is checked against the active spectrometer
+        and the background is marked as usable. Assigning the attribute directly left has_background
+        false, and a file of the wrong length was accepted without a word. """
+        if not self.DataHandling.use_background(bg):
+            self.bg_file_indicator.setText('rejected: wrong length')
+            return wave, bg
 
         # display measured spectra filepath
         idx = bg_path.rfind('/')
@@ -590,10 +745,10 @@ class MainInterface(QtWidgets.QMainWindow):
     def acquire_measurement(self):
         # take one spectrum with spectrometer
         if self.measurement_busy:
-            try:
-                self.measurement.take_spectrum()
-            except AttributeError:
-                logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
+            """ take_spectrum() runs the blocking hardware readout, and this is the GUI thread: calling
+            it here froze the whole interface for as long as the camera took to answer. Let the running
+            measurement finish instead. """
+            logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
         else:
             self.measurement_busy = True
             self.DataHandling.clear_data()
@@ -610,7 +765,8 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement = ViewMeasurement(self.devices, self.parameter)
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
-            self.measurement.sendClear.connect(self.SpectrometerPlot.clear_plot)
+            for plot in self.spectrum_plots:
+                self.measurement.sendClear.connect(plot.clear_plot)
             self.measurement.start()
         else:
             logger.info('%s Measurement not started, devices are busy'%datetime.datetime.now())
@@ -636,6 +792,10 @@ class MainInterface(QtWidgets.QMainWindow):
                                                      self.filename, self.comments_edit.toPlainText())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            """ Without this the measured background was only ever stored as ordinary data: nothing
+            assigned DataHandling.background except loading a file, so acquiring a background and
+            ticking the correction box subtracted an uninitialised array. """
+            self.measurement.sendSpectrum.connect(self.DataHandling.set_background)
             self.measurement.sendSave.connect(self.DataHandling.save_data)
             self.measurement.start()
         else:
@@ -970,6 +1130,129 @@ class MainInterface(QtWidgets.QMainWindow):
             self.DataHandling.set_beam((self.delay_second_beam_name_box.currentText(), beam))
         else:
             logger.warning('%s Delay calibration fit has not been processed. Processed the calibration fit first'%datetime.datetime.now())
+
+    def _resolve_tgfrog_beam_names(self, is_demo):
+        """
+            Reads the three beam-role dropdowns in the Pulse characterization tab. In demo
+            mode, empty/duplicate selections fall back to placeholder names since
+            TGFROGMeasurement's demo mode never touches the beam objects; for real hardware,
+            the three must be distinct and selected. Shared by the acquire and retrieve
+            handlers so the two can't drift out of sync on what counts as valid.
+            output:
+                - (probeBeamName, gratingBeam1Name, gratingBeam2Name), or None (with an error
+                  already shown in the status label) if invalid for the current mode
+        """
+        pc = self.PulseCharacterization
+        probeBeamName = pc.probe_beam_box.currentText()
+        gratingBeam1Name = pc.grating_beam1_box.currentText()
+        gratingBeam2Name = pc.grating_beam2_box.currentText()
+
+        if is_demo:
+            probeBeamName = probeBeamName or 'SimProbe'
+            gratingBeam1Name = gratingBeam1Name or 'SimGrating1'
+            gratingBeam2Name = gratingBeam2Name or 'SimGrating2'
+            return probeBeamName, gratingBeam1Name, gratingBeam2Name
+
+        if ('' in (probeBeamName, gratingBeam1Name, gratingBeam2Name)
+                or len({probeBeamName, gratingBeam1Name, gratingBeam2Name}) < 3):
+            pc.status_label.setText(
+                'Error: select three different beams for a real acquisition.')
+            return None
+        return probeBeamName, gratingBeam1Name, gratingBeam2Name
+
+    def tgfrogAcquireMeasurement(self):
+        """
+            Starts a TG-FROG delay scan using the beam roles and scan parameters set in the
+            Pulse characterization tab.
+        """
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            pc = self.PulseCharacterization
+            is_demo = pc.demo_mode_checkbox.isChecked()
+
+            names = self._resolve_tgfrog_beam_names(is_demo)
+            if names is None:
+                self.measurement_busy = False
+                return
+            probeBeamName, gratingBeam1Name, gratingBeam2Name = names
+
+            beam_dict = self.DataHandling.get_beams()
+            probeBeam = beam_dict[probeBeamName] if probeBeamName in beam_dict else Beam(self.devices['SLM'].get_width(), self.devices['SLM'].get_height())
+            gratingBeam1 = beam_dict[gratingBeam1Name] if gratingBeam1Name in beam_dict else Beam(self.devices['SLM'].get_width(), self.devices['SLM'].get_height())
+            gratingBeam2 = beam_dict[gratingBeam2Name] if gratingBeam2Name in beam_dict else Beam(self.devices['SLM'].get_width(), self.devices['SLM'].get_height())
+
+            self.DataHandling.clear_data()
+            if hasattr(self, 'background'):
+                tgfrogBackground = self.DataHandling.calibration['background_data']
+                background = tgfrogBackground['spec']
+            else:
+                background = 0
+
+            try:
+                spectral_calib_dict = self.DataHandling.calibration['spectral_calibration_fit']
+            except KeyError:
+                spectral_calib_dict = None
+
+            self.measurement = TGFROGMeasurement(
+                self.devices, background, self.grating_period_edit.value(),
+                pc.probe_wavelength_spin.value(),
+                pc.delay_step_spin.value(),
+                pc.delay_max_spin.value(),
+                pc.delay_min_spin.value(),
+                probeBeamName, gratingBeam1Name, gratingBeam2Name,
+                probeBeam, gratingBeam1, gratingBeam2,
+                spectral_calib_dict,
+                demo=is_demo,
+                demo_fwhm=pc.sim_fwhm_spin.value() * 1e-15,
+                demo_gdd=pc.sim_gdd_spin.value() * 1e-30,
+                demo_tod=pc.sim_tod_spin.value() * 1e-45,
+                demo_noise_level=pc.sim_noise_spin.value() / 100.0,
+                demo_window_nm=pc.sim_window_spin.value())
+
+            """ sendSpectrum is deliberately not wired to DataHandling.concatenate_data here,
+            unlike other measurements: that buffer assumes every emitted spectrum has the same
+            length as DataHandling.spec_length (the currently configured spectrometer's pixel
+            count), but demo mode synthesizes its own wavelength axis at a different length,
+            which crashed concatenate_data's np.c_ concatenation when tested. The 2D trace is
+            already fully captured below via sendTraceData, which is what matters for retrieval. """
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendBeam.connect(self.DataHandling.set_beam)
+            self.measurement.sendTrace.connect(self.PulseCharacterization.set_data)
+            self.measurement.sendTraceData.connect(self.DataHandling.add_calibration)
+            self.measurement.finished.connect(lambda: self.PulseCharacterization.set_running(False))
+            self.PulseCharacterization.set_running(True)
+            self.measurement.start()
+        else:
+            print('Measurement not started, devices are busy')
+
+    def tgfrogRetrieveMeasurement(self):
+        """
+            Runs offline TG-FROG retrieval (TGFROGRetrievalWorker) on the trace matching the
+            beam roles currently selected in the Pulse characterization tab. Not gated on
+            measurement_busy: retrieval is pure computation on an already-acquired trace, it
+            does not touch the SLM or spectrometer, so it neither needs nor should block a
+            hardware acquisition running at the same time.
+        """
+        pc = self.PulseCharacterization
+        is_demo = pc.demo_mode_checkbox.isChecked()
+        names = self._resolve_tgfrog_beam_names(is_demo)
+        if names is None:
+            return
+        probeBeamName, gratingBeam1Name, gratingBeam2Name = names
+
+        key = f'TGFROG_raw_data_{probeBeamName}_{gratingBeam1Name}_{gratingBeam2Name}'
+        if key not in self.DataHandling.calibration:
+            pc.status_label.setText(
+                f'No trace found for these beam roles ({key}). Run a scan or simulation first.')
+            return
+
+        trace = self.DataHandling.calibration[key]
+        self.tgfrog_retrieval_worker = TGFROGRetrievalWorker(trace)
+        self.tgfrog_retrieval_worker.sendResult.connect(pc.set_retrieval_result)
+        self.tgfrog_retrieval_worker.sendError.connect(pc.set_retrieval_error)
+        self.tgfrog_retrieval_worker.finished.connect(lambda: pc.set_retrieval_running(False))
+        pc.set_retrieval_running(True)
+        self.tgfrog_retrieval_worker.start()
 
     def getLOSpectrum(self):
         if not self.measurement_busy:
@@ -1345,6 +1628,15 @@ class UpdateWorker(QtCore.QThread):
                         self.updated_param[param] = self.devices[devices].parameter_dict[param]
                 self.new_parameter.emit(self.updated_param)
             time.sleep(self.update_interval)
+
+""" Every fixed pixel width/height in this app's widgets (spin boxes, panels, splitter sizes)
+was chosen assuming Qt renders logical pixels 1:1 with the display. Without HiDPI awareness,
+Qt5 on Windows does exactly that regardless of the monitor's actual scale factor, so the same
+layout looks fine on a display running at 100% scaling and cramped/overlapping on a laptop
+screen or any monitor scaled above that -- which is what made this so inconsistent to debug
+from screenshots taken on different screens. Must be set before QApplication is constructed. """
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
 
 app = QtWidgets.QApplication(sys.argv)
 window = MainInterface()
