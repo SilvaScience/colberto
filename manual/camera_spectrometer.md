@@ -9,3 +9,9 @@ On the main panel, on the top right, you can find a sliding menu where there is 
 ## Spectral calibration
 
 The spectral calibration is done following the example in src\compute\example_spectrometer calibration_notebook.ipynb
+
+You'll need:
+- **A spectral calibration lamp**. Note that a FreeCAD 3D printable plastic holder for Oriel lamps can be found in hardware\Spectrograph calibration\spectral_lamp_holder.FCStd
+- A spectrograph to calibrate.
+
+WRITE DOCUMENTATION ABOUT THE PROCESS HERE
