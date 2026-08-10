@@ -34,6 +34,15 @@ TRIGGER_INPUTS = {'I': 0, 'S1': 1, 'S2': 2, 'I gated by S2': 3}
 TRIGGER_TIMER = 4
 CHOPPER_INPUTS = {'S1': 5, 'S2': 6, 'S1 and S2': 7}
 
+""" What starts the integrator that actually gates the sensor's light exposure -- a separate
+register from sti_mode/bti_mode, which only pick what starts a *readout*. XCK ties the integrator
+to the sensor's own start signal, so exposure follows the readout period (stime) with nothing
+external needed: this is what CONTINUOUS mode needs. EXTTRIG waits for a dedicated 'Ext. Trig.'
+input on the camera control box, letting the integrator be gated by an incoming pulse (delayed by
+sec_in_10ns) independently of the sensor -- this is what pulsed/EXTERNAL acquisition needs. """
+XCK = 0
+EXTTRIG = 1
+
 CONTINUOUS = 'continuous'
 EXTERNAL = 'external'
 CHOPPER = 'chopper'
@@ -97,6 +106,10 @@ class StresingCamera(QtCore.QThread):
         self.sti = int(config.get("Board0","sti"))
         self.btimer = int(float(config.get("Board0","btimer")))
         self.stimer = int(config.get("Board0","stimer"))
+        """ Delay between the pulse trigger and the start of the integrator (sec_in_10ns), used to
+        line up exposure with a laser pulse in EXTERNAL/CHOPPER mode. In CONTINUOUS mode the
+        integrator is tied to XCK instead (see set_acquisition_mode), so this has no effect there. """
+        self.pulse_sync_delay_10ns = int(config.get("Board0","shutterSecIn10ns", fallback=0))
         self.new_spectrum = False
 
         """ Deadline used when the board is waiting on an external signal. Without it a trigger that
@@ -185,6 +198,11 @@ class StresingCamera(QtCore.QThread):
         self.parameter_display_dict['Scan_Timer']['unit'] = ' '
         self.parameter_display_dict['Scan_Timer']['max'] = 1000000
         self.parameter_display_dict['Scan_Timer']['read'] = False
+
+        self.parameter_display_dict['Pulse_Sync_Delay']['val'] = self.pulse_sync_delay_10ns
+        self.parameter_display_dict['Pulse_Sync_Delay']['unit'] = ' (x10ns)'
+        self.parameter_display_dict['Pulse_Sync_Delay']['max'] = 1000000
+        self.parameter_display_dict['Pulse_Sync_Delay']['read'] = False
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
         for key in self.parameter_display_dict.keys():
@@ -263,6 +281,10 @@ class StresingCamera(QtCore.QThread):
         elif parameter == 'Scan_Timer':
             self.driver.settings.camera_settings[self.driver.drvno].stime_in_microsec = int(value)
             self.stimer = value
+            self.new_spectrum = False
+        elif parameter == 'Pulse_Sync_Delay':
+            self.driver.settings.camera_settings[self.driver.drvno].sec_in_10ns = int(value)
+            self.pulse_sync_delay_10ns = value
             self.new_spectrum = False
         init_measure(self) # type: ignore
 
@@ -383,6 +405,15 @@ class StresingCamera(QtCore.QThread):
         cam = self.driver.settings.camera_settings[self.driver.drvno]
         cam.sti_mode, cam.bti_mode = sti, bti
         self.sti, self.bti = sti, bti
+
+        """ sti_mode/bti_mode only pick what starts a *readout*. The integrator that actually gates
+        the sensor's exposure is a separate register (trigger_mode_integrator) and was left at
+        whatever the ini configured (exttrig, for pulsed operation) no matter which mode was chosen
+        here -- so CONTINUOUS changed the readout cadence while the integrator kept waiting on an
+        external pulse that never came, and exposure stopped tracking Scan_Timer entirely. Tie it to
+        XCK in CONTINUOUS so exposure follows the sensor's own readout timing; keep EXTTRIG for
+        EXTERNAL/CHOPPER, where sec_in_10ns delays the integrator to line up with the incoming pulse. """
+        cam.trigger_mode_integrator = XCK if mode == CONTINUOUS else EXTTRIG
 
         """ The board only reads a timer in the mode that uses it. Writing them in the other modes
         would leave values on screen that have no effect, which is what made the old parameter table

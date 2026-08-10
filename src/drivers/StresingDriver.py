@@ -104,6 +104,7 @@ def init_driver(self, path_dll, config):
     self.settings.camera_settings[self.drvno].adc_gain = int(config.get("board0","adcGain")) # Controlling the gain function of the ADC in 3030 high speed cameras (sensor S14290 use 5 or 6).
     self.settings.camera_settings[self.drvno].tor = int(config.get("board0","tor")) # Shows the exposure window at the O output of the PCI card.
     self.settings.camera_settings[self.drvno].trigger_mode_integrator = int(config.get("board0","triggerCc")) # Trigger mode camera control.
+    self.settings.camera_settings[self.drvno].sec_in_10ns = int(config.get("board0","shutterSecIn10ns", fallback=0)) # Scan exposure control: delay, in units of 10 ns, between the pulse trigger and the start of the integrator. Only takes effect when trigger_mode_integrator is exttrig (pulsed/external acquisition); in continuous mode the integrator is tied to XCK and this is unused.
 
     # Scan trigger input (sti) mode determines the signal on which one readout is started :
     #   0 - External trigger on input I of PCIe board 
