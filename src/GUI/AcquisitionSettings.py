@@ -418,14 +418,17 @@ class AcquisitionSettings(QtWidgets.QWidget):
             return
         grating = self.grating_choice.currentData()
         port = self.exit_port.currentData()
+        logger.info('Port is %s'%port)
         try:
             """ Only moved when it actually changes: both are slow mechanical moves, and the grating
             in particular takes seconds to settle. """
             if grating is not None and grating != int(getattr(self.monochromator, 'grating', 0)):
                 self.monochromator.set_parameter('grating', grating)
+                logger.info('Grating set to %s'%grating)
             self.monochromator.set_parameter('central_wave', self.center_wavelength.value())
             if port is not None and port != int(getattr(self.monochromator, 'mirror', -1)):
                 self.monochromator.set_parameter('mirror', port)
+                logger.info('Mirror set to port %s'%port)
         except Exception as e:
             logger.error('Could not move the monochromator: %s', e)
             self.mono_status.setText('Could not move: %s' % e)

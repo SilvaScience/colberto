@@ -11,6 +11,8 @@ from collections import defaultdict
 import time
 import serial
 import re
+import logging
+logger = logging.getLogger(__name__)
 
 class SpectraPro2300i(QtCore.QThread):
     
@@ -102,6 +104,7 @@ class SpectraPro2300i(QtCore.QThread):
                 self.serial_busy = True
                 time.sleep(0.1)
             out += char
+        logger.info("%s"%out)
         self.serial_busy = False
         return re.findall(r'\d+', out.decode().strip())
    
