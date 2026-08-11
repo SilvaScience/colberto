@@ -4,14 +4,6 @@ Colbert can be used with two cameras (Stresing and Pixis) plugged to one spoectr
 
 On the main panel, on the top right, you can find a sliding menu where there is a list of the connected cameras. Selecting another camera reset completely Data Handling beacause the number of parameter is changing between cameras and also the length of the sensor may be different. For those reasons, it is easier to reset. All the other calibrations that were not associated with the camera will be loaded back. However, the connection between the beam explorer and Data Handling seems to be lost. 
 
-# Calibration
+## Calibration
 
-## Spectral calibration
-
-The spectral calibration is done following the example in src\compute\example_spectrometer calibration_notebook.ipynb
-
-You'll need:
-- **A spectral calibration lamp**. Note that a FreeCAD 3D printable plastic holder for Oriel lamps can be found in hardware\Spectrograph calibration\spectral_lamp_holder.FCStd
-- A spectrograph to calibrate.
-
-WRITE DOCUMENTATION ABOUT THE PROCESS HERE
+Calibrations are done following a standard procedure using the Jupyter notebook found in `/src/compute/example_spectrometer calibration_notebook.ipynb`. If it is the first time you are calibrating the spectrometer or are unsure how to use the notebook, refer to [our introductory tutorial](calibrations/spectrograph_calibration.mb).
