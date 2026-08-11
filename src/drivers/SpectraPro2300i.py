@@ -11,6 +11,8 @@ from collections import defaultdict
 import time
 import serial
 import re
+import logging
+logger = logging.getLogger(__name__)
 
 class SpectraPro2300i(QtCore.QThread):
     
@@ -27,33 +29,24 @@ class SpectraPro2300i(QtCore.QThread):
         # get startup values
         self.grating = float(self.write_command('?GRATING')[0])
         numbers = self.write_command('?GRATINGS')
-        self.num_gratings = int((len(numbers)-8)/2)
         self.grating_densities = []
         self.grating_blazes = []
         for i,number in enumerate(numbers):
-            print('lol')
             if i%3==0:
                 if int(numbers[i])==0:
                     break
                 else:
-                    print(number)
                     self.grating_densities.append(int(numbers[i + 1]))
                     self.grating_blazes.append(int(numbers[i + 2]))
-                    print(int(numbers[i + 1]))
-                    print(int(numbers[i + 2]))
         self.grating_densities=np.array(self.grating_densities)
         self.grating_blazes=np.array(self.grating_blazes)
         self.center_wl = float(self.write_command('?NM')[0])
         self.mirror = float(self.write_command('?MIR')[0])
-        print(self.center_wl)
-        print(self.grating_densities)
-        print(self.grating_blazes)
-        print(self.grating)
-        print('SP2300 grating info: ', numbers)
-        print('SP2300 grating densities: ',self.grating_densities)
-        print('SP2300 grating blazes: ',self.grating_blazes)
-        print('SP2300 selected grating: ',self.grating)
-        print('SP2300 selected mirror: ',self.mirror)
+        logger.info('SP2300 grating info: %s', numbers)
+        logger.info('SP2300 grating densities: %s',self.grating_densities)
+        logger.info('SP2300 grating blazes: %s',self.grating_blazes)
+        logger.info('SP2300 selected grating: %s',self.grating)
+        logger.info('SP2300 selected mirror: %s',self.mirror)
 
         # This is the hardware parameters dictionnary. It is provided by hardware-specific configurations and are not changed in operation
         self.hardware_params=hardware_params
