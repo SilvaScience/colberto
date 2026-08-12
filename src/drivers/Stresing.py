@@ -497,6 +497,14 @@ class StresingCamera(QtCore.QThread):
         self.spectrum = measure(self, True, timeout_s) # type: ignore
         self.new_spectrum = True
 
+    def close_driver(self):
+        """
+            Releases the PCIe board and its DMA buffer (DLLExitDriver). Without this the board stays
+            reserved after the app closes, and the next DLLInitMeasurement() inherits a DMA state the
+            previous session never released.
+        """
+        exit(self) # type: ignore
+
 class StresingWorker(QtCore.QThread):
     """ Publishes the spectra acquired from the Stresing camera to the interface.
     The camera is read synchronously by StresingCamera.acquire_spectrum() in the thread that asks for

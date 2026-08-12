@@ -1390,6 +1390,16 @@ class MainInterface(QtWidgets.QMainWindow):
         '''
             Closes all windows when the main window is closed.
         '''
+        """ The Stresing PCIe board's DMA buffer is only released by DLLExitDriver(). Without this the
+        board stays reserved after the app closes, and the next DLLInitMeasurement() has to clean up a
+        DMA state the previous session never released -- which fails outright on ESLSCDLL < 4.18.4 and
+        has been seen to require a full reboot to clear. """
+        for spectrometer in getattr(self, 'spectrometers', {}).values():
+            if hasattr(spectrometer, 'close_driver'):
+                try:
+                    spectrometer.close_driver()
+                except Exception as e:
+                    logger.warning('Could not cleanly release the Stresing board: %s', e)
         QApplication.closeAllWindows()
 
     def save_calibration(self, filename_prefix="Filename", use_prompt=True, save_dir=None):
