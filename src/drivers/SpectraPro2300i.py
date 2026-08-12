@@ -27,7 +27,6 @@ class SpectraPro2300i(QtCore.QThread):
         self.ser = serial.Serial(port=port, baudrate=9600, bytesize=8, parity='N',
                                  stopbits=1, xonxoff=0, rtscts=0, timeout=0.02)
         # get startup values
-        self.grating = float(self.write_command('?GRATING')[0])
         numbers = self.write_command('?GRATINGS')
         self.grating_densities = []
         self.grating_blazes = []
@@ -40,8 +39,7 @@ class SpectraPro2300i(QtCore.QThread):
                     self.grating_blazes.append(int(numbers[i + 2]))
         self.grating_densities=np.array(self.grating_densities)
         self.grating_blazes=np.array(self.grating_blazes)
-        self.center_wl = float(self.write_command('?NM')[0])
-        self.mirror = float(self.write_command('?MIR')[0])
+        self.get_monochromator_parameters()
         logger.info('SP2300 grating info: %s', numbers)
         logger.info('SP2300 grating densities: %s',self.grating_densities)
         logger.info('SP2300 grating blazes: %s',self.grating_blazes)
@@ -150,5 +148,22 @@ class SpectraPro2300i(QtCore.QThread):
             output:
                 - central_wavelength (np.float): the central wavelength in nm
                 - grating_lines_per_mm (np.float): the number of groove per mm of the selected grating
+                - grating_blazes(np.float): the blaze wavelength of the grating
         """
-        return self.center_wl, self.grating_densities[int(self.grating-1)]
+        self.grating= int(self.write_command('?GRATING')[0])
+        self.center_wl = float(self.write_command('?NM')[0])
+        self.mirror = int(self.write_command('?MIR')[0])
+        return self.center_wl, self.grating_densities[self.grating-1],self.grating_blazes[self.grating-1]
+
+    def get_grating_indices(self):
+        """
+            Returns the index of the current grating
+            output:
+                - grating index (int): the index of the grating currently used
+                - mirror index(int): the output port the internal mirror is redirecting light to (0 or 1)
+
+        """
+        self.grating= int(self.write_command('?GRATING')[0])
+        self.center_wl = float(self.write_command('?NM')[0])
+        self.mirror = int(self.write_command('?MIR')[0])
+        return self.grating,self.mirror

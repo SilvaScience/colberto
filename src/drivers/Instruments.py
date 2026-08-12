@@ -61,6 +61,7 @@ def load_instruments():
 
     # initialize MonochromDemo
     grating_params_stresing={
+        '1':{#NOT CALIBRATED
         'focal_length_mm':300,
         'f':np.float64(305381928.6149399),
         'delta':np.float64(0.11432112488955509),
@@ -70,26 +71,76 @@ def load_instruments():
         'd_grating':833.3333333333334,
         'x_pixel':24000.0,
         'curvature':np.float64(5.736575254871788e-07),
-    }
-    f, delta, gamma, n0, offset_adjust, d_grating, x_pixel, curvature = [np.float64(330605663.74965495), np.float64(-0.20488367116307532), np.float64(2.021864300924973), np.float64(508.0), 0, 6666.666666666667, 26000.0, np.float64(3.1224154313329654e-06)]
-    grating_params_pixis = {
+        },
+        '2':{#NOT CALIBRATED
         'focal_length_mm':300,
-        'f':np.float64(300000000.0),
-        'delta':np.float64(0.06),
-        'gamma':np.float64(0.5),
-        'n0':np.float64(516.6), # Central pixel
+        'f':np.float64(305381928.6149399),
+        'delta':np.float64(0.11432112488955509),
+        'gamma':np.float64(0.5337955112241486),
+        'n0':np.float64(539.4), # Central pixel
         'offset_adjust':0,
         'd_grating':833.3333333333334,
-        'x_pixel':26000,
-        'curvature':np.float64(0.0),
+        'x_pixel':24000.0,
+        'curvature':np.float64(5.736575254871788e-07),
+        },
+        '3':{#NOT CALIBRATED
+        'focal_length_mm':300,
+        'f':np.float64(305381928.6149399),
+        'delta':np.float64(0.11432112488955509),
+        'gamma':np.float64(0.5337955112241486),
+        'n0':np.float64(539.4), # Central pixel
+        'offset_adjust':0,
+        'd_grating':833.3333333333334,
+        'x_pixel':24000.0,
+        'curvature':np.float64(5.736575254871788e-07),
+        }
     }
-
+    f, delta, gamma, n0, offset_adjust, d_grating, x_pixel, curvature = [np.float64(330605663.74965495), np.float64(-0.20488367116307532), np.float64(2.021864300924973), np.float64(508.0), 0, 6666.666666666667, 26000.0, np.float64(3.1224154313329654e-06)]
+    gratings_params_pixis ={ 
+            '1':{
+                'focal_length_mm':300,
+                'f':np.float64(300000000.0),
+                'delta':np.float64(0.5),
+                'gamma':np.float64(0.1),
+                'n0':np.float64(480.14285714285717), # Central pixel
+                'offset_adjust':0,
+                'd_grating':833.3333333333334,
+                'x_pixel':26000,
+                'curvature':np.float64(0.0),
+                'blaze':np.float64(300),
+                },
+            '2':{
+                'focal_length_mm':300,
+                'f':np.float64(300000000.0),
+                'delta':np.float64(0.5),
+                'gamma':np.float64(0.1),
+                'n0':np.float64(480.14285714285717), # Central pixel
+                'offset_adjust':0,
+                'd_grating':833.3333333333334,
+                'x_pixel':26000,
+                'curvature':np.float64(0.0),
+                'blaze':np.float64(750),
+                },
+            '3':{
+                'focal_length_mm':300,
+                'f':np.float64(300000000.0),
+                'delta': np.float64(0.05),
+                'gamma':np.float64(0.01),
+                'n0':np.float64(478.2), # Central pixel
+                'offset_adjust':0,
+                'd_grating': 3333.333333333333,
+                'x_pixel':26000,
+                'curvature':np.float64(0.0),
+                'blaze':np.float64(2000),
+                },
+            }
     grating_params = {
         'Stresing': grating_params_stresing,
-        'Pixis': grating_params_pixis
+        'Pixis': gratings_params_pixis
     }
+    port='COM5'
     try:
-        Monochrom = SpectraPro2300i(grating_params)
+        Monochrom = SpectraPro2300i(grating_params,port=port)
         logger.info('%s SpectraPro2300i connected' % datetime.datetime.now())
     except Exception as e:
         Monochrom = SpectraPro2300iDemo(grating_params)
