@@ -121,8 +121,17 @@ class SpectraPro2300i(QtCore.QThread):
         elif parameter == 'mirror':
             cmd = f'{value:1.0f} MIRROR'
             self.write_command(cmd)
+            """ The controller acks 'ok' as soon as it accepts the command, not once the flip mirror
+            has actually reached position -- a jammed or unpowered actuator still answers 'ok'. Read
+            the position back so a mechanical failure surfaces as an exception here instead of a
+            false success reported to the GUI. """
+            actual = float(self.write_command('?MIR')[0])
+            if actual != value:
+                raise RuntimeError(
+                    f'Mirror commanded to {value:.0f} but ?MIR reports {actual:.0f}: '
+                    f'the flip did not reach position (check the mirror actuator).')
             self.parameter_dict['mirror'] = value
-            self.mirror = value
+            self.mirror = actual
 
     def get_hardware_parameters(self, name):
         """
