@@ -103,12 +103,11 @@ def init_driver(self, path_dll, config):
     self.settings.camera_settings[self.drvno].use_software_polling = int(config.get("board0","useSoftwarePolling")) # Determines which method is used to copy data from DMA to user buffer.
     self.settings.camera_settings[self.drvno].adc_gain = int(config.get("board0","adcGain")) # Controlling the gain function of the ADC in 3030 high speed cameras (sensor S14290 use 5 or 6).
     self.settings.camera_settings[self.drvno].tor = int(config.get("board0","tor")) # Shows the exposure window at the O output of the PCI card.
-    self.settings.camera_settings[self.drvno].trigger_mode_integrator = int(config.get("board0","triggerCc")) # Trigger mode camera control.
     self.settings.camera_settings[self.drvno].sec_in_10ns = int(config.get("board0","shutterSecIn10ns", fallback=0)) # Scan exposure control: delay, in units of 10 ns, between the pulse trigger and the start of the integrator. Only takes effect when trigger_mode_integrator is exttrig (pulsed/external acquisition); in continuous mode the integrator is tied to XCK and this is unused.
 
     # Scan trigger input (sti) mode determines the signal on which one readout is started :
-    #   0 - External trigger on input I of PCIe board 
-    #   1 - External trigger on input S1 of PCIe board 
+    #   0 - External trigger on input I of PCIe board
+    #   1 - External trigger on input S1 of PCIe board
     #   2 - External trigger on input S2 of PCIe board
     #   3 - External trigger by I but only when enabled by S2.
     #   4 - Trigger with internal timer. Select the time between two readouts with stime.
@@ -116,6 +115,18 @@ def init_driver(self, path_dll, config):
     self.settings.camera_settings[self.drvno].sti_mode = int(config.get("board0","sti"))
     if self.settings.camera_settings[self.drvno].sti_mode == 4:
         self.settings.camera_settings[self.drvno].stime_in_microsec = int(config.get("board0","stimer"))
+
+    """ trigger_mode_integrator (triggerCc in the ini) only gets set to XCK for continuous mode inside
+    Stresing.set_acquisition_mode() -- which runs only when the operator opens Acquisition Settings and
+    clicks Apply. Since sti/bti already read 4 (continuous, internal timer) straight from the ini, the
+    panel shows "Continuous" as already active and gives no reason to click Apply, so the board started
+    with the readout cadence continuous but the integrator still parked on triggerCc's raw ini value
+    (exttrig on config_UdeM.ini) waiting for a pulse that never comes -- exposure never tracked Scan_Timer
+    at all until Apply was pressed by hand. Deriving it here from sti_mode keeps it correct from boot,
+    matching the mapping in Stresing.py's XCK/EXTTRIG constants (XCK=0, EXTTRIG=1). """
+    self.settings.camera_settings[self.drvno].trigger_mode_integrator = (
+        0 if self.settings.camera_settings[self.drvno].sti_mode == 4
+        else int(config.get("board0","triggerCc")))
 
     # Block trigger input (bti) mode determines the signal on which one block of readouts is started :
     #   0 - External trigger on input I of PCIe board
