@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jan  1 14:34:11 2025
+@Simon Daneau
+@Felix Thouin
+@Mathieu Desmarais
+@Kathie Khosh
 @author: David Tiede
 """
 

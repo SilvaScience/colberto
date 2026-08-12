@@ -1,6 +1,6 @@
 pyqtgraph
 numpy
-PyQt
+PyQt5
 matplotlib
 pip
 pillow
@@ -11,5 +11,5 @@ scipy
 seabreeze
 pyvisa
 pylablib
-OpenCV
+opencv-python
 screeninfo
