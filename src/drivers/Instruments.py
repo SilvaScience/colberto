@@ -95,38 +95,37 @@ def load_instruments():
         'curvature':np.float64(5.736575254871788e-07),
         }
     }
-    f, delta, gamma, n0, offset_adjust, d_grating, x_pixel, curvature = [np.float64(330605663.74965495), np.float64(-0.20488367116307532), np.float64(2.021864300924973), np.float64(508.0), 0, 6666.666666666667, 26000.0, np.float64(3.1224154313329654e-06)]
     gratings_params_pixis ={ 
-            '1':{
+            '1':{#'[np.float64(300000000.0), np.float64(0.5), np.float64(0.1), np.float64(507.14285714285717), 0, 833.3333333333334, 26000.0, np.float64(0.0)]'
                 'focal_length_mm':300,
                 'f':np.float64(300000000.0),
                 'delta':np.float64(0.5),
                 'gamma':np.float64(0.1),
-                'n0':np.float64(480.14285714285717), # Central pixel
+                'n0':np.float64(507.14285714285717),# Central pixel
                 'offset_adjust':0,
                 'd_grating':833.3333333333334,
                 'x_pixel':26000,
                 'curvature':np.float64(0.0),
                 'blaze':np.float64(300),
                 },
-            '2':{
+            '2':{#'[np.float64(296772481.19608825), np.float64(-0.1011307412781098), np.float64(0.5254178460808079), np.float64(498.85714285714283), 0, 833.3333333333334, 26000.0, np.float64(4.8015347380556125e-08)]'
                 'focal_length_mm':300,
-                'f':np.float64(300000000.0),
-                'delta':np.float64(0.5),
-                'gamma':np.float64(0.1),
-                'n0':np.float64(480.14285714285717), # Central pixel
+                'f':np.float64(296772481.19608825),
+                'delta':np.float64(-0.1011307412781098),
+                'gamma':np.float64(0.5254178460808079),
+                'n0':np.float64(498.85714285714283),
                 'offset_adjust':0,
                 'd_grating':833.3333333333334,
                 'x_pixel':26000,
                 'curvature':np.float64(0.0),
                 'blaze':np.float64(750),
                 },
-            '3':{
+            '3':{#'[np.float64(305859374.99999994), np.float64(0.021862966763817993), np.float64(0.5415310171886933), np.float64(507.0), 0, 3333.3333333333335, 26000.0, np.float64(5.378365208238061e-07)]'
                 'focal_length_mm':300,
-                'f':np.float64(300000000.0),
-                'delta': np.float64(0.05),
-                'gamma':np.float64(0.01),
-                'n0':np.float64(478.2), # Central pixel
+                'f':np.float64(305859374.99999994),
+                'delta':np.float64(0.021862966763817993),
+                'gamma':np.float64(0.5415310171886933),
+                'n0':np.float64(507.0),
                 'offset_adjust':0,
                 'd_grating': 3333.333333333333,
                 'x_pixel':26000,
