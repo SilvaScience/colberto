@@ -469,6 +469,14 @@ class MainInterface(QtWidgets.QMainWindow):
             self.DataHandling.sendSpectrum.connect(plot.set_data)
             self.DataHandling.sendMaximum.connect(plot.update_datareader)
 
+        # Re-wire beam-related signals: DataHandling is a fresh instance, so the
+        # connections made once in __init__ between the old DataHandling and the
+        # Beam Explorer / beam name lists no longer exist.
+        self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
+        self.DataHandling.sendBeams.connect(self.update_beam_name_list)
+        self.DataHandling.sendBeams.connect(self.PulseCharacterization.update_beam_names)
+        self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
+
         self.connect_camera_display()
         self.connect_acquisition_settings()
 
