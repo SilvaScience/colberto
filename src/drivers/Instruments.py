@@ -83,17 +83,18 @@ def load_instruments():
         'x_pixel':24000.0,
         'curvature':np.float64(5.736575254871788e-07),
         },
-        '3':{#NOT CALIBRATED
-        'focal_length_mm':300,
-        'f':np.float64(305381928.6149399),
-        'delta':np.float64(0.11432112488955509),
-        'gamma':np.float64(0.5337955112241486),
-        'n0':np.float64(539.4), # Central pixel
-        'offset_adjust':0,
-        'd_grating':833.3333333333334,
-        'x_pixel':24000.0,
-        'curvature':np.float64(5.736575254871788e-07),
-        }
+        '3':{#'[np.float64(305859374.99999994), np.float64(0.021862966763817993), np.float64(0.5415310171886933), np.float64(507.0), 0, 3333.3333333333335, 26000.0, np.float64(5.378365208238061e-07)]'
+            'focal_length_mm':300,
+            'f':np.float64(305859374.99999994),
+            'delta':np.float64(0.021862966763817993),
+            'gamma':np.float64(0.5415310171886933),
+            'n0':np.float64(507.0),
+            'offset_adjust':0,
+            'd_grating': 3333.333333333333,
+            'x_pixel':26000,
+            'curvature':np.float64(0.0),
+            'blaze':np.float64(2000),
+            },
     }
     gratings_params_pixis ={ 
             '1':{#'[np.float64(300000000.0), np.float64(0.5), np.float64(0.1), np.float64(507.14285714285717), 0, 833.3333333333334, 26000.0, np.float64(0.0)]'

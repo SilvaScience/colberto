@@ -60,6 +60,7 @@ class StresingCamera(QtCore.QThread):
         
         # Define spectral range
         self.spec_length = self.hardware_params.get('num_pixels', 1024)
+        self.px0 = np.linspace(1,self.spec_length,self.spec_length)
         self.spec_range = np.r_[0:self.spec_length]
         
         # Path to the DLL file
@@ -268,62 +269,55 @@ class StresingCamera(QtCore.QThread):
 
     def calculate_wavelength_array(self):
         """
-            Calculate the wavelength array for the pixels of the Stresing camera using the hardware parameters from the camera and the attached monochromator. 
+        Calculate the wavelength array for a PIXIS camera on SP-2150 spectrograph.
+
+        Parameters:
+
+        Returns:
+            wavelengths: 1D numpy array of wavelengths (nm)
         """
         if self.monochromator is not None:
-            self.center_wavelength,self.grating_lines_per_mm=self.monochromator.get_monochromator_parameters()
-            pixel_size_mm =self.hardware_params['pixel_size_mm'] 
-            focal_length_mm = self.hardware_params['focal_length_mm']
-            num_pixels = self.hardware_params['num_pixels']
+            self.center_wavelength=self.monochromator.get_monochromator_parameters()[0]
+            self.grating_index=self.monochromator.get_grating_indices()[0]
+        if self.hardware_params['calibrated']:
 
-            if self.hardware_params['calibrated']:
+            wl_center = self.center_wavelength
+            m_order = 1
+            px = self.px0
+            grating_key=str(self.grating_index)
+            # calibration from notebook
+            f=self.hardware_params[grating_key]['f']
+            delta=self.hardware_params[grating_key]['delta']
+            gamma=self.hardware_params[grating_key]['gamma']
+            n0=self.hardware_params[grating_key]['n0']
+            offset_adjust=self.hardware_params[grating_key]['offset_adjust']
+            d_grating=self.hardware_params[grating_key]['d_grating']
+            x_pixel=self.hardware_params[grating_key]['x_pixel']
+            curvature=self.hardware_params[grating_key]['curvature']
 
-                pixel_size_mm = 24 / 1E3  # specs of Sresing
-                focal_length_mm = 300  # specs of SP2300i
-                num_pixels = 1010  # specs of stresing
+            n = px - (n0 + offset_adjust * wl_center)
 
-                wl_center = self.center_wavelength
-                m_order = 1
-                px = np.linspace(1,1010,1010)
+            psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
+            eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
-                # calibration from notebook
-                f=self.hardware_params['f']
-                delta=self.hardware_params['delta']
-                gamma=self.hardware_params['gamma']
-                n0=self.hardware_params['n0']
-                offset_adjust=self.hardware_params['offset_adjust']
-                d_grating=self.hardware_params['d_grating']
-                x_pixel=self.hardware_params['x_pixel']
-                curvature=self.hardware_params['curvature']
-
-                n = px - (n0 + offset_adjust * wl_center)
-
-                psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
-                eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
-
-                self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
-
-            else:
-
-                pixel_size_mm = 24 / 1E3  # specs of Stresing
-                focal_length_mm = 300  # specs of SP2300i
-                num_pixels = 1010  # specs of Stresing
-
-                # Calculate linear dispersion (nm/mm)
-                dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
-
-                # Center pixel
-                center_pixel = num_pixels // 2
-
-                # Pixel index array
-                pixel_indices = np.arange(num_pixels)
-
-                # Wavelength at each pixel
-                self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-
+            self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
         else:
-            self.wavelengths= self.hardware_params['num_pixels']
-            logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength'%datetime.datetime.now())
+            pixel_size_mm =self.hardware_params[grating_key]['pixel_size_mm'] 
+            focal_length_mm = self.hardware_params[grating_key]['focal_length_mm']
+            num_pixels = self.hardware_params[grating_key]['num_pixels']
+
+            # Calculate linear dispersion (nm/mm)
+            dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
+
+            # Center pixel
+            center_pixel = num_pixels // 2
+
+            # Pixel index array
+            pixel_indices = np.arange(num_pixels)
+
+            # Wavelength at each pixel
+            self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
+
 
     def attach_to_monochromator(self,monochromator):
         """
