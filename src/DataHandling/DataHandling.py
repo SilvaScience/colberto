@@ -37,10 +37,8 @@ class DataHandling(QtCore.QThread):
         super(DataHandling, self).__init__()
         self.parameter = parameter
         self.starttime = time.time()
-
+        self.change_spectrometer(speclength)
         # initialize data arrays, their uses are explained in the corresponding functions
-        self.speclength = speclength
-        self.data_dim = np.size(speclength) #dimension of data
         self.parameter_queue = {} # initialize FIFO queues for parameter storage
         self.parameter_queue['time'] = deque(maxlen=100000)
         self.parameter_queue['absolute_time'] = deque(maxlen=100000)
@@ -53,16 +51,6 @@ class DataHandling(QtCore.QThread):
         """ The background is zeroed, not np.empty: an np.empty array holds whatever was in memory,
         and subtracting it corrupts every spectrum silently. has_background says whether a real
         background was ever measured or loaded; until then correct_background subtracts nothing. """
-        if self.data_dim  == 1:
-            self.spec = np.empty([self.speclength, 0])
-            self.background = np.zeros([self.speclength, 1])
-            self.wls = np.empty([self.speclength, 1])
-        else:
-            self.spec = np.empty([0,self.speclength[0],self.speclength[1]])
-            self.background = np.zeros([1,self.speclength[0],self.speclength[1]])
-            self.wls = np.empty([self.speclength[1], 1])
-        self.has_background = False
-        self.background_warned = False
 
         # set initial values
         self.maximum = np.zeros([3])
@@ -92,6 +80,22 @@ class DataHandling(QtCore.QThread):
         self.bufferSaveSignal.connect(self.BufferWorker.save_buffer)
         # initialize beams dict
         self.beams={}
+    def change_spectrometer(self,speclength):
+        """
+            Updates the internal spectrum book keeping to match the number of pixels on the currently used detector
+        """
+        self.speclength = speclength
+        self.data_dim = np.size(speclength) #dimension of data
+        if self.data_dim  == 1:
+            self.spec = np.empty([self.speclength, 0])
+            self.background = np.zeros([self.speclength, 1])
+            self.wls = np.empty([self.speclength, 1])
+        else:
+            self.spec = np.empty([0,self.speclength[0],self.speclength[1]])
+            self.background = np.zeros([1,self.speclength[0],self.speclength[1]])
+            self.wls = np.empty([self.speclength[1], 1])
+        self.has_background = False
+        self.background_warned = False
 
     # main update device parameter function
     def update_parameter(self, parameter):

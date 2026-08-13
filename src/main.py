@@ -462,20 +462,7 @@ class MainInterface(QtWidgets.QMainWindow):
         for device in self.parameter_dic:
             for param in self.parameter_dic[device]:
                 self.parameter[param] = self.parameter_dic[device][param]['val']
-        self.DataHandling.close()
-        self.DataHandling = DataHandling(self.parameter, self.spec_length)
-        self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
-        for plot in self.spectrum_plots:
-            self.DataHandling.sendSpectrum.connect(plot.set_data)
-            self.DataHandling.sendMaximum.connect(plot.update_datareader)
-
-        # Re-wire beam-related signals: DataHandling is a fresh instance, so the
-        # connections made once in __init__ between the old DataHandling and the
-        # Beam Explorer / beam name lists no longer exist.
-        self.DataHandling.sendBeams.connect(self.beam_explorer.receive_beams)
-        self.DataHandling.sendBeams.connect(self.update_beam_name_list)
-        self.DataHandling.sendBeams.connect(self.PulseCharacterization.update_beam_names)
-        self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
+        self.DataHandling.change_spectrometer(self.spec_length)
 
         self.connect_camera_display()
         self.connect_acquisition_settings()
