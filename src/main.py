@@ -854,6 +854,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 beam.set_beamVerticalDelimiters([top_index,bottom_index])
                 beam.set_gratingPeriod(self.grating_period_edit.value())
                 self.DataHandling.set_beam((label,beam))
+        print('Vertical Beam Calibration Applied')
                 
     def update_beam_name_list(self, beamDict):
         old = self.beam_name_box.currentText()
@@ -958,8 +959,12 @@ class MainInterface(QtWidgets.QMainWindow):
     def assignTemporalCalibration(self, Add_or_Remove):
         '''
             Assign the polynomial calibration to the beam.
-        ''' 
-        beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
+        '''
+        beams = self.DataHandling.get_beams()
+        print("Selected beam:", repr(self.beam_name_box.currentText()))
+        print("Available beams:", beams.keys())
+        beam = beams[self.beam_name_box.currentText()]
+        # beam = self.DataHandling.get_beams()[self.beam_name_box.currentText()]
         beam.set_compressionCarrierWave(float(self.compression_carrier_wavelength_Qline.text()) * 10**(-9))
         self.last_temp_fit_coeffs = np.rint(self.last_temp_fit_coeffs).astype(int)
         old_coeff = beam.get_optimalPhase(units_to_return='fs').coef
