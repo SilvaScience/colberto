@@ -261,7 +261,7 @@ class SLMWorker(QtCore.QThread):
 
         if imagetype=='phase':
             digital_image=self.normalize_phase_image(image)
-            digital_image=self.apply_wavelength_correction(digital_image, max_value=255)
+            digital_image=self.apply_wavelength_correction(digital_image, max_value=2**self.depth-1)
         if imagetype=='raw':
             digital_image=image
         self.current_image=digital_image
