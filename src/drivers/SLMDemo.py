@@ -165,6 +165,21 @@ class SLMDemo(QtCore.QThread):
         """
         self.slm_worker.change_image(image,imagetype=imagetype)
 
+    def set_calibration_wavelength(self, wavelength_m):
+        """
+            Sets the reference wavelength (in meters) the currently loaded phase-to-greyscale LUT
+            was calibrated at. None disables the wavelength correction.
+        """
+        self.slm_worker.set_calibration_wavelength(wavelength_m)
+
+    def set_wavelength_axis(self, wavelength_axis_m):
+        """
+            Sets the wavelength (in meters) incident on each SLM column, from the spectral
+            calibration.
+            input:
+                - wavelength_axis_m (np.ndarray): one value per SLM column, same width as the panel
+        """
+        self.slm_worker.set_wavelength_axis(wavelength_axis_m)
 
 
 class SLMWorker(QtCore.QThread):
@@ -190,6 +205,12 @@ class SLMWorker(QtCore.QThread):
         self.current_image= np.zeros((self.width,self.height,3))
         self.new_image_available= False 
         self.frame_duration = 1/self.target_fps
+
+        # Wavelength-dependent correction of the phase-to-greyscale LUT, mirrors the real SLM
+        # driver (see drivers/SLM.py) so the mechanism can be tested without hardware.
+        self.calibration_wavelength = None
+        self.wavelength_axis = None
+        self._last_clip_warning_time = 0.0
 
     def run(self):
         '''
@@ -240,6 +261,7 @@ class SLMWorker(QtCore.QThread):
 
         if imagetype=='phase':
             digital_image=self.normalize_phase_image(image)
+            digital_image=self.apply_wavelength_correction(digital_image, max_value=2**self.depth-1)
         if imagetype=='raw':
             digital_image=image
         self.current_image=digital_image
@@ -292,6 +314,57 @@ class SLMWorker(QtCore.QThread):
         image = np.clip(image, 0, max_phase)  # safety
         norm_img = (image / max_phase) * 255
         return norm_img.astype(np.uint8)
+
+    def set_calibration_wavelength(self, wavelength_m):
+        """
+            Sets the reference wavelength (in meters) the currently loaded phase-to-greyscale LUT
+            was calibrated at. None (default) disables the wavelength correction.
+        """
+        self.calibration_wavelength = wavelength_m
+
+    def set_wavelength_axis(self, wavelength_axis_m):
+        """
+            Sets the wavelength (in meters) incident on each SLM column, from the spectral
+            calibration.
+            input:
+                - wavelength_axis_m (np.ndarray): one value per SLM column, same width as the panel
+        """
+        self.wavelength_axis = wavelength_axis_m
+
+    def apply_wavelength_correction(self, digital_image, max_value):
+        """
+            Scales each column of a greyscale image by wavelength(column)/calibration_wavelength.
+            Mirrors drivers/SLM.py's SLMWorker.apply_wavelength_correction. Returns the image
+            unchanged if no calibration wavelength or wavelength axis has been set yet.
+            input:
+                - digital_image (np.ndarray): greyscale image, shape (height, width)
+                - max_value (int): saturation value of the greyscale range (255 or 1023)
+            output:
+                - np.ndarray: corrected image, same shape and dtype as digital_image
+        """
+        if self.calibration_wavelength is None or self.wavelength_axis is None:
+            return digital_image
+        if self.wavelength_axis.shape[0] != digital_image.shape[1]:
+            logger.warning('%s SLM wavelength axis length (%d) does not match image width (%d); '
+                           'skipping wavelength correction.'
+                           % (datetime.datetime.now(), self.wavelength_axis.shape[0], digital_image.shape[1]))
+            return digital_image
+
+        dtype = digital_image.dtype
+        ratio = self.wavelength_axis / self.calibration_wavelength
+        corrected = digital_image.astype(np.float64) * ratio[np.newaxis, :]
+        clipped = np.clip(corrected, 0, max_value)
+
+        if not np.array_equal(clipped, corrected):
+            now = time.time()
+            if now - self._last_clip_warning_time > 1.0:
+                n_clipped = int(np.count_nonzero(clipped != corrected))
+                logger.warning('%s SLM wavelength correction clipped %d pixel(s): requested phase '
+                               'exceeds what the panel can produce at the local wavelength.'
+                               % (datetime.datetime.now(), n_clipped))
+                self._last_clip_warning_time = now
+
+        return np.round(clipped).astype(dtype)
 
     def close(self):
         """
