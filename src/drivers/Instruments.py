@@ -36,8 +36,8 @@ def load_instruments():
 
     # initialize SLM
     try:
-        # path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
-        path_config = (r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_WFU.ini")
+        path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
+        #path_config = (r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_WFU.ini")
         SLM = Slm(path_config)
         devices['SLM'] = SLM
         logger.info('%s SLM connected' % datetime.datetime.now())
@@ -56,7 +56,7 @@ def load_instruments():
 
         # Choose the configuration file
         config_name = "config_UdeM.ini"
-        config_name = "config.ini" # WFU path
+        # config_name = "config.ini" # WFU path
 
         # Full path to the configuration file
         path_config = folder_path_config / config_name
@@ -68,8 +68,9 @@ def load_instruments():
                 'pixel_size_mm': 24e-3,
                 'num_pixels': 1010,
                 'calibrated': False,
-                'calibrationThirdOrder': -3e-5,
-                'calibrationSlope': 0.9891,
+                'calibrationThirdOrder': 0,
+                'calibrationSecondOrder': 0,
+                'calibrationFirstOrder': 0.9891,
                 'calibrationOffset': -51.163
             }
 

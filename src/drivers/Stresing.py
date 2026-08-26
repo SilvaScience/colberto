@@ -273,14 +273,10 @@ class StresingCamera(QtCore.QThread):
         """
         if self.monochromator is not None:
             self.center_wavelength,self.grating_lines_per_mm=self.monochromator.get_monochromator_parameters()
-            pixel_size_mm =self.hardware_params['pixel_size_mm'] 
-            focal_length_mm = self.hardware_params['focal_length_mm']
             num_pixels = self.hardware_params['num_pixels']
 
             if self.hardware_params['calibrated']:
 
-                pixel_size_mm = 24 / 1E3  # specs of Sresing
-                focal_length_mm = 300  # specs of SP2300i
                 num_pixels = 1010  # specs of stresing
 
                 wl_center = self.center_wavelength
