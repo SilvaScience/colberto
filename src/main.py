@@ -7,6 +7,7 @@ Created on Tue Jan  1 14:34:11 2025
 import sys
 import time
 import re
+import math
 from collections import defaultdict
 from pathlib import Path
 import numpy as np
@@ -941,14 +942,21 @@ class MainInterface(QtWidgets.QMainWindow):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
             coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
             coeffs_scaled = [coeffs[i] * (10**15)**i for i in range(len(coeffs))]
+            # The fit describes GDD as an ordinary power series. Beam stores the
+            # corresponding spectral-phase derivatives, so terms of order i in
+            # the GDD fit must be multiplied by i! before they are assigned.
+            phase_derivative_coeffs = [
+                math.factorial(i) * coefficient
+                for i, coefficient in enumerate(coeffs_scaled)
+            ]
             # Generate names dynamically
-            names = ["GDD" if i == 0 else "TOD" if i == 1 else "FOD" if i == 2 else f"{i+2}OD" for i in range(len(coeffs))]
+            names = ["GDD" if i == 0 else "TOD" if i == 1 else "FOD" if i == 2 else f"{i+2}OD" for i in range(len(phase_derivative_coeffs))]
             # Polynomial string using the same names list
-            poly_eq = " + ".join(names[i] + ("" if i == 0 else " * x" if i == 1 else f" * x^{i}") for i in range(len(coeffs)))
+            poly_eq = " + ".join(names[i] + ("" if i == 0 else " * x" if i == 1 else f" * x^{i}") for i in range(len(phase_derivative_coeffs)))
             # Lines with coefficients using the same names
-            lines = [f"Equation: {poly_eq}", ""] + [f"{names[i]} = {v:.2e} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(coeffs_scaled)]
+            lines = [f"Equation: {poly_eq}", ""] + [f"{names[i]} = {v:.2e} {'fs^2' if i == 0 else f'fs^{i+2}'}" for i, v in enumerate(phase_derivative_coeffs)]
             self.chirp_coeff.setText('\n'.join(lines))
-            self.last_temp_fit_coeffs = np.array(np.concatenate(([0, 0], coeffs_scaled)))
+            self.last_temp_fit_coeffs = np.array(np.concatenate(([0, 0], phase_derivative_coeffs)))
 
     def assignTemporalCalibration(self, Add_or_Remove):
         '''
