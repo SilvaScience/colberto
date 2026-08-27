@@ -125,9 +125,9 @@ def load_instruments():
             }
 
             Monochrom = Shamrock(grating_params)
-            devices['Monochrom'] = Monochrom
             logger.info('%s Monochrom DEMO connected' % datetime.datetime.now())
 
+        devices['Monochrom'] = Monochrom
         camera= StresingCamera(stresing_params, path_config)
         camera.attach_to_monochromator(Monochrom)
         spectrometers['Stresing'] = camera
@@ -183,4 +183,3 @@ def load_instruments():
 
     # Return both — object dicts only
     return devices, spectrometers
-
