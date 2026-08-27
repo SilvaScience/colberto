@@ -1,3 +1,10 @@
+# Normalize line endings to LF for text files at commit time, regardless of each contributor's
+# local core.autocrlf setting -- a branch committed with CRLF (see the Wake Forest integration
+# branch, 2026-08-14) makes every line look changed even when the real diff is a few dozen lines,
+# which makes review effectively impossible. git's own text/binary heuristic decides what counts
+# as text; the explicit "binary" overrides below protect files that heuristic could get wrong.
+* text=auto eol=lf
+
 # Binary files must never go through line-ending conversion. Committing the debugging report as a
 # PDF made git warn that LF would be replaced by CRLF, which would corrupt the file on checkout.
 *.pdf binary
@@ -7,3 +14,7 @@
 *.jpg binary
 *.stl binary
 *.lut binary
+*.pyc binary
+*.lib binary
+*.vi binary
+*.FCStd binary

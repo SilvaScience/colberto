@@ -452,7 +452,6 @@ class StresingCamera(QtCore.QThread):
             for the spectrum with no way back -- including the interface itself. Waiting on the board
             is not worth losing the ability to give up.
         """
-        init_measure(self) # type: ignore
         """ Only an acquisition that depends on an external signal needs the trigger watch. On the
         internal timer the board drives itself and the readouts are guaranteed, so waiting for a
         trigger there would just add a delay to every spectrum. """
