@@ -37,6 +37,7 @@ from measurements.TGFROGClasses import TGFROGMeasurement, TGFROGRetrievalWorker
 from GUI.PulseCharacterization import PulseCharacterization
 from compute.beams import Beam
 from samples.drivers.exemple_image_generation import beam_image_gen
+from configuration import load_site_config
 from drivers.Instruments import load_instruments
 from GUI.BeamExplorer import BeamExplorer
 import logging
@@ -65,7 +66,8 @@ class MainInterface(QtWidgets.QMainWindow):
         self.tabWidget.setUsesScrollButtons(True)
         self.tabWidget.setElideMode(QtCore.Qt.ElideRight)
 
-        self.devices, self.spectrometers = load_instruments()
+        self.site_config = load_site_config()
+        self.devices, self.spectrometers = load_instruments(self.site_config)
 
         # find items to complement in GUI
         self.parameter_tree = self.findChild(QtWidgets.QTreeWidget, 'parameters_treeWidget')
@@ -331,7 +333,11 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # start DataHandling
         # self.spec_length = self.devices['spectrometer'].get_num_pixel()
-        self.DataHandling = DataHandling(self.parameter, self.spec_length)
+        self.DataHandling = DataHandling(
+            self.parameter,
+            self.spec_length,
+            self.site_config.get('site', 'temp_data_file'),
+        )
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         for plot in self.spectrum_plots:
             self.DataHandling.sendSpectrum.connect(plot.set_data)
@@ -348,10 +354,8 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # set variables
         self.measurement_busy = False
-        self.save_folder_path = r'C:/data/Colbert'
-        #a default data folder is always required and it would be good to keep it seperated from the code.
-        #can everyone simply create a C:/Data/test' path on their device? # Not sure how to handle different OS here.
-        self.filename = r'C:/Data/test'
+        self.save_folder_path = self.site_config.get('site', 'default_data_directory')
+        self.filename = self.site_config.get('site', 'default_filename')
         self.power_calib_array = []
 
         # set connect events

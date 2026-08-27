@@ -17,13 +17,12 @@ class SpectraPro2300i(QtCore.QThread):
     name = 'SpectraPro2300i'
     type = 'Monochromator'
     
-    def __init__(self,hardware_params):
+    def __init__(self, hardware_params, port, baud_rate):
         super(SpectraPro2300i, self).__init__()
 
         # set up spectrograph
         self.serial_busy = False
-        port = 'COM5'
-        self.ser = serial.Serial(port=port, baudrate=9600, bytesize=8, parity='N',
+        self.ser = serial.Serial(port=port, baudrate=baud_rate, bytesize=8, parity='N',
                                  stopbits=1, xonxoff=0, rtscts=0, timeout=0.02)
         # get startup values
         self.grating = float(self.write_command('?GRATING')[0])

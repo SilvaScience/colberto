@@ -11,6 +11,9 @@ from ctypes import *
 import numpy as np
 import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
+sys.path.append(str(Path(__file__).resolve().parent.parent.parent / "src"))
+
+from configuration import load_site_config
 
 from src.drivers.streising_camera import camera_settings
 from src.drivers.streising_camera import measurement_settings
@@ -22,8 +25,8 @@ folder_path = Path(__file__).resolve().parent.parent.parent #add or remove paren
 path_camera_dll = folder_path / "src" / "drivers" / "stresing" / "ESLSCDLL.dll"
 path_camera_dll = str(path_camera_dll)
 
-path_config = folder_path / "src" / "drivers" / "stresing" / "config_WFU.ini"
-path_config = str(path_config)
+site_config = load_site_config()
+path_config = site_config.get("stresing", "vendor_config")
 
 # Intitalize stressing camera 
 CAM = streising(path_config, path_camera_dll)

@@ -29,10 +29,12 @@ from sklearn.preprocessing import MinMaxScaler
 
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from src.drivers.Oscilloscope_Keysight_DSOX1202A import OscilloscopeController
+from src.configuration import load_site_config
 
 
 '''
-OscilloscopeController=OscilloscopeController()
+site_config = load_site_config()
+OscilloscopeController = OscilloscopeController(site_config.get("oscilloscope", "ip_address"))
 OscilloscopeController.initialisation()
 '''
 ########################################################################################################################

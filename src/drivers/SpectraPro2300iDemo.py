@@ -21,17 +21,17 @@ class SpectraPro2300iDemo(QtCore.QThread):
     name = 'SpectraPro2300iDemo'
     type = 'Monochromator'
 
-    def __init__(self, hardware_params):
+    def __init__(self, hardware_params, center_wavelength, grating_densities):
         super(SpectraPro2300iDemo, self).__init__()
 
         self.hardware_params = hardware_params
 
-        self.center_wl = 800.0
+        self.center_wl = float(center_wavelength)
         self.grating = 1
         self.mirror = 0
-        self.num_gratings = 3
-        self.grating_densities = np.array([1200.0, 600.0, 300.0])
-        self.grating_blazes = np.array([500.0, 750.0, 1000.0])
+        self.grating_densities = np.asarray(grating_densities, dtype=float)
+        self.num_gratings = len(self.grating_densities)
+        self.grating_blazes = np.zeros(self.num_gratings)
 
         self.parameter_display_dict = defaultdict(dict)
 

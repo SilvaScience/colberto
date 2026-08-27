@@ -1,8 +1,7 @@
 import pyvisa
 
-ip_address='169.254.75.129'
 class OscilloscopeController:
-    def __init__(self, timeout=10000):
+    def __init__(self, ip_address, timeout=10000):
         self.ip_address = ip_address
         self.timeout = timeout
         self.rm = pyvisa.ResourceManager('@py')
@@ -26,12 +25,9 @@ class OscilloscopeController:
 
     def initialisation(self):
         # Configuration de l'oscilloscope
-        oscilloscope = OscilloscopeController()
-    # Connexion à l'oscilloscope
-        oscilloscope.connect()
-    # Configurer la source et le format de la forme d'onde
-        oscilloscope.set_waveform_source('CHAN1')
-        oscilloscope.set_waveform_format('ASC')
+        self.connect()
+        self.set_waveform_source('CHAN1')
+        self.set_waveform_format('ASC')
 
 
 

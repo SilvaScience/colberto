@@ -3,6 +3,26 @@ Modules and code related to Colbert experiment
 # Documentation
 [Documentation for the main branch can be found here](https://silvascience.github.io/colberto/index.html). You can also check it out in your own branch by running `doxygen doxygen.conf` and opening `index.html` in `/docs/`. It is also automatically built using Doxygen whenever a branch is pushed to this remote.
 
+# Site configuration
+
+Colberto has one application configuration per installation:
+
+- `config/udem.ini`
+- `config/wfu.ini`
+
+UdeM is selected by default. Set `COLBERTO_SITE` before launching the application to select a
+different installation. In PowerShell, for example:
+
+```powershell
+$env:COLBERTO_SITE = "wfu"
+python src/main.py
+```
+
+The site file is the source of truth for device availability, drivers, communication addresses,
+SLM settings, camera geometry, optical calibrations and default data paths. The Stresing
+`vendor_config` entry is the only separate machine configuration: it points to the file installed
+and maintained by the Stresing software.
+
 Follow common [Python DocStrings guidelines](https://www.doxygen.nl/manual/docblocks.html#pythonblocks)
 
 # Contributing

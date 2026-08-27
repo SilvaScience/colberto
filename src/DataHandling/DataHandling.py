@@ -33,7 +33,7 @@ class DataHandling(QtCore.QThread):
     sendBeams = QtCore.pyqtSignal(object)
     bufferSaveSignal = QtCore.pyqtSignal(object, object, object, object)
 
-    def __init__(self, parameter, speclength):
+    def __init__(self, parameter, speclength, temp_filename):
         super(DataHandling, self).__init__()
         self.parameter = parameter
         self.starttime = time.time()
@@ -62,7 +62,7 @@ class DataHandling(QtCore.QThread):
         self.parameter_matrix_full = False
         self.data_in_flash = 0
         self.firstbuffer = True
-        self.temp_filename = r"C:\TEMP\temp.h5"
+        self.temp_filename = temp_filename
         self.filename = 'test'
 
         # initialize Calibration dict

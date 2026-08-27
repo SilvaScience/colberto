@@ -33,9 +33,9 @@ class Pixis(QtCore.QThread):
         super(Pixis, self).__init__()
 
         #self.camera.start()
-        self.wavelength = np.linspace(200,1000,1024) # get property from Worker
-        self.px0 = np.linspace(1,1024,1024)
-        self.spec_length = 1024 #(252,1024) # get property from Worker
+        self.spec_length = int(hardware_params['num_pixels'])
+        self.wavelength = np.linspace(200, 1000, self.spec_length)
+        self.px0 = np.linspace(1, self.spec_length, self.spec_length)
         self.image = np.zeros(self.spec_length)
         self.hardware_params = hardware_params
 
@@ -89,7 +89,7 @@ class Pixis(QtCore.QThread):
 
         # Determine the number of sensor rows available for vertical binning.
         # The PIXIS used here is 1024 x 256, but ask the camera rather than assume.
-        self.sensor_height = int(self.hardware_params.get('sensor_height', 256))
+        self.sensor_height = int(self.hardware_params['sensor_height'])
         try:
             detector_size = self.camera.get_detector_size()  # (width, height)
             if detector_size is not None and len(detector_size) == 2:
@@ -110,7 +110,7 @@ class Pixis(QtCore.QThread):
         self.set_roi(self.roi_y0, self.roi_height, self.roi_binning, restart=False)
 
         # initialize camera
-        self.worker = CameraWorker(self.camera,self.int_time)
+        self.worker = CameraWorker(self.camera, self.int_time, self.spec_length)
         self.worker.sendSpectrum.connect(self.update_spectrum) # connect where signals of worker go to.
         self.worker.sendTemperature.connect(self.update_temperature)
         self.worker.start()
@@ -164,13 +164,11 @@ class Pixis(QtCore.QThread):
             pixel_size_mm =self.hardware_params['pixel_size_mm'] 
             focal_length_mm = self.hardware_params['focal_length_mm']
             num_pixels = self.hardware_params['num_pixels']
-        
+        else:
+            self.wavelengths = np.arange(self.spec_length)
+            return
+
         if self.hardware_params['calibrated']:
-
-            pixel_size_mm = 26 / 1E3  # specs of PIXIS
-            focal_length_mm = 300  # specs of SP2300
-            num_pixels = 1024  # specs of PIXIS
-
             wl_center = self.center_wavelength
             m_order = 1
             px = self.px0
@@ -192,10 +190,6 @@ class Pixis(QtCore.QThread):
 
             self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
         else:
-            pixel_size_mm = 26 / 1E3  # specs of PIXIS
-            focal_length_mm = 300  # specs of SP2150
-            num_pixels = 1024  # specs of PIXIS
-
             # Calculate linear dispersion (nm/mm)
             dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
 
@@ -245,7 +239,7 @@ class Pixis(QtCore.QThread):
             if was_acquiring:
                 self.stop_acquisition()
 
-            roi = {"x": 0, "width": 1024, "x_binning": 1,
+            roi = {"x": 0, "width": self.spec_length, "x_binning": 1,
                    "y": y0, "height": height, "y_binning": binning}
             self.camera.set_attribute_value("ROIs", [roi])
             self.roi_y0, self.roi_height, self.roi_binning = y0, height, binning
@@ -382,12 +376,12 @@ class CameraWorker(QtCore.QThread):
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, float)
     sendTemperature = QtCore.pyqtSignal(float)
 
-    def __init__(self,camera,int_time):
+    def __init__(self, camera, int_time, spec_length):
         super(CameraWorker, self).__init__() # Elevates this thread to be independent.
 
         # definition of some parameters
         self.camera = camera
-        self.spec_length = 1024
+        self.spec_length = spec_length
         self.change_int_time = False
         self.spectrum = np.zeros(self.spec_length)
         self.int_time = int_time

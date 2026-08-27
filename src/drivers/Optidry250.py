@@ -14,7 +14,7 @@ class CryoPasqal(QtCore.QThread):
     name = 'CryoPasqal'
     type = 'Cryostat'
 
-    def __init__(self, port_com='COM9'):
+    def __init__(self, port_com):
         super(CryoPasqal, self).__init__()
         
         # 1. Initialize nested dictionary for detailed parameter info (value, limits, read-only flags)
