@@ -41,6 +41,18 @@ class SiteConfigurationTests(unittest.TestCase):
         with self.assertRaisesRegex(SiteConfigurationError, r"\[site\] default_data_directory"):
             validate_site_config(config)
 
+    def test_invalid_typed_setting_is_reported(self):
+        config = load_site_config("udem")
+        config.set("slm", "depth", "ten")
+        with self.assertRaisesRegex(SiteConfigurationError, "Invalid typed setting"):
+            validate_site_config(config)
+
+    def test_unsupported_driver_is_reported(self):
+        config = load_site_config("wfu")
+        config.set("monochromator", "driver", "unknown")
+        with self.assertRaisesRegex(SiteConfigurationError, "Unsupported driver"):
+            validate_site_config(config)
+
 
 if __name__ == "__main__":
     unittest.main()

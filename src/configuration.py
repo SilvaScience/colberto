@@ -75,6 +75,43 @@ def validate_site_config(config, source="<configuration>"):
     if configured_name not in ("udem", "wfu"):
         raise SiteConfigurationError("Unsupported site name in %s: %s" % (source, configured_name))
 
+    try:
+        for device in REQUIRED_OPTIONS["devices"]:
+            config.getboolean("devices", device)
+
+        for option in ("rgb", "is_eight_bit_image", "height", "width", "depth", "bytes_per_pixel"):
+            config.getint("slm", option)
+        config.getint("monochromator", "baud_rate")
+        config.getfloat("monochromator", "center_wavelength")
+
+        for section in ("stresing", "stresing_optics", "pixis", "pixis_optics"):
+            hardware_parameters(config, section)
+    except ValueError as error:
+        raise SiteConfigurationError("Invalid typed setting in %s: %s" % (source, error)) from error
+
+    supported_drivers = {
+        ("cryostat", "driver"): ("optidry250",),
+        ("stresing", "driver"): ("stresing",),
+        ("pixis", "driver"): ("pixis",),
+        ("monochromator", "driver"): ("spectrapro2300i", "shamrock"),
+        ("oscilloscope", "driver"): ("keysight_dsox1202a",),
+    }
+    for (section, option), supported in supported_drivers.items():
+        value = config.get(section, option).strip().lower()
+        if value not in supported:
+            raise SiteConfigurationError(
+                "Unsupported driver in %s: [%s] %s=%s" % (source, section, option, value)
+            )
+
+    priorities = csv_values(config, "site", "spectrometer_priority")
+    allowed_spectrometers = {"Stresing", "Pixis", "Ocean", "Demo"}
+    if not priorities or len(priorities) != len(set(priorities)) or not set(priorities) <= allowed_spectrometers:
+        raise SiteConfigurationError("Invalid spectrometer_priority in %s" % source)
+
+    grating_densities = csv_values(config, "monochromator", "grating_densities", float)
+    if not grating_densities or any(density <= 0 for density in grating_densities):
+        raise SiteConfigurationError("Invalid grating_densities in %s" % source)
+
 
 def csv_values(config, section, option, converter=str):
     """Read a comma-separated setting and convert every non-empty value."""
