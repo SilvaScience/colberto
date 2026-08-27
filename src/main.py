@@ -941,13 +941,12 @@ class MainInterface(QtWidgets.QMainWindow):
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
             coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
-            coeffs_scaled = [coeffs[i] * (10**15)**i for i in range(len(coeffs))]
             # The fit describes GDD as an ordinary power series. Beam stores the
             # corresponding spectral-phase derivatives, so terms of order i in
             # the GDD fit must be multiplied by i! before they are assigned.
             phase_derivative_coeffs = [
                 math.factorial(i) * coefficient
-                for i, coefficient in enumerate(coeffs_scaled)
+                for i, coefficient in enumerate(coeffs)
             ]
             # Generate names dynamically
             names = ["GDD" if i == 0 else "TOD" if i == 1 else "FOD" if i == 2 else f"{i+2}OD" for i in range(len(phase_derivative_coeffs))]

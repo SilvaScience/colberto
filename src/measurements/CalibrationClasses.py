@@ -579,18 +579,29 @@ class FitTemporalBeamCalibration(QtCore.QThread):
 
         # Shifted frequency around the carrier
         omega_carrier = co.waveToAngFreq(carrier_wavelength * 1e-9) # rad Hz
-        omega_shifted = omega_values-omega_carrier
+        # Express the frequency offset in rad/fs. Fitting directly in rad/s
+        # produces a severely ill-conditioned Vandermonde matrix because the
+        # independent variable is typically of order 1e14.
+        omega_shifted_fs = (omega_values - omega_carrier) * 1e-15
 
-        # Fit a nth order polynimial
-        #self.fit_polynomial = Polynomial.fit(omega_shifted, max_chirp_values, deg)
-        coeffs = np.polyfit(omega_shifted, max_chirp_values, deg)
-        self.fit_polynomial = np.polyval(coeffs, omega_shifted)
-        self.send_chirp_fit.emit(omega_shifted, max_chirp_values)
-        self.send_polynomial.emit(omega_shifted, self.fit_polynomial)
+        # Fit the local GDD using ascending-order coefficients. On the rad/fs
+        # axis the returned coefficients are already expressed in femtosecond
+        # units and do not require a later power-of-1e15 rescaling.
+        coeffs = np.polynomial.polynomial.polyfit(
+            omega_shifted_fs,
+            max_chirp_values,
+            deg,
+        )
+        self.fit_polynomial = np.polynomial.polynomial.polyval(
+            omega_shifted_fs,
+            coeffs,
+        )
+        self.send_chirp_fit.emit(omega_shifted_fs, max_chirp_values)
+        self.send_polynomial.emit(omega_shifted_fs, self.fit_polynomial)
         self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
 
         # Get the coefficients
-        self.coeffs = coeffs[::-1]
+        self.coeffs = coeffs
         return self.coeffs
     
 class DelayCalibrationMeasurement(QtCore.QThread):
