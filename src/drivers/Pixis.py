@@ -33,9 +33,9 @@ class Pixis(QtCore.QThread):
         super(Pixis, self).__init__()
 
         #self.camera.start()
-        self.wavelength = np.linspace(200,1000,1024) # get property from Worker
-        self.px0 = np.linspace(1,1024,1024)
-        self.spec_length = 1024 #(252,1024) # get property from Worker
+        self.spec_length = int(hardware_params['num_pixels'])
+        self.wavelength = np.linspace(200, 1000, self.spec_length)
+        self.px0 = np.linspace(1, self.spec_length, self.spec_length)
         self.image = np.zeros(self.spec_length)
         self.hardware_params = hardware_params
 
@@ -164,13 +164,11 @@ class Pixis(QtCore.QThread):
             pixel_size_mm =self.hardware_params['pixel_size_mm'] 
             focal_length_mm = self.hardware_params['focal_length_mm']
             num_pixels = self.hardware_params['num_pixels']
-        
+        else:
+            self.wavelengths = np.arange(self.spec_length)
+            return
+
         if self.hardware_params['calibrated']:
-
-            pixel_size_mm = 26 / 1E3  # specs of PIXIS
-            focal_length_mm = 300  # specs of SP2300
-            num_pixels = 1024  # specs of PIXIS
-
             wl_center = self.center_wavelength
             m_order = 1
             px = self.px0
@@ -192,10 +190,6 @@ class Pixis(QtCore.QThread):
 
             self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
         else:
-            pixel_size_mm = 26 / 1E3  # specs of PIXIS
-            focal_length_mm = 300  # specs of SP2150
-            num_pixels = 1024  # specs of PIXIS
-
             # Calculate linear dispersion (nm/mm)
             dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
 

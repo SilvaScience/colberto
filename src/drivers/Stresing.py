@@ -276,12 +276,9 @@ class StresingCamera(QtCore.QThread):
             num_pixels = self.hardware_params['num_pixels']
 
             if self.hardware_params['calibrated']:
-
-                num_pixels = 1010  # specs of stresing
-
                 wl_center = self.center_wavelength
                 m_order = 1
-                px = np.linspace(1,1010,1010)
+                px = np.linspace(1, num_pixels, num_pixels)
 
                 # calibration from notebook
                 f=self.hardware_params['f']

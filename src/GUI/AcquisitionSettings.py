@@ -201,7 +201,7 @@ class AcquisitionSettings(QtWidgets.QWidget):
         self.registers_label = QtWidgets.QLabel()
         self.registers_label.setWordWrap(True)
         self.registers_label.setToolTip('What this writes to the board, in the vocabulary of\n'
-                                        'config_UdeM.ini and of the Stresing documentation.')
+                                        'the active site configuration and the Stresing documentation.')
         self.apply_button = QtWidgets.QPushButton('Apply')
         self.status_label = QtWidgets.QLabel()
         self.status_label.setWordWrap(True)
@@ -539,7 +539,7 @@ class AcquisitionSettings(QtWidgets.QWidget):
     def registers_preview(self, mode, nos, nob):
         """
             Describes the registers the current selection maps to, in the vocabulary of
-            config_UdeM.ini.
+            the active site configuration.
             input:
                 - mode (str): selected mode
                 - nos (int): spectra per block

@@ -12,22 +12,22 @@ DEFAULT_SITE = "udem"
 
 REQUIRED_OPTIONS = {
     "site": ("name", "default_data_directory", "default_filename", "spectrometer_priority"),
-    "devices": ("cryostat", "slm", "monochromator", "stresing", "pixis", "ocean", "demo"),
+    "devices": ("cryostat", "slm", "monochromator", "stresing", "pixis", "ocean", "oscilloscope", "demo"),
     "cryostat": ("driver", "port"),
     "slm": (
         "driver_name", "c_wrapper", "image_gen", "lut_file", "rgb",
         "is_eight_bit_image", "height", "width", "depth", "bytes_per_pixel",
     ),
     "stresing": (
-        "vendor_config", "pixel_size_mm", "num_pixels", "calibrated",
+        "driver", "vendor_config", "pixel_size_mm", "num_pixels", "calibrated",
         "calibration_third_order", "calibration_second_order",
         "calibration_first_order", "calibration_offset",
     ),
     "monochromator": ("driver", "serial_port", "baud_rate", "center_wavelength", "grating_densities"),
     "stresing_optics": ("f", "delta", "gamma", "n0", "offset_adjust", "d_grating", "x_pixel", "curvature"),
-    "pixis": ("pixel_size_mm", "num_pixels", "sensor_height", "calibrated"),
+    "pixis": ("driver", "pixel_size_mm", "num_pixels", "sensor_height", "calibrated"),
     "pixis_optics": ("focal_length_mm", "f", "delta", "gamma", "n0", "offset_adjust", "d_grating", "x_pixel", "curvature"),
-    "oscilloscope": ("ip_address",),
+    "oscilloscope": ("driver", "ip_address"),
 }
 
 
@@ -91,7 +91,7 @@ def hardware_parameters(config, section):
     }
     values = {}
     for key, raw_value in config.items(section):
-        if key == "vendor_config":
+        if key in ("driver", "vendor_config"):
             continue
         output_key = driver_names.get(key, key)
         if key == "calibrated":
