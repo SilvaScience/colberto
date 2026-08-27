@@ -333,7 +333,11 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # start DataHandling
         # self.spec_length = self.devices['spectrometer'].get_num_pixel()
-        self.DataHandling = DataHandling(self.parameter, self.spec_length)
+        self.DataHandling = DataHandling(
+            self.parameter,
+            self.spec_length,
+            self.site_config.get('site', 'temp_data_file'),
+        )
         self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
         for plot in self.spectrum_plots:
             self.DataHandling.sendSpectrum.connect(plot.set_data)

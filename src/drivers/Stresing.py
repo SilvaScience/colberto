@@ -59,7 +59,7 @@ class StresingCamera(QtCore.QThread):
         self.monochromator=None#By default, no spectrometer is attached
         
         # Define spectral range
-        self.spec_length = self.hardware_params.get('num_pixels', 1024)
+        self.spec_length = self.hardware_params['num_pixels']
         self.spec_range = np.r_[0:self.spec_length]
         
         # Path to the DLL file

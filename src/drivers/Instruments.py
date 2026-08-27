@@ -47,7 +47,11 @@ def _load_monochromator(config, grating_parameters):
                 datetime.datetime.now(), error,
             )
             logger.info("%s SpectraPro2300iDemo connected", datetime.datetime.now())
-            return SpectraPro2300iDemo(grating_parameters)
+            return SpectraPro2300iDemo(
+                grating_parameters,
+                center_wavelength=config.getfloat("monochromator", "center_wavelength"),
+                grating_densities=csv_values(config, "monochromator", "grating_densities", float),
+            )
     if driver == "shamrock":
         return Shamrock(
             grating_parameters,

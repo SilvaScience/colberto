@@ -11,7 +11,7 @@ SITE_ENVIRONMENT_VARIABLE = "COLBERTO_SITE"
 DEFAULT_SITE = "udem"
 
 REQUIRED_OPTIONS = {
-    "site": ("name", "default_data_directory", "default_filename", "spectrometer_priority"),
+    "site": ("name", "default_data_directory", "default_filename", "temp_data_file", "spectrometer_priority"),
     "devices": ("cryostat", "slm", "monochromator", "stresing", "pixis", "ocean", "oscilloscope", "demo"),
     "cryostat": ("driver", "port"),
     "slm": (

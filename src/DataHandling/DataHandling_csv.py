@@ -9,6 +9,8 @@ from PyQt5 import QtCore, QtWidgets
 import numpy as np
 import os.path
 import pandas as pd
+import tempfile
+from pathlib import Path
 from collections import deque
 
 
@@ -50,7 +52,7 @@ class DataHandling(QtCore.QThread):
         self.parameter_matrix_full = False
         self.data_in_flash = 0
         self.firstbuffer = True
-        self.temp_filename = r"C:\Data\temp.csv"
+        self.temp_filename = str(Path(tempfile.gettempdir()) / "colberto-temp.csv")
         self.filename = 'test'
 
     def run(self):

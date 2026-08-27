@@ -16,7 +16,7 @@ class Shamrock(QtCore.QThread):
     name = 'Shamrock'
     type = 'Monochromator'
     
-    def __init__(self, hardware_params, center_wavelength=650.0, grating_densities=(150.0,)):
+    def __init__(self, hardware_params, center_wavelength, grating_densities):
         super(Shamrock, self).__init__()
         self.center_wl = float(center_wavelength)
         self.grating = 1
@@ -85,4 +85,3 @@ class Shamrock(QtCore.QThread):
                 - grating_lines_per_mm (np.float): the number of groove per mm of the selected grating
         """
         return self.center_wl, self.grating_densities[int(self.grating - 1)]
-
