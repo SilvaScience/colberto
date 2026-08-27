@@ -26,7 +26,9 @@ class SiteConfigurationTests(unittest.TestCase):
                 config = load_site_config(site)
                 self.assertEqual(config.get("site", "name"), site)
                 self.assertTrue(csv_values(config, "monochromator", "grating_densities", float))
-                self.assertIsInstance(hardware_parameters(config, "stresing")["num_pixels"], int)
+                parameters = hardware_parameters(config, "stresing")
+                self.assertIsInstance(parameters["num_pixels"], int)
+                self.assertIn("calibrationThirdOrder", parameters)
 
     def test_environment_selects_site(self):
         with mock.patch.dict(os.environ, {SITE_ENVIRONMENT_VARIABLE: "WFU"}):

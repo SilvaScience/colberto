@@ -21,7 +21,6 @@ from ctypes import *
 import time
 import sys
 import os
-import configparser
 import importlib
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent)) #add or remove parent based on the file location
@@ -37,9 +36,9 @@ class Slm(QtCore.QThread):
     name = 'SLM_Meadowlark'
     type= 'SLM'
 
-    def __init__(self, path_config):
+    def __init__(self, slm_config):
         super(Slm, self).__init__()
-        self.slm_worker= SLMWorker(path_config)
+        self.slm_worker= SLMWorker(slm_config)
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
         self.slm_worker.sendFlag.connect(self.set_phaseShown)
@@ -199,28 +198,24 @@ class SLMWorker(QtCore.QThread):
     imageSLM = QtCore.pyqtSignal(np.ndarray)
     sendFlag = QtCore.pyqtSignal(bool)
     
-    def __init__(self, path_config):
+    def __init__(self, slm_config):
 
         super(SLMWorker, self).__init__() # Elevates this thread to be independent.
-        # Create a ConfigParser object
-        config = CaseInsensitiveConfig()
-        # Read the INI file
-        config.read(path_config)
-    
+
         #parameter 
         self.terminate= False
         self.target_fps = 30
         self.slm = None
-        self.driver_name = config.get("SLM0","driverName")
-        self.c_wrapper = config.get("SLM0","cWrapper")
-        self.image_Gen = config.get("SLM0","imageGen")
-        self.lut_File = config.get("SLM0","lutFile")
-        self.rgb = int(config.get("SLM0","rgb"))
-        self.is_eight_bit_image = int(config.get("SLM0","isEightBitImage"))
-        self.height = int(config.get("SLM0","height")) 
-        self.width = int(config.get("SLM0","width"))
-        self.depth = int(config.get("SLM0","depth"))
-        self.bytes_per_pixel = int(config.get("SLM0","bytesPerPixel"))
+        self.driver_name = slm_config["driver_name"]
+        self.c_wrapper = slm_config["c_wrapper"]
+        self.image_Gen = slm_config["image_gen"]
+        self.lut_File = slm_config["lut_file"]
+        self.rgb = int(slm_config["rgb"])
+        self.is_eight_bit_image = int(slm_config["is_eight_bit_image"])
+        self.height = int(slm_config["height"])
+        self.width = int(slm_config["width"])
+        self.depth = int(slm_config["depth"])
+        self.bytes_per_pixel = int(slm_config["bytes_per_pixel"])
         self.current_image = np.zeros((self.width,self.height,3))
         self.new_image_available = False 
         self.frame_duration = 1/self.target_fps
@@ -350,41 +345,3 @@ class SLMWorker(QtCore.QThread):
         """
         if self.slm is not None:
             self.slm.delete_sdk()
-
-class CaseInsensitiveConfig(configparser.ConfigParser):
-    """ This class extends Python’s built-in configparser.ConfigParser to make both section names and option names case-insensitive.
-    Normally, ConfigParser is only case-insensitive for option names, not section names, so this subclass enforces lowercase normalization for both. """
-
-    def __init__(self, *args, **kwargs):
-        """
-            Initialize the parent ConfigParser. By inheriting from it, your class gets all the functionality of ConfigParser — things like: 
-                Reading .ini files
-                Parsing sections and options
-                Providing .get(), .set(), .items(), etc.
-            Then you can override or extend parts of that functionality to make it case-insensitive.
-        """
-        super().__init__(*args, **kwargs)
-
-        # Force all option (key) names to be lowercase when stored internally
-        # This makes option lookups case-insensitive
-        self.optionxform = str.lower
-
-    def read(self, filenames, encoding=None):
-        """
-            Use the parent class's read method to load the config file(s)
-        """
-        super().read(filenames, encoding)
-
-        # Convert all section names and their corresponding option names to lowercase
-        # This ensures that both sections and options are case-insensitive
-        self._sections = {
-            k.lower(): {kk.lower(): vv for kk, vv in v.items()}
-            for k, v in self._sections.items()
-        }
-
-    def get(self, section, option, **kwargs):
-        """
-            Override the default .get() method so that lookups are case-insensitive
-        """
-        # Both section and option names are converted to lowercase before lookup
-        return super().get(section.lower(), option.lower(), **kwargs)

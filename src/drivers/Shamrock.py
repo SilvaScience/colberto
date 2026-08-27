@@ -16,10 +16,12 @@ class Shamrock(QtCore.QThread):
     name = 'Shamrock'
     type = 'Monochromator'
     
-    def __init__(self,hardware_params):
+    def __init__(self, hardware_params, center_wavelength=650.0, grating_densities=(150.0,)):
         super(Shamrock, self).__init__()
-        self.central_wave = 650.00
-        self.grating = 0
+        self.center_wl = float(center_wavelength)
+        self.grating = 1
+        self.grating_densities = np.asarray(grating_densities, dtype=float)
+        self.num_gratings = len(self.grating_densities)
 
         # This is the hardware parameters dictionnary. It is provided by hardware-specific configurations and are not changed in operation
         self.hardware_params=hardware_params
@@ -30,21 +32,20 @@ class Shamrock(QtCore.QThread):
         
         self.parameter_display_dict = defaultdict(dict)
         
-        self.parameter_dict['central_wave'] = 650.00
-        self.parameter_dict['grating'] = 1
+        self.parameter_dict['central_wave'] = self.center_wl
+        self.parameter_dict['grating'] = self.grating
         
-        self.parameter_display_dict['central_wave']['val'] = 650.00
+        self.parameter_display_dict['central_wave']['val'] = self.center_wl
         self.parameter_display_dict['central_wave']['unit'] = ' nm'
         self.parameter_display_dict['central_wave']['min'] = 200.00
         self.parameter_display_dict['central_wave']['max'] = 1100.00
         self.parameter_display_dict['central_wave']['read'] = False
         
-        self.parameter_display_dict['grating']['val'] = 1
+        self.parameter_display_dict['grating']['val'] = self.grating
         self.parameter_display_dict['grating']['unit'] = ' grating choice'
-        self.parameter_display_dict['grating']['max'] = 1
+        self.parameter_display_dict['grating']['max'] = self.num_gratings
         self.parameter_display_dict['grating']['read'] = False
 
-        self.grating_dispersions={0:150}
         # set up parameter dict that only contains value. (faster to access)
         self.parameter_dict = {}
         for key in self.parameter_display_dict.keys():
@@ -55,12 +56,12 @@ class Shamrock(QtCore.QThread):
         In devices with workers, a pause of continuous acquisition might be required. """
         if parameter == 'central_wave':
             self.parameter_dict['central_wave'] = value
-            self.central_wave = value
+            self.center_wl = value
         elif parameter == 'grating':
             self.parameter_dict['grating'] = value
             self.grating = value
 
-    def get_hardware_parameters(self, hardware_params):
+    def get_hardware_parameters(self, name):
         """
             Returns the hardware parameters of the monochromator
             output:
@@ -75,7 +76,7 @@ class Shamrock(QtCore.QThread):
                     - curvature
 
         """
-        return self.hardware_params
+        return self.hardware_params[name]
     def get_monochromator_parameters(self):
         """
             Returns the current parameters of the monochromator.
@@ -83,6 +84,5 @@ class Shamrock(QtCore.QThread):
                 - central_wavelength (np.float): the central wavelength in nm
                 - grating_lines_per_mm (np.float): the number of groove per mm of the selected grating
         """
-        return self.central_wave, self.grating_dispersions[self.grating]
-
+        return self.center_wl, self.grating_densities[int(self.grating - 1)]
 

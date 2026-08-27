@@ -12,7 +12,7 @@ DEFAULT_SITE = "udem"
 
 REQUIRED_OPTIONS = {
     "site": ("name", "default_data_directory", "default_filename", "spectrometer_priority"),
-    "devices": ("cryostat", "slm", "stresing", "pixis", "ocean", "demo"),
+    "devices": ("cryostat", "slm", "monochromator", "stresing", "pixis", "ocean", "demo"),
     "cryostat": ("driver", "port"),
     "slm": (
         "driver_name", "c_wrapper", "image_gen", "lut_file", "rgb",
@@ -83,14 +83,21 @@ def csv_values(config, section, option, converter=str):
 
 def hardware_parameters(config, section):
     """Convert a calibration/geometry section to values expected by camera drivers."""
+    driver_names = {
+        "calibration_third_order": "calibrationThirdOrder",
+        "calibration_second_order": "calibrationSecondOrder",
+        "calibration_first_order": "calibrationFirstOrder",
+        "calibration_offset": "calibrationOffset",
+    }
     values = {}
     for key, raw_value in config.items(section):
         if key == "vendor_config":
             continue
+        output_key = driver_names.get(key, key)
         if key == "calibrated":
-            values[key] = config.getboolean(section, key)
+            values[output_key] = config.getboolean(section, key)
         else:
-            values[key] = float(raw_value)
+            values[output_key] = float(raw_value)
     for integer_key in ("num_pixels", "sensor_height", "roi_y0", "roi_height", "roi_binning"):
         if integer_key in values:
             values[integer_key] = int(values[integer_key])
