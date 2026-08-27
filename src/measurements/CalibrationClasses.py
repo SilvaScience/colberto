@@ -564,63 +564,18 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         # Loop through each wavelength 
         max_chirp_values = []
         wavelength_values = []
-        # for wls in range(self.data.shape[1]):
-        #     intensity_column = self.data[:, wls]
-        #     max_row_index = np.argmax(intensity_column)
-        #     if max_row_index == 0:
-        #         continue
-        #     max_chirp_values.append(self.chirp_array[max_row_index])
-        #     wavelength_values.append(self.wavelength_array[wls])
-
-
-        # ----- Find starting wavelength -----
-        # wavelength with the strongest overall signal
-        start_col = np.argmax(np.max(self.data, axis=0))
-
-        # maximum there
-        start_row = np.argmax(self.data[:, start_col])
-
-        indices = np.zeros(self.data.shape[1], dtype=int)
-        indices[start_col] = start_row
-
-        # Search window in chirp units
-        window = 1000   # fs²/rad²
-
-        dchirp = np.abs(self.chirp_array[1] - self.chirp_array[0])
-        N = int(window / dchirp)
-
-        # ---------- Track toward longer wavelengths ----------
-        for col in range(start_col + 1, self.data.shape[1]):
-
-            prev = indices[col-1]
-
-            lo = max(0, prev-N)
-            hi = min(self.data.shape[0], prev+N+1)
-
-            local = self.data[lo:hi, col]
-
-            indices[col] = lo + np.argmax(local)
-
-        # ---------- Track toward shorter wavelengths ----------
-        for col in range(start_col-1, -1, -1):
-
-            prev = indices[col+1]
-
-            lo = max(0, prev-N)
-            hi = min(self.data.shape[0], prev+N+1)
-
-            local = self.data[lo:hi, col]
-
-            indices[col] = lo + np.argmax(local)
-
-        # Final arrays
-        max_chirp_values = self.chirp_array[indices]
-        wavelength_values = self.wavelength_array
+        for wls in range(self.data.shape[1]):
+            intensity_column = self.data[:, wls]
+            max_row_index = np.argmax(intensity_column)
+            if max_row_index == 0:
+                continue
+            max_chirp_values.append(self.chirp_array[max_row_index])
+            wavelength_values.append(self.wavelength_array[wls])
 
 
         max_chirp_values = np.array(max_chirp_values)
         wavelength_values = np.array(wavelength_values)
-        omega_values = 0.5*co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz
+        omega_values = 0.5*co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz of the associated fundamental (hence the factor of 0.5)
 
         # Shifted frequency around the carrier
         omega_carrier = co.waveToAngFreq(carrier_wavelength * 1e-9) # rad Hz
