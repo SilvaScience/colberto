@@ -132,6 +132,14 @@ class SLM(QtCore.QThread):
         self.blink_dll.Delete_SDK.restype = None
         self.blink_dll.Write_image.restype = ctypes.c_int
         self.blink_dll.Load_lut.restype = ctypes.c_int
+        self.blink_dll.Load_lut.argtypes = [ctypes.c_int, ctypes.c_char_p]
+        self.blink_dll.Store_lut.restype = ctypes.c_int
+        self.blink_dll.Store_lut.argtypes = [ctypes.c_int]
+        self.blink_dll.GetLUTFileName.restype = ctypes.c_int
+        # The header declares wchar_t*, but the DLL writes narrow chars.
+        self.blink_dll.GetLUTFileName.argtypes = [ctypes.c_int, ctypes.c_char_p]
+        self.blink_dll.Get_SLMTemp.argtypes = [ctypes.c_int]
+        self.blink_dll.Get_Depth.argtypes = [ctypes.c_int]
         self.blink_dll.SetPostRampSlope.restype = ctypes.c_int
         self.blink_dll.SetPreRampSlope.restype = ctypes.c_int
         self.blink_dll.Set_channel.restype = ctypes.c_int
@@ -226,9 +234,38 @@ class SLM(QtCore.QThread):
                 the hardware prior to writing images to the SLM. The function takes a path to a LUT file and supports file
                 types of: *.blt, *.lut, and *.txt.
         """
-        logger.info('%s LoadLUT Successful'%(datetime.datetime.now()))
-        self.blink_dll.Load_lut(0, file_path.encode()) # Need to put a 0 as first argument in the new DLL.
-        self.store_lut() # Used to store the currently applied global LUT file to non-volatile memory
+        lut_path = Path(file_path).expanduser().resolve()
+        if not lut_path.is_file():
+            raise FileNotFoundError('LUT file not found: %s' % lut_path)
+
+        # The DLL takes a char*, so the path must survive an 8-bit encoding.
+        try:
+            encoded_path = str(lut_path).encode('ascii')
+        except UnicodeEncodeError:
+            raise ValueError('LUT path contains non-ASCII characters, the DLL '
+                             'cannot open it: %s' % lut_path)
+
+        # Board 0 is the first controller (matches the Meadowlark example).
+        if not self.blink_dll.Load_lut(0, encoded_path):
+            raise RuntimeError('Load_lut failed for %s' % lut_path)
+        if not self.store_lut():  # store to non-volatile memory
+            raise RuntimeError('Store_lut failed for %s' % lut_path)
+
+        # Read back from the controller rather than trusting the call above.
+        lut_in_slm = self.get_lut_name()
+        print('LUT now in the SLM: %s' % lut_in_slm)
+        logger.info('%s LoadLUT Successful: %s'%(datetime.datetime.now(), lut_in_slm))
+
+    def get_lut_name(self):
+        """
+        Reads back the LUT file name currently held by the controller, over the
+        serial link. This is the hardware state, unlike the name BlinkHdmi shows,
+        which comes from its own Preferences.ini.
+        """
+        buf = ctypes.create_string_buffer(512)
+        if not self.blink_dll.GetLUTFileName(0, buf):
+            return '<GetLUTFileName failed>'
+        return buf.value.decode('mbcs', errors='replace')
     
     def store_lut(self):
         """
