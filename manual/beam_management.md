@@ -23,9 +23,9 @@ When a particular spectral phase profile is more convenient for your application
 
 ### Units
 Managing the units of phase polynomials can be tricky. The convenience static method `convertPhaseCoeffUnits` can convert the units of phase polynomials and is used extensively in the code.
-The polynomials kept as attributes of Beam objects have their units in powers of seconds. However, they are often displayed in powers of fs.
+The polynomials kept as attributes of Beam objects have their units in powers of femtoseconds. All frequencies are kepts in units of rad PHz to make the code numerically more stable when performing phase calculations.
 
-Examples of beam manipulation can be found in the beam sample script in `samples/beamsamples.py
+Examples of beam manipulation can be found in the beam sample script in `samples/beamsamples.py`
 
 ## Beam explorer
 
