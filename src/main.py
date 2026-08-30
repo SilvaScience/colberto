@@ -936,7 +936,7 @@ class MainInterface(QtWidgets.QMainWindow):
 
     def fitChirpMeasurement(self):
         '''
-            Fit the chirp scan to a polynomial function up to the fifth order.
+            Fit the chirp scan to a polynomial function.
         ''' 
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
