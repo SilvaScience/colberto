@@ -940,14 +940,7 @@ class MainInterface(QtWidgets.QMainWindow):
         ''' 
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
-            coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
-            # The fit describes GDD as an ordinary power series. Beam stores the
-            # corresponding spectral-phase derivatives, so terms of order i in
-            # the GDD fit must be multiplied by i! before they are assigned.
-            phase_derivative_coeffs = [
-                math.factorial(i) * coefficient
-                for i, coefficient in enumerate(coeffs)
-            ]
+            phase_derivative_coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
             # Generate names dynamically
             names = ["GDD" if i == 0 else "TOD" if i == 1 else "FOD" if i == 2 else f"{i+2}OD" for i in range(len(phase_derivative_coeffs))]
             # Polynomial string using the same names list
@@ -969,7 +962,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.last_temp_fit_coeffs = np.pad(self.last_temp_fit_coeffs, (0, len(old_coeff) - len(self.last_temp_fit_coeffs)), 'constant', constant_values=0)
         elif len(old_coeff) < len(self.last_temp_fit_coeffs):
             old_coeff = np.pad(old_coeff, (0, len(self.last_temp_fit_coeffs) - len(old_coeff)), 'constant', constant_values=0)
-        beam.set_optimalPhase(P(Add_or_Remove*self.last_temp_fit_coeffs+old_coeff))
+        beam.set_optimalPhase(P(Add_or_Remove*self.last_temp_fit_coeffs+old_coeff), )
         self.DataHandling.set_beam((self.beam_name_box.currentText(), beam))
 
     def spectralBeamCalibrationMeasurement(self):
