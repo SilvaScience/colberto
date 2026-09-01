@@ -112,7 +112,9 @@ class Beam:
             - unit: the unit in which to return the spectrum axis allows for
                 - 'wavelength' (default): Returns in units of wavelength (m)
                 - 'frequency' : Returns in units of frequency (Hz)
+                - 'frequencyPHz' : Returns in units of frequency (PHz)
                 - 'ang_frequency' : Returns in units of angular frequency (rad.Hz)
+                - 'ang_frequencyPHz' : Returns in units of angular frequency (rad.PHz)
                 - 'energy' : Returns in units of energy (eV)
         output: (nd.array) the spectral position associated with the pixels in pixels
 
@@ -120,6 +122,8 @@ class Beam:
         conversionFunction={'wavelength':lambda x: x,
                             'frequency':co.waveToFreq,
                             'ang_frequency':co.waveToAngFreq,
+                            'frequencyPHz':co.waveToPHzFreq,
+                            'ang_frequencyPHz':co.waveToAngFreqPHz,
                             'energy':co.waveToeV}
         if pixels is None:
             pixels=self.indices
@@ -140,24 +144,29 @@ class Beam:
         input:
             wavelength: Compression carrier wavelength in m
         """
-        self.delayCarrierFreq=co.waveToAngFreq(compCarrierWave)
+        self.delayCarrierFreq=co.waveToAngFreqPHz(compCarrierWave)
 
-    def get_delayCarrier(self,unit='ang_frequency'):
+    def get_delayCarrier(self,unit='ang_frequencyPHz'):
+
         """
         Gets the wavelength around which the phase coefficients for pulse delaying (rotating frame) are defined
         input:
             - unit: the unit in which to return the compression carrier frequency 
                 - 'wavelength' : Returns in units of wavelength (m)
                 - 'frequency' : Returns in units of frequency (Hz)
-                - 'ang_frequency' (default): Returns in units of angular frequency (rad.Hz)
+                - 'frequencyPHz' : Returns in units of frequency (PHz)
+                - 'ang_frequency' : Returns in units of angular frequency (rad.Hz)
+                - 'ang_frequencyPHz' (default): Returns in units of angular frequency (rad.PHz)
                 - 'energy' : Returns in units of energy (eV)
         output:
             float: Delay carrier in specified units
         """
-        conversionFunction={'wavelength':co.angFreqToWave,
-                            'frequency':co.angFreqToFreq,
-                            'ang_frequency': lambda x: x,
-                            'energy':co.angFreqToeV}
+        conversionFunction={'wavelength':co.angFreqPHzToWave,
+                            'frequency':co.angFreqPHzToFreq,
+                            'frequencyPHz':co.angFreqToFreq,
+                            'ang_frequency': co.FreqPHztoFreq,
+                            'ang_frequencyPHz': lambda x: x,
+                            'energy':co.angFreqPHzToeV}
         return conversionFunction[unit](self.delayCarrierFreq)
 
     def set_compressionCarrierWave(self,compCarrierWave=None):
@@ -166,24 +175,28 @@ class Beam:
         input:
             wavelength: Compression carrier wavelength in m
         """
-        self.compressionCarrierFreq=co.waveToAngFreq(compCarrierWave)
+        self.compressionCarrierFreq=co.waveToAngFreqPHz(compCarrierWave)
 
-    def get_compressionCarrier(self,unit='ang_frequency'):
+    def get_compressionCarrier(self,unit='ang_frequencyPHz'):
         """
         Gets the wavelength around which the phase coefficients for compression are defined
         input:
             - unit: the unit in which to return the compression carrier frequency 
                 - 'wavelength' : Returns in units of wavelength (m)
                 - 'frequency' : Returns in units of frequency (Hz)
+                - 'frequencyPHz' : Returns in units of frequency (PHz)
                 - 'ang_frequency' (default): Returns in units of angular frequency (rad.Hz)
+                - 'ang_frequencyPHz' : Returns in units of angular frequency (rad.PHz)
                 - 'energy' : Returns in units of energy (eV)
         output:
             float: Compression carrier in specified units
         """
-        conversionFunction={'wavelength':co.angFreqToWave,
-                            'frequency':co.angFreqToFreq,
-                            'ang_frequency': lambda x: x,
-                            'energy':co.angFreqToeV}
+        conversionFunction={'wavelength':co.angFreqPHzToWave,
+                            'frequency':co.angFreqPHzToFreq,
+                            'frequencyPHz':co.angFreqToFreq,
+                            'ang_frequency': co.FreqPHztoFreq,
+                            'ang_frequencyPHz': lambda x: x,
+                            'energy':co.angFreqPHzToeV}
         return conversionFunction[unit](self.compressionCarrierFreq)
     
     def set_optimalPhase(self,phasePolynomial,unit='fs',TaylorPrefactorFlag=''):
@@ -195,21 +208,21 @@ class Beam:
                 - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
         '''
         phasePolynomial = self.TaylorPrefactor(phasePolynomial, TaylorPrefactorFlag)
-        self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
+        self.optimalPhasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='fs')
 
-    def get_optimalPhase(self,units_to_return='s',TaylorPrefactorFlag=''):
+    def get_optimalPhase(self,units_to_return='fs',TaylorPrefactorFlag=''):
         '''
             Sets the beam's phase profile 
             input:
                 - indices (nd.array of int) : Indices at which to sample the 
-                - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of seconds
+                - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of femtoseconds
                     Specifying 'fs' converts the internal units to be displayed in fs.
                 - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
             output:
-                - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
+                
         '''
         returnPolynomial = self.TaylorPrefactor(self.optimalPhasePolynomial, TaylorPrefactorFlag)
-        return self.convertPhaseCoeffUnits(returnPolynomial,input_units='s',output_units=units_to_return)
+        return self.convertPhaseCoeffUnits(returnPolynomial,input_units='fs',output_units=units_to_return)
     
     def set_current_phase_mode(self,mode):
         """
@@ -234,33 +247,32 @@ class Beam:
         """
             Sets the current phase to match to optimal phase
         """
-        self.set_currentPhase(self.optimalPhasePolynomial,mode='absolute',unit='s')
+        self.set_currentPhase(self.optimalPhasePolynomial,mode='absolute',unit='fs')
 
     def set_currentPhase(self,phasePolynomial,mode=None,unit='fs',TaylorPrefactorFlag = ''):
         '''
             Sets the beam's phase profile 
             input:
-                - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.Hz)
+                - phasePolynomial (numpy Polynomial object): A Numpy Polynomial representing the phase profile taking arguments in angular frequency (rad.PHz)
                 - mode (string): Specifies if the phase is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
                 - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
         '''
         phasePolynomial = self.TaylorPrefactor(phasePolynomial, TaylorPrefactorFlag)
         if mode is None:
             mode=self.current_phase_mode
-        phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='s')
+        phasePolynomial=self.convertPhaseCoeffUnits(phasePolynomial,input_units=unit,output_units='fs')
         if mode=='relative':
             self.currentPhasePolynomial = P([a + b for a, b in zip_longest(self.optimalPhasePolynomial.coef, phasePolynomial.coef, fillvalue=0)])
         elif mode=='absolute':
             self.currentPhasePolynomial=phasePolynomial
     
-    def get_currentPhase(self,mode=None,units_to_return='s',TaylorPrefactorFlag=''):
+    def get_currentPhase(self,mode=None,units_to_return='fs',TaylorPrefactorFlag=''):
         '''
             Sets the beam's phase profile 
             input:
                 - indices (nd.array of int) : Indices at which to sample the 
                 - mode (string): Specifies if the phase returned is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
-                - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of seconds
-                    Specifying 'fs' converts the internal units to be displayed in fs.
+                - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of femtoseconds
                 - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
             output:
                 - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
@@ -272,7 +284,7 @@ class Beam:
         elif mode=='absolute':
             returnPolynomial=self.currentPhasePolynomial
         returnPolynomial = self.TaylorPrefactor(returnPolynomial, TaylorPrefactorFlag)
-        return self.convertPhaseCoeffUnits(returnPolynomial,input_units='s',output_units=units_to_return)
+        return self.convertPhaseCoeffUnits(returnPolynomial,input_units='fs',output_units=units_to_return)
     
     def get_horizontalIndices(self):
         '''
@@ -305,8 +317,8 @@ class Beam:
             compression_polynomial.coef[1]=0
         else:
             delay_polynomial=P([0,0])   
-        angFreq_compression=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_compressionCarrier()
-        angFreq_delay=self.get_spectrumAtPixel(indices,unit='ang_frequency')-self.get_delayCarrier()
+        angFreq_compression=self.get_spectrumAtPixel(indices,unit='ang_frequencyPHz')-self.get_compressionCarrier()
+        angFreq_delay=self.get_spectrumAtPixel(indices,unit='ang_frequencyPHz')-self.get_delayCarrier()
         return delay_polynomial(angFreq_delay)+compression_polynomial(angFreq_compression)
 
     def get_sampledOptimalPhase(self,indices):
@@ -396,13 +408,16 @@ class Beam:
             phaseStripesImage=phaseStripesImage*self.mask  
         return phaseStripesImage 
 
-    def makeGrating(self):
+    def makeGrating(self,horizontalDelimiters=None,verticalDelimiters=None):
         '''
             Makes the phase grating using the current phase, amplitude and period
+            input:
+                - horizontalDelimiters (nd.array, Default None) Indices of the two horizontal limiting edges of the beam. Default uses internal delimiters
+                - verticalDelimiters (nd.array, Default None) Indices of the two vertical limiting edges of the beam. Default uses internal delimiters
             output:
                 - 2d.array: A 2D phase array corresponding to the current phase profile in rad
         '''
-        self.make_mask()
+        self.make_mask(horizontalDelimiters=horizontalDelimiters,verticalDelimiters=verticalDelimiters)
         phaseGratingImage=np.zeros((self.SLMHeight,self.SLMWidth))
         if self.phaseGratingPeriod is None:
             return phaseGratingImage

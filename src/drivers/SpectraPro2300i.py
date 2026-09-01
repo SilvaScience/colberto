@@ -11,39 +11,40 @@ from collections import defaultdict
 import time
 import serial
 import re
+import logging
+logger = logging.getLogger(__name__)
 
 class SpectraPro2300i(QtCore.QThread):
     
     name = 'SpectraPro2300i'
     type = 'Monochromator'
     
-    def __init__(self,hardware_params):
+    def __init__(self,hardware_params,port):
         super(SpectraPro2300i, self).__init__()
 
         # set up spectrograph
         self.serial_busy = False
-        port = 'COM5'
         self.ser = serial.Serial(port=port, baudrate=9600, bytesize=8, parity='N',
                                  stopbits=1, xonxoff=0, rtscts=0, timeout=0.02)
         # get startup values
-        self.grating = float(self.write_command('?GRATING')[0])
         numbers = self.write_command('?GRATINGS')
-        self.num_gratings = int((len(numbers)-8)/2)
-        self.grating_densities = np.zeros(self.num_gratings)
-        self.grating_blazes = np.zeros(self.num_gratings)
-        for i in range(self.num_gratings):
-            self.grating_densities[i] = numbers[i*3 + 1]
-            self.grating_blazes[i] = numbers[i * 3 + 2]
-        self.center_wl = float(self.write_command('?NM')[0])
-        self.mirror = float(self.write_command('?MIR')[0])
-        print(self.center_wl)
-        print(self.grating_densities)
-        print(self.grating_blazes)
-        print(self.grating)
-        print('SP2300 grating info: ', numbers)
-        print('SP2300 grating densities: ',self.grating_densities)
-        print('SP2300 grating blazes: ',self.grating_blazes)
-        print('SP2300 selected grating: ',self.grating)
+        self.grating_densities = []
+        self.grating_blazes = []
+        for i,number in enumerate(numbers):
+            if i%3==0:
+                if int(numbers[i])==0:
+                    break
+                else:
+                    self.grating_densities.append(int(numbers[i + 1]))
+                    self.grating_blazes.append(int(numbers[i + 2]))
+        self.grating_densities=np.array(self.grating_densities)
+        self.grating_blazes=np.array(self.grating_blazes)
+        self.get_monochromator_parameters()
+        logger.info('SP2300 grating info: %s', numbers)
+        logger.info('SP2300 grating densities: %s',self.grating_densities)
+        logger.info('SP2300 grating blazes: %s',self.grating_blazes)
+        logger.info('SP2300 selected grating: %s',self.grating)
+        logger.info('SP2300 selected mirror: %s',self.mirror)
 
         # This is the hardware parameters dictionnary. It is provided by hardware-specific configurations and are not changed in operation
         self.hardware_params=hardware_params
@@ -147,5 +148,22 @@ class SpectraPro2300i(QtCore.QThread):
             output:
                 - central_wavelength (np.float): the central wavelength in nm
                 - grating_lines_per_mm (np.float): the number of groove per mm of the selected grating
+                - grating_blazes(np.float): the blaze wavelength of the grating
         """
-        return self.center_wl, self.grating_densities[int(self.grating-1)]
+        self.grating= int(self.write_command('?GRATING')[0])
+        self.center_wl = float(self.write_command('?NM')[0])
+        self.mirror = int(self.write_command('?MIR')[0])
+        return self.center_wl, self.grating_densities[self.grating-1],self.grating_blazes[self.grating-1]
+
+    def get_grating_indices(self):
+        """
+            Returns the index of the current grating
+            output:
+                - grating index (int): the index of the grating currently used
+                - mirror index(int): the output port the internal mirror is redirecting light to (0 or 1)
+
+        """
+        self.grating= int(self.write_command('?GRATING')[0])
+        self.center_wl = float(self.write_command('?NM')[0])
+        self.mirror = int(self.write_command('?MIR')[0])
+        return self.grating,self.mirror

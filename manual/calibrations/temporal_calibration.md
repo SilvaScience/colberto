@@ -15,11 +15,11 @@ Chirp scans can be performed from the Chirp Scan panel in the Chirp Calibration 
 
 3. Secondly, you must enter the needed informations in the measurement block, i.e. carrier wavelength, beam name and the GDD interval parameters. YOU ALSO HAVE TO ADD THE SHG BANDPASS FILTER IN FRONT OF THE MONOCHROMATOR.
 
-4. Then you can click on `acquire`. If demo mode is selected, it will take old saved data. Otherwise, the program will perform the chirp scan and show you the result on the top right figure. The background saved data will be subtracted from every scan step. 
+4. Then you can click on `acquire`. If demo mode is selected, it will take old saved data. Otherwise, the program will perform the chirp scan and show you the result on the top right figure. The background saved data will be subtracted from every scan step.  The last chirp scan raw data is saved in the Datahandling under 'chirp_calibration_raw_data_beam_XXX' where XXXX is the beam's name.
 
 5. Once the measurement is done, you may want to try to fit a polynomial function on the SHG region of interest. To do so, in the fitting block, the user may choose a wavelength bandwidth and an SNR threshold. By clicking on Apply SNR threshold, the bottom left figure will be adjusted and will show the desired region with nonzero signal where the SNR is big enough. 
 
-6. To perform the fit, you have to choose the polynomial order between 1 to 10. Then by clicking on `Fit chirp scan` the program will find the maximum chirp value for each wavelength and do the polynomial fitting. The output bottom right graph will show the data and the fit. The outputs coefficients will be printed in the bottom text box. If the fit isn't right, you can try with a different polynomial order. 
+6. To perform the fit, you have to choose the polynomial order between 1 to 10. Then by clicking on `Fit chirp scan` the program will find the maximum chirp value for each wavelength and do the polynomial fitting. The output bottom right graph will show the data and the fit. The outputs coefficients will be printed in the bottom text box. If the fit isn't right, you can try with a different polynomial order. The last fit data (frequency relative to carrier, key 'omega_shifted_fs', maximal chirp values in key 'max_chirp_values', fitted polynomial coefficients in key 'polynomial_coeffs' and phase derivative coefficients in key 'phase_derivative_coeffs') are all saved in a dict in Datahandling under the key 'temporal_calibration_processed_fit_beam_XXX' where XXXX is the beam's name
 
 7. Once the fit is good, the coefficients seems ok, than you can click on `assign calibration` to assign the coefficients to the selected beam name. 
 

@@ -429,7 +429,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                                 # )[0]
                                 # self.send_chirp.emit(self.chirp[3:i],self.wls[indexes],np.array(self.intensities)[3:i,indexes])
                                 self.send_chirp.emit(self.chirp[3:i],self.wls,np.array(self.intensities)[3:i,:])
-        self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data',self.Chirp_calibration_data))
+        self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data_beam_'+self.beam_name,self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
         print('Temporal Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
@@ -440,8 +440,6 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
     def take_spectrum(self,i):
-        if i == 0: 
-            self.spec = np.array(self.spectrometer.get_intensities())
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
             self.spec = self.spec-self.background
@@ -469,7 +467,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
 
         super(FitTemporalBeamCalibration, self).__init__()
 
-    def set_SNR(self, chirpdata, SNR_threshold):
+    def set_SNR(self, chirpdata, SNR_threshold,beam_name):
         '''
             Method to remove data below a given SNR:
                 - SNR: (int) Minimal signal to noise ratio.
@@ -539,9 +537,9 @@ class FitTemporalBeamCalibration(QtCore.QThread):
             'wavelengths': wavelength_array_region,
             'data': data_filtered_region
         }
-        self.send_chirp_calibration_data.emit(('temporal_calibration_processed_data', self.temporal_calibration_processed_data))
+        self.send_chirp_calibration_data.emit(('chirp_calibration_processed_data_beam_'+beam_name, self.temporal_calibration_processed_data))
 
-    def set_boundaries(self, chirpdata, boundaries, SNR_threshold):
+    def set_boundaries(self, chirpdata, boundaries, SNR_threshold,beam_name):
         '''
             Method to change the temporal beam fitting algorithm wavelength boundaries and update the results
             input:
@@ -549,13 +547,21 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         '''
         self.boundaries = boundaries
         self.SNR_threshold = SNR_threshold
-        self.set_SNR(chirpdata, self.SNR_threshold)
+        self.set_SNR(chirpdata, self.SNR_threshold,beam_name)
 
-    def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg, carrier_wavelength):
+    def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg, carrier_wavelength,beam_name):
         '''
-            Fit the polynomial 
-                - columns: (nd.array) array of SLM columns indices
-                - maxima_wavelenghts: (nd.array) array of the maxima (wavelengths) of the spectral calibration measurements
+            Fit the polynomial emits the fitted results and returns the coefficients after removing the Taylor prefactors so that they are the phase derivatives. 
+            input:
+                -
+                - wavelength_array: (1d.array) array of wavelengths where SHG was detected
+                - chirp_array: (1d.array) array of GDD used in the chirp scans
+                - data: (2d.array) array of SHG intensity for a given wavelength and applied GDD
+                - deg: (int) integer representing the order of the polynomial fit
+                - carrier_wavelength: (float) Compression carrier wavelength in nm
+                - beam_name: (str) Name of the beam being compressed
+            output:
+                - 1d.array: Phase derivate coefficients in units of powers of fs 
         '''
         self.chirp_array = chirp_array
         self.wavelength_array = wavelength_array
@@ -564,79 +570,54 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         # Loop through each wavelength 
         max_chirp_values = []
         wavelength_values = []
-        # for wls in range(self.data.shape[1]):
-        #     intensity_column = self.data[:, wls]
-        #     max_row_index = np.argmax(intensity_column)
-        #     if max_row_index == 0:
-        #         continue
-        #     max_chirp_values.append(self.chirp_array[max_row_index])
-        #     wavelength_values.append(self.wavelength_array[wls])
-
-
-        # ----- Find starting wavelength -----
-        # wavelength with the strongest overall signal
-        start_col = np.argmax(np.max(self.data, axis=0))
-
-        # maximum there
-        start_row = np.argmax(self.data[:, start_col])
-
-        indices = np.zeros(self.data.shape[1], dtype=int)
-        indices[start_col] = start_row
-
-        # Search window in chirp units
-        window = 1000   # fs²/rad²
-
-        dchirp = np.abs(self.chirp_array[1] - self.chirp_array[0])
-        N = int(window / dchirp)
-
-        # ---------- Track toward longer wavelengths ----------
-        for col in range(start_col + 1, self.data.shape[1]):
-
-            prev = indices[col-1]
-
-            lo = max(0, prev-N)
-            hi = min(self.data.shape[0], prev+N+1)
-
-            local = self.data[lo:hi, col]
-
-            indices[col] = lo + np.argmax(local)
-
-        # ---------- Track toward shorter wavelengths ----------
-        for col in range(start_col-1, -1, -1):
-
-            prev = indices[col+1]
-
-            lo = max(0, prev-N)
-            hi = min(self.data.shape[0], prev+N+1)
-
-            local = self.data[lo:hi, col]
-
-            indices[col] = lo + np.argmax(local)
-
-        # Final arrays
-        max_chirp_values = self.chirp_array[indices]
-        wavelength_values = self.wavelength_array
+        for wls in range(self.data.shape[1]):
+            intensity_column = self.data[:, wls]
+            max_row_index = np.argmax(intensity_column)
+            if max_row_index == 0:
+                continue
+            max_chirp_values.append(self.chirp_array[max_row_index])
+            wavelength_values.append(self.wavelength_array[wls])
 
 
         max_chirp_values = np.array(max_chirp_values)
         wavelength_values = np.array(wavelength_values)
-        omega_values = 0.5*co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz
+        omega_values = 0.5*co.waveToAngFreq(np.array(wavelength_values) * 1e-9) # rad Hz of the associated fundamental (hence the factor of 0.5)
 
         # Shifted frequency around the carrier
         omega_carrier = co.waveToAngFreq(carrier_wavelength * 1e-9) # rad Hz
-        omega_shifted = omega_values-omega_carrier
+        # Express the frequency offset in rad/fs. Fitting directly in rad/s
+        # produces a severely ill-conditioned Vandermonde matrix because the
+        # independent variable is typically of order 1e14.
+        omega_shifted_fs = (omega_values - omega_carrier) * 1e-15
 
-        # Fit a nth order polynimial
-        #self.fit_polynomial = Polynomial.fit(omega_shifted, max_chirp_values, deg)
-        coeffs = np.polyfit(omega_shifted, max_chirp_values, deg)
-        self.fit_polynomial = np.polyval(coeffs, omega_shifted)
-        self.send_chirp_fit.emit(omega_shifted, max_chirp_values)
-        self.send_polynomial.emit(omega_shifted, self.fit_polynomial)
-        self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
-
+        # Fit the local GDD using ascending-order coefficients. On the rad/fs
+        # axis the returned coefficients are already expressed in femtosecond
+        # units and do not require a later power-of-1e15 rescaling.
+        coeffs = np.polynomial.polynomial.polyfit(
+            omega_shifted_fs,
+            max_chirp_values,
+            deg,
+        )
+        self.fit_polynomial = np.polynomial.polynomial.polyval(
+            omega_shifted_fs,
+            coeffs,
+        )
+        self.send_chirp_fit.emit(omega_shifted_fs, max_chirp_values)
+        self.send_polynomial.emit(omega_shifted_fs, self.fit_polynomial)
         # Get the coefficients
-        self.coeffs = coeffs[::-1]
-        return self.coeffs
+        self.phase_derivative_coeffs = [
+            math.factorial(i) * coefficient
+            for i, coefficient in enumerate(coeffs)
+        ]
+        self.Chirp_fit_data={
+                                'omega_shifted_fs' :omega_shifted_fs,
+                                'max_chirp_values' :max_chirp_values,
+                                'polynomial_coeffs' : coeffs,
+                                'phase_derivative_coeffs' : self.phase_derivative_coeffs
+                                }
+        self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit_beam_'+beam_name, self.Chirp_fit_data))
+
+        return self.phase_derivative_coeffs 
     
 class DelayCalibrationMeasurement(QtCore.QThread):
     '''
@@ -750,12 +731,10 @@ class DelayCalibrationMeasurement(QtCore.QThread):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
     
-    def take_spectrum(self, i):
-        if i == 0: 
-            self.shg = np.array(self.spectrometer.get_intensities())
+    def take_spectrum(self,i):
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
-            self.spec = self.spec-self.background-self.shg
+            self.spec = self.spec-self.background
             self.sendSpectrum.emit(self.wls, self.spec)
 
     def set_SNR(self, delaydata, SNR_threshold, boundaries):
@@ -822,8 +801,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
         wavelength_array_region = self.wavelength_array[mask]
         data_filtered_region = data_filtered[1:-1, mask]
         data_integrated = np.sum(data_filtered_region, axis=1)
-        data_integrated_normalized = data_integrated/np.max(data_integrated)
-        data_integrated_normalized = -(data_integrated_normalized-np.max(data_integrated_normalized))
+        data_integrated_normalized = data_integrated-np.min(data_integrated)/(np.max(data_integrated)-np.min(data_integrated))
 
         self.sendCrossCorrelationRegion.emit(delay_array_region, data_integrated_normalized)
         self.delay_calibration_processed_data={
