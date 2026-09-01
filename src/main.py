@@ -930,7 +930,7 @@ class MainInterface(QtWidgets.QMainWindow):
         if hasattr(self, 'temporalfitting'):
             temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data_beam_'+self.beam_name_box.currentText()]
             try: 
-                self.temporalfitting.set_boundaries(temporal_calib_dict, [self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value())
+                self.temporalfitting.set_boundaries(temporal_calib_dict, [self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value(),self.beam_name_box.currentText())
             except KeyError:
                 print('Unexpected error. There should be a temporal_calibration_raw_data key in the calibration dict in Datahandling')
 

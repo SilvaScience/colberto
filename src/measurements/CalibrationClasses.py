@@ -440,8 +440,6 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
     def take_spectrum(self,i):
-        if i == 0: 
-            self.spec = np.array(self.spectrometer.get_intensities())
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
             self.spec = self.spec-self.background
@@ -541,7 +539,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         }
         self.send_chirp_calibration_data.emit(('chirp_calibration_processed_data_beam_'+beam_name, self.temporal_calibration_processed_data))
 
-    def set_boundaries(self, chirpdata, boundaries, SNR_threshold):
+    def set_boundaries(self, chirpdata, boundaries, SNR_threshold,beam_name):
         '''
             Method to change the temporal beam fitting algorithm wavelength boundaries and update the results
             input:
@@ -549,7 +547,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         '''
         self.boundaries = boundaries
         self.SNR_threshold = SNR_threshold
-        self.set_SNR(chirpdata, self.SNR_threshold)
+        self.set_SNR(chirpdata, self.SNR_threshold,beam_name)
 
     def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg, carrier_wavelength,beam_name):
         '''
@@ -733,12 +731,10 @@ class DelayCalibrationMeasurement(QtCore.QThread):
             self.terminate = True
             print(time.strftime('%H:%M:%S') + ' Request Stop')
     
-    def take_spectrum(self, i):
-        if i == 0: 
-            self.shg = np.array(self.spectrometer.get_intensities())
+    def take_spectrum(self,i):
         self.spec = np.array(self.spectrometer.get_intensities())
         if not self.isDemo and i>=1:
-            self.spec = self.spec-self.background-self.shg
+            self.spec = self.spec-self.background
             self.sendSpectrum.emit(self.wls, self.spec)
 
     def set_SNR(self, delaydata, SNR_threshold, boundaries):
@@ -805,8 +801,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
         wavelength_array_region = self.wavelength_array[mask]
         data_filtered_region = data_filtered[1:-1, mask]
         data_integrated = np.sum(data_filtered_region, axis=1)
-        data_integrated_normalized = data_integrated/np.max(data_integrated)
-        data_integrated_normalized = -(data_integrated_normalized-np.max(data_integrated_normalized))
+        data_integrated_normalized = data_integrated-np.min(data_integrated)/(np.max(data_integrated)-np.min(data_integrated))
 
         self.sendCrossCorrelationRegion.emit(delay_array_region, data_integrated_normalized)
         self.delay_calibration_processed_data={
