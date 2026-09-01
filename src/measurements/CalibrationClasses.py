@@ -429,7 +429,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                                 # )[0]
                                 # self.send_chirp.emit(self.chirp[3:i],self.wls[indexes],np.array(self.intensities)[3:i,indexes])
                                 self.send_chirp.emit(self.chirp[3:i],self.wls,np.array(self.intensities)[3:i,:])
-        self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data',self.Chirp_calibration_data))
+        self.send_chirp_calibration_data.emit(('chirp_calibration_raw_data_beam_'+self.beam_name,self.Chirp_calibration_data))
         self.sendProgress.emit(100)
         self.stop()
         print('Temporal Calibration Measurement '+time.strftime('%H:%M:%S') + ' Finished')
@@ -469,7 +469,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
 
         super(FitTemporalBeamCalibration, self).__init__()
 
-    def set_SNR(self, chirpdata, SNR_threshold):
+    def set_SNR(self, chirpdata, SNR_threshold,beam_name):
         '''
             Method to remove data below a given SNR:
                 - SNR: (int) Minimal signal to noise ratio.
@@ -539,7 +539,7 @@ class FitTemporalBeamCalibration(QtCore.QThread):
             'wavelengths': wavelength_array_region,
             'data': data_filtered_region
         }
-        self.send_chirp_calibration_data.emit(('temporal_calibration_processed_data', self.temporal_calibration_processed_data))
+        self.send_chirp_calibration_data.emit(('chirp_calibration_processed_data_beam_'+beam_name, self.temporal_calibration_processed_data))
 
     def set_boundaries(self, chirpdata, boundaries, SNR_threshold):
         '''
@@ -551,11 +551,19 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         self.SNR_threshold = SNR_threshold
         self.set_SNR(chirpdata, self.SNR_threshold)
 
-    def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg, carrier_wavelength):
+    def fit_chirp_scan(self, wavelength_array, chirp_array, data, deg, carrier_wavelength,beam_name):
         '''
-            Fit the polynomial 
-                - columns: (nd.array) array of SLM columns indices
-                - maxima_wavelenghts: (nd.array) array of the maxima (wavelengths) of the spectral calibration measurements
+            Fit the polynomial emits the fitted results and returns the coefficients after removing the Taylor prefactors so that they are the phase derivatives. 
+            input:
+                -
+                - wavelength_array: (1d.array) array of wavelengths where SHG was detected
+                - chirp_array: (1d.array) array of GDD used in the chirp scans
+                - data: (2d.array) array of SHG intensity for a given wavelength and applied GDD
+                - deg: (int) integer representing the order of the polynomial fit
+                - carrier_wavelength: (float) Compression carrier wavelength in nm
+                - beam_name: (str) Name of the beam being compressed
+            output:
+                - 1d.array: Phase derivate coefficients in units of powers of fs 
         '''
         self.chirp_array = chirp_array
         self.wavelength_array = wavelength_array
@@ -598,11 +606,20 @@ class FitTemporalBeamCalibration(QtCore.QThread):
         )
         self.send_chirp_fit.emit(omega_shifted_fs, max_chirp_values)
         self.send_polynomial.emit(omega_shifted_fs, self.fit_polynomial)
-        self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit', self.fit_polynomial))
-
         # Get the coefficients
-        self.coeffs = coeffs
-        return self.coeffs
+        self.phase_derivative_coeffs = [
+            math.factorial(i) * coefficient
+            for i, coefficient in enumerate(coeffs)
+        ]
+        self.Chirp_fit_data={
+                                'omega_shifted_fs' :omega_shifted_fs,
+                                'max_chirp_values' :max_chirp_values,
+                                'polynomial_coeffs' : coeffs,
+                                'phase_derivative_coeffs' : self.phase_derivative_coeffs
+                                }
+        self.send_chirp_calibration_fit.emit(('temporal_calibration_processed_fit_beam_'+beam_name, self.Chirp_fit_data))
+
+        return self.phase_derivative_coeffs 
     
 class DelayCalibrationMeasurement(QtCore.QThread):
     '''

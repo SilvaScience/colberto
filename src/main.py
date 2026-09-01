@@ -920,15 +920,15 @@ class MainInterface(QtWidgets.QMainWindow):
             Apply the SNR on the chirp scan and show the desired wavelength bandwidth.
         '''
         if hasattr(self, 'temporalfitting'):
-            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
-            self.temporalfitting.set_SNR(temporal_calib_dict, self.chirp_SNR_threshold_value.value())
+            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data_beam_'+self.beam_name_box.currentText()]
+            self.temporalfitting.set_SNR(temporal_calib_dict, self.chirp_SNR_threshold_value.value(),self.beam_name_box.currentText())
     
     def update_temporal_calibration_boundaries(self):
         '''
             Updates the boundaries to consider when processing temporal calibration data
         ''' 
         if hasattr(self, 'temporalfitting'):
-            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data']
+            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_raw_data_beam_'+self.beam_name_box.currentText()]
             try: 
                 self.temporalfitting.set_boundaries(temporal_calib_dict, [self.chirp_min_wavelength_value.value(), self.chirp_max_wavelength_value.value()], self.chirp_SNR_threshold_value.value())
             except KeyError:
@@ -939,8 +939,11 @@ class MainInterface(QtWidgets.QMainWindow):
             Fit the chirp scan to a polynomial function.
         ''' 
         if hasattr(self, 'temporalfitting'):
-            temporal_calib_dict = self.DataHandling.calibration['temporal_calibration_processed_data']
-            phase_derivative_coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()))
+            temporal_calib_dict = self.DataHandling.calibration['chirp_calibration_processed_data_beam_'+self.beam_name_box.currentText()]
+            phase_derivative_coeffs = self.temporalfitting.fit_chirp_scan(temporal_calib_dict['wavelengths'], temporal_calib_dict['chirps'], temporal_calib_dict['data'], self.chirp_polynomial_order_value.value(), float(self.compression_carrier_wavelength_Qline.text()),self.beam_name_box.currentText())
+            # The fit describes GDD as an ordinary power series. Beam stores the
+            # corresponding spectral-phase derivatives, so terms of order i in
+            # the GDD fit must be multiplied by i! before they are assigned.
             # Generate names dynamically
             names = ["GDD" if i == 0 else "TOD" if i == 1 else "FOD" if i == 2 else f"{i+2}OD" for i in range(len(phase_derivative_coeffs))]
             # Polynomial string using the same names list
