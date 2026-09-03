@@ -278,7 +278,7 @@ class StresingCamera(QtCore.QThread):
             wavelengths: 1D numpy array of wavelengths (nm)
         """
         if self.monochromator is not None:
-            self.center_wavelength,self.grating_lines_per_mm=self.monochromator.get_monochromator_parameters()
+            self.center_wavelength,self.grating_lines_per_mm=self.monochromator.get_monochromator_parameters()[:2]
             self.grating_index,self.mirror=self.monochromator.get_grating_indices()
             num_pixels = self.hardware_params['num_pixels']
             if self.hardware_params['calibrated']:

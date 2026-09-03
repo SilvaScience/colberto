@@ -64,6 +64,15 @@ def load_instruments():
 
         if config_name == "config_UdeM.ini":
             print('Udem Settings Chosen')
+            stresing_params = {
+                'pixel_size_mm': 24e-3,
+                'num_pixels': 1010,
+                'calibrated': False,
+                'calibrationThirdOrder': 0,
+                'calibrationSecondOrder': 0,
+                'calibrationFirstOrder': 0.9891,
+                'calibrationOffset': -51.163
+            }
             grating_params_stresing={
                 '1':{#NOT CALIBRATED
                 'focal_length_mm':300,
