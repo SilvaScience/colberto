@@ -227,22 +227,22 @@ class BoxcarGeometry(QtCore.QThread):
         for key in self.group_delay:
             self.group_delay[key] *= -1
 
-    def phase_cycling(self, j):
+    def phase_cycling(self, j=None):
         '''
             Takes the eight spectra needed for the phase cycling procedure.
-                - j: Iteration index of the scanned delay
+                - j: Iteration index of the scanned delay. Default is None and does not apply additionnal delay to the beams
         '''
         self.intensity = np.zeros(len(self.wls))
         if getattr(self, "isPhaseCycling", True):
-            operations = np.array([1, -1, -1, 1, -1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1])
+            operations = np.array([1,-1,-1,1,-1,1,1,-1])
         else:
             operations = np.array([1])  # single step, no phase cycling
 
         self.cep = {
-            'A':  np.array([0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi, 0, 0, 0, 0, np.pi, np.pi, np.pi, np.pi]),
-            'B':  np.array([0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, np.pi]),
-            'C':  np.array([0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi, 0, np.pi]),
-            'LO': np.array([0, np.pi, np.pi, 0, np.pi, 0, 0, np.pi, np.pi, 0, 0, np.pi, 0, np.pi, np.pi, 0])
+            'A':  np.pi*np.array([0,0,0,0,0,0,0,0]),
+            'B':  np.pi*np.array([0,0,1,1,0,0,1,1]),
+            'C':  np.pi*np.array([0,0,0,0,1,1,1,1]),
+            'LO': np.pi*np.array([0,1,0,1,0,1,0,1])
         }
 
         self.specs = []
@@ -250,7 +250,10 @@ class BoxcarGeometry(QtCore.QThread):
             image_output = None
 
             for name in self.beam_name:
-                self.coeffs = np.array([self.cep[name][i], self.group_delay[name][j]])
+                if j is None:
+                    self.coeffs = np.array([self.cep[name][i]])
+                else:
+                    self.coeffs = np.array([self.cep[name][i], self.group_delay[name][j]])
                 self.beam[name].set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
                 beam_image = self.beam[name].makeGrating()
                 if image_output is None:
@@ -262,60 +265,19 @@ class BoxcarGeometry(QtCore.QThread):
             self.SLM.write_image(image_output)
 
             if not self.isDemo:
-                self.flag = 0
-                self.take_spectrum()
+                self.spec=np.array(self.spectrometer.get_intensities())
+                time.sleep(0.03)
+                self.sendSpectrum.emit(self.wls, self.spec)
             else:
                 self.fake_spectrum()
             self.specs.append(self.spec.copy())
         
         # Total signal
-        S_total = np.zeros_like(self.wls, dtype=complex)
+        self.heterodyne_signal= np.zeros_like(self.wls, dtype=float)
         for i in range(len(operations)):
-            S_total += operations[i] * self.specs[i]
-        self.intensity = S_total/np.sum(np.abs(operations))
+            self.heterodyne_signal += operations[i] * self.specs[i]
 
-        self.sendPhaseCycling.emit(self.wls, np.abs(self.intensity))
-    
-    def take_spectrum(self, max_iter=10):
-        '''
-            Get the spectrum and check if the measurement is good. The while loop breaks if too many spectrum were took.
-                - max_iter: maximum number of trials to get a good spectrum 
-        '''
-        count = 0
-        while self.flag == 0 and count < max_iter:
-            self.spec = np.array(self.spectrometer.get_intensities())
-            time.sleep(0.1)
-            self.sendPhaseCycling.emit(self.wls, self.spec)
-            self.check_spectrum()   # updates self.flag
-            count += 1
-        if count == max_iter:
-            logger.info('%s Measurement background changes over the tolerance threshold'%datetime.datetime.now())
-            return
-        if not self.isDemo:
-            self.sendSpectrum.emit(self.wls, self.spec)
-
-    def check_spectrum(self, saturation=16000, tolerance=0.005):
-        '''
-            Check if the spectrum is chnaging too much between different acquisitions.
-                - saturation: saturation count for the camera (16000 for stresing)
-                - tolerance: defines how big the change in background is still acceptable
-                    example: tolerance * saturation = average change per pixel
-                        0.005 x 16000 = 80
-                        0.01  x 16000 = 160
-        '''
-
-        if self.prev_spec is None:
-            self.prev_spec = self.spec.copy()
-            self.flag = 0
-            return
-
-        delta = np.abs(self.spec - self.prev_spec)
-        mean_change = np.mean(delta)
-        relative_change = mean_change / saturation
-
-        self.flag = int(relative_change < tolerance)
-
-        self.prev_spec = self.spec.copy()
+        self.sendPhaseCycling.emit(self.wls, self.heterodyne_signal)
     
     def stop(self):
         self.terminate = True

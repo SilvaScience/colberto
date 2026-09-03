@@ -44,10 +44,10 @@ class LOmeasurementPlot(QtWidgets.QMainWindow):
              - x_array: np.1darray the x-axis of the data
              - y_array: np.1darray the y-axis of the data
         '''
-        self.x_array = x_array
-        self.y_array = y_array
+        self.x_array = np.real(x_array)
+        self.y_array = np.real(y_array)
         self.graphWidget.clear()
-        self.graphWidget.plot(x_array, y_array, symbol='o')
+        self.graphWidget.plot(x_array, y_array)
 
 class MDCSmeasurementPlot(QtWidgets.QMainWindow):
     
