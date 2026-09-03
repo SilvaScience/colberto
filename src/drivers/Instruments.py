@@ -73,26 +73,87 @@ def load_instruments():
                 'calibrationFirstOrder': 0.9891,
                 'calibrationOffset': -51.163
             }
-
-            grating_params_pixis = {
+            grating_params_stresing={
+                '1':{#NOT CALIBRATED
+                'focal_length_mm':300,
+                'f':np.float64(305381928.6149399),
+                'delta':np.float64(0.11432112488955509),
+                'gamma':np.float64(0.5337955112241486),
+                'n0':np.float64(539.4), # Central pixel
+                'offset_adjust':0,
+                'd_grating':833.3333333333334,
+                'x_pixel':24000.0,
+                'curvature':np.float64(5.736575254871788e-07),
+                },
+                '2':{#NOT CALIBRATED
+                'focal_length_mm':300,
+                'f':np.float64(305381928.6149399),
+                'delta':np.float64(0.11432112488955509),
+                'gamma':np.float64(0.5337955112241486),
+                'n0':np.float64(539.4), # Central pixel
+                'offset_adjust':0,
+                'd_grating':833.3333333333334,
+                'x_pixel':24000.0,
+                'curvature':np.float64(5.736575254871788e-07),
+                },
+                '3':{#'[np.float64(305859374.99999994), np.float64(0.021862966763817993), np.float64(0.5415310171886933), np.float64(507.0), 0, 3333.3333333333335, 26000.0, np.float64(5.378365208238061e-07)]'
                     'focal_length_mm':300,
-                    'f':np.float64(300000000.0),
-                    'delta':np.float64(0.06),
-                    'gamma':np.float64(0.5),
-                    'n0':np.float64(516.6), # Central pixel
+                    'f':np.float64(305859374.99999994),
+                    'delta':np.float64(0.021862966763817993),
+                    'gamma':np.float64(0.5415310171886933),
+                    'n0':np.float64(507.0),
                     'offset_adjust':0,
-                    'd_grating':833.3333333333334,
+                    'd_grating': 3333.333333333333,
                     'x_pixel':26000,
-                    'curvature':np.float64(0.0),
-                }
-
-            grating_params = {
-                'Stresing': stresing_params,
-                'Pixis': grating_params_pixis
+                        'curvature':np.float64(0.0),
+                        'blaze':np.float64(2000),
+                    },
             }
-
+            gratings_params_pixis ={ 
+                    '1':{#'[np.float64(300000000.0), np.float64(0.5), np.float64(0.1), np.float64(507.14285714285717), 0, 833.3333333333334, 26000.0, np.float64(0.0)]'
+                        'focal_length_mm':300,
+                        'f':np.float64(300000000.0),
+                        'delta':np.float64(0.5),
+                        'gamma':np.float64(0.1),
+                        'n0':np.float64(507.14285714285717),# Central pixel
+                        'offset_adjust':0,
+                        'd_grating':833.3333333333334,
+                        'x_pixel':26000,
+                        'curvature':np.float64(0.0),
+                        'blaze':np.float64(300),
+                        },
+                    '2':{#'[np.float64(296772481.19608825), np.float64(-0.1011307412781098), np.float64(0.5254178460808079), np.float64(498.85714285714283), 0, 833.3333333333334, 26000.0, np.float64(4.8015347380556125e-08)]'
+                        'focal_length_mm':300,
+                        'f':np.float64(296772481.19608825),
+                        'delta':np.float64(-0.1011307412781098),
+                        'gamma':np.float64(0.5254178460808079),
+                        'n0':np.float64(498.85714285714283),
+                        'offset_adjust':0,
+                        'd_grating':833.3333333333334,
+                        'x_pixel':26000,
+                        'curvature':np.float64(0.0),
+                        'blaze':np.float64(750),
+                        },
+                    '3':{#'[np.float64(305859374.99999994), np.float64(0.021862966763817993), np.float64(0.5415310171886933), np.float64(507.0), 0, 3333.3333333333335, 26000.0, np.float64(5.378365208238061e-07)]'
+                        'focal_length_mm':300,
+                        'f':np.float64(305859374.99999994),
+                        'delta':np.float64(0.021862966763817993),
+                        'gamma':np.float64(0.5415310171886933),
+                        'n0':np.float64(507.0),
+                        'offset_adjust':0,
+                        'd_grating': 3333.333333333333,
+                        'x_pixel':26000,
+                        'curvature':np.float64(0.0),
+                        'blaze':np.float64(2000),
+                        },
+                    }
+            grating_params = {
+                'Stresing': grating_params_stresing,
+                'Pixis': gratings_params_pixis
+            }
+            port='COM5'
             try:
-                Monochrom = SpectraPro2300i(grating_params)
+                Monochrom = SpectraPro2300i(grating_params,port=port)
                 logger.info('%s SpectraPro2300i connected' % datetime.datetime.now())
             except Exception as e:
                 Monochrom = SpectraPro2300iDemo(grating_params)
@@ -102,7 +163,7 @@ def load_instruments():
 
         else:
             print('WFU Settings Chosen')
-            stresing_params = {
+            stresing_params ={
                 'pixel_size_mm': 24e-3,
                 'num_pixels': 1010,
                 'calibrated': False,
@@ -110,18 +171,20 @@ def load_instruments():
                 'calibrationSecondOrder': 0.000165366,
                 'calibrationFirstOrder': 0.409445,
                 'calibrationOffset': 265.515,
-            }
+                }
 
             grating_params = {
-                'focal_length_mm': 150,  # should be 150
-                'f': np.float64(330000000.08),
-                'delta': np.float64(-0.7775441817634736),
-                'gamma': np.float64(0.7313712629429233),
-                'n0': np.float64(511.0),
-                'offset_adjust': 0.0,
-                'd_grating': np.float64(3333.3333333333335),
-                'x_pixel': 24000.0,
-                'curvature': np.float64(-9.999764504749403e-07),
+                '1': {
+                    'focal_length_mm': 150,  # should be 150
+                    'f': np.float64(330000000.08),
+                    'delta': np.float64(-0.7775441817634736),
+                    'gamma': np.float64(0.7313712629429233),
+                    'n0': np.float64(511.0),
+                    'offset_adjust': 0.0,
+                    'd_grating': np.float64(3333.3333333333335),
+                    'x_pixel': 24000.0,
+                    'curvature': np.float64(-9.999764504749403e-07),
+                }
             }
 
             Monochrom = Shamrock(grating_params)

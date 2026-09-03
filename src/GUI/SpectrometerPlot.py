@@ -107,7 +107,7 @@ class SpectrometerPlot(QtWidgets.QMainWindow):
         mousePoint = self.graphWidget.getPlotItem().vb.mapSceneToView(pos)
         self.crosshair_v.setPos(mousePoint.x())
         self.crosshair_h.setPos(mousePoint.y())
-        calibration_mode = False
+        calibration_mode = True 
         if calibration_mode:
             pixel = np.argmin(abs(self.wls - mousePoint.x()))
             self.value_label.setText(f"Cursor: {mousePoint.x():.1f} nm {mousePoint.y():.1f} cts {pixel:.0f} pixel")
