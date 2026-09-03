@@ -462,12 +462,7 @@ class MainInterface(QtWidgets.QMainWindow):
         for device in self.parameter_dic:
             for param in self.parameter_dic[device]:
                 self.parameter[param] = self.parameter_dic[device][param]['val']
-        self.DataHandling.close()
-        self.DataHandling = DataHandling(self.parameter, self.spec_length)
-        self.DataHandling.sendParameterarray.connect(self.ParameterPlot.set_data)
-        for plot in self.spectrum_plots:
-            self.DataHandling.sendSpectrum.connect(plot.set_data)
-            self.DataHandling.sendMaximum.connect(plot.update_datareader)
+        self.DataHandling.change_spectrometer(self.spec_length)
 
         self.connect_camera_display()
         self.connect_acquisition_settings()

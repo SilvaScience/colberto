@@ -43,7 +43,7 @@ class StresingCamera(QtCore.QThread):
 
     name = 'StresingCamera'
 
-    def __init__(self,hardware_params):
+    def __init__(self,hardware_params, path_config):
         super(StresingCamera, self).__init__()
 
         # initialize Worker
@@ -68,13 +68,14 @@ class StresingCamera(QtCore.QThread):
         path_dll = folder_path_dll / "stresing" / "ESLSCDLL.dll"
         path_dll = str(path_dll)
 
-        path_config = Path(r"C:\Program Files\Stresing\Escam\config_UdeM.ini")
-        #path_config = Path(r"C:\Program Files\Stresing\Escam\config.ini") # WFU path
-
         # Create a ConfigParser object
         config = CaseInsensitiveConfig()
         # Read the INI file
         config.read(path_config)
+
+        print(path_config)
+        print("Reading:", path_config)
+        print("Sections:", config.sections())
 
         # Intitalize stresing camera 
         self.driver = init_driver(self, path_dll, config) # type: ignore
@@ -277,47 +278,64 @@ class StresingCamera(QtCore.QThread):
             wavelengths: 1D numpy array of wavelengths (nm)
         """
         if self.monochromator is not None:
-            self.center_wavelength=self.monochromator.get_monochromator_parameters()[0]
-            self.grating_index=self.monochromator.get_grating_indices()[0]
-        if self.hardware_params['calibrated']:
+            self.center_wavelength,self.grating_lines_per_mm=self.monochromator.get_monochromator_parameters()
+            self.grating_index,self.mirror=self.monochromator.get_grating_indices()
+            num_pixels = self.hardware_params['num_pixels']
+            if self.hardware_params['calibrated']:
 
-            wl_center = self.center_wavelength
-            m_order = 1
-            px = self.px0
-            grating_key=str(self.grating_index)
-            # calibration from notebook
-            f=self.hardware_params[grating_key]['f']
-            delta=self.hardware_params[grating_key]['delta']
-            gamma=self.hardware_params[grating_key]['gamma']
-            n0=self.hardware_params[grating_key]['n0']
-            offset_adjust=self.hardware_params[grating_key]['offset_adjust']
-            d_grating=self.hardware_params[grating_key]['d_grating']
-            x_pixel=self.hardware_params[grating_key]['x_pixel']
-            curvature=self.hardware_params[grating_key]['curvature']
+                wl_center = self.center_wavelength
+                m_order = 1
+                px = self.px0
+                grating_key=str(self.grating_index)
+                # calibration from notebook
+                f=self.hardware_params[grating_key]['f']
+                delta=self.hardware_params[grating_key]['delta']
+                gamma=self.hardware_params[grating_key]['gamma']
+                n0=self.hardware_params[grating_key]['n0']
+                offset_adjust=self.hardware_params[grating_key]['offset_adjust']
+                d_grating=self.hardware_params[grating_key]['d_grating']
+                x_pixel=self.hardware_params[grating_key]['x_pixel']
+                curvature=self.hardware_params[grating_key]['curvature']
 
-            n = px - (n0 + offset_adjust * wl_center)
+                n = px - (n0 + offset_adjust * wl_center)
 
-            psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
-            eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
+                psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
+                eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
-            self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+                self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+
+            else:
+                # Calculate linear dispersion (nm/mm)
+                # dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
+                #
+                # # Center pixel
+                # center_pixel = num_pixels // 2
+                #
+                # # Pixel index array
+                # pixel_indices = np.arange(num_pixels)
+                #
+                # # Wavelength at each pixel
+                # self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
+                # # Refine the calibration using a mercury spectral lamp
+                # self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + self.hardware_params['calibrationSlope']*self.wavelengths + self.hardware_params['calibrationOffset']
+
+                if self.center_wavelength == 500:
+                    # print('center wavelength = 500')
+                    self.wavelengths = np.arange(num_pixels)
+                if self.center_wavelength > 500:
+                    # print('center wavelength > 500')
+                    self.wavelengths = np.arange(num_pixels) + (self.center_wavelength - 500)
+                if self.center_wavelength < 500:
+                    # print('center wavelength < 500')
+                    self.wavelengths = np.arange(num_pixels) + (self.center_wavelength - 500)
+
+                self.wavelengths = self.hardware_params['calibrationThirdOrder'] * (self.wavelengths ** 3) + \
+                                   self.hardware_params['calibrationSecondOrder'] * (self.wavelengths ** 2) + \
+                                   self.hardware_params['calibrationFirstOrder'] * (self.wavelengths) + \
+                                   self.hardware_params['calibrationOffset']
         else:
-            pixel_size_mm =self.hardware_params[grating_key]['pixel_size_mm'] 
-            focal_length_mm = self.hardware_params[grating_key]['focal_length_mm']
-            num_pixels = self.hardware_params[grating_key]['num_pixels']
-
-            # Calculate linear dispersion (nm/mm)
-            dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
-
-            # Center pixel
-            center_pixel = num_pixels // 2
-
-            # Pixel index array
-            pixel_indices = np.arange(num_pixels)
-
-            # Wavelength at each pixel
-            self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-
+            self.wavelengths = self.hardware_params['num_pixels']
+            logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength' % datetime.datetime.now())
 
     def attach_to_monochromator(self,monochromator):
         """
