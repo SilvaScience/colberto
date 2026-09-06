@@ -1,5 +1,6 @@
 import yaml
 import importlib
+import inspect
 import sys
 import time
 import numpy as np
@@ -251,6 +252,11 @@ class MainInterface(QtWidgets.QMainWindow):
 
         try:
             cls = load_class(f"{'measurements.MeasurementClasses'}.{cls}")
+
+            # Save the inputs of the function in the H5 file
+            input_names = list(inspect.signature(cls).parameters)   # Gets the name of every input
+            self.DataHandling.set_measurement_metadata(cls.__name__, input_names, [repr(value) for value in args])  # Sends the information to datahandling
+
             self.measurement = cls(*args)
 
             # standard connections
