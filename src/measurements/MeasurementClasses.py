@@ -734,7 +734,7 @@ class THzAcquisition(QtCore.QThread):
     sendParameter = QtCore.pyqtSignal(str, float)
     plotDataSignal = QtCore.pyqtSignal(np.ndarray, np.ndarray)    # Internal signal (To make sure Qt widgets is accessed from the GUI thread)
 
-    def __init__(self, devices, plot_widget,line_edit, scan_speed, continuous_checkbox, averaging):
+    def __init__(self, devices, plot_widget, start_step_stop, scan_speed, continuous_checkbox, averaging):
         super(THzAcquisition, self).__init__()
 
         # Store parameters
@@ -743,7 +743,7 @@ class THzAcquisition(QtCore.QThread):
         self.scan_speed = scan_speed
         self.averageing_nb = averaging
         self.plot_widget = plot_widget
-        line_components = [float(x) for x in re.split(':', line_edit)]
+        line_components = [float(x) for x in re.split(':', start_step_stop)]
         self.initial_pos = line_components[0]
         self.scan_resolution = line_components[1]
         self.final_pos = line_components[2]
