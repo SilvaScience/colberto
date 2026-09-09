@@ -16,7 +16,6 @@ class Lock_In():
         self.lock_in_type = lock_in_type
 
         # setting up the parameter dict
-        self.parameter_dict = defaultdict()
         self.parameter_display_dict = defaultdict(dict)
 
         self.parameter_display_dict['filter_order']['val'] = 4
