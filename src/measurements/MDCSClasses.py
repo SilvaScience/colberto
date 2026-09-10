@@ -383,9 +383,13 @@ class PhaseCycling(QtCore.QThread):
         wls = self.wls*1e-9                           # 1D array
         freqs=co.waveToAngFreqPHz(wls)
         sigma = 0.10*np.abs(np.max(freqs)-np.min(freqs))
-        amplitude = 500 * 2000 / (sigma * np.sqrt(2 * np.pi))
-        gaussian = lambda x,center: amplitude * np.exp(-((x - center) ** 2) / (2 * sigma**2))
-        gaussian_interf=lambda x,t,phi,center:gaussian(x,center)*np.exp(1j*(t*(x-center)+phi))
+        amplitudes = {'A':0.2,
+                      'B':0.2,
+                      'C':0.2,
+                      'LO':1,
+                      'FWM':0.01}
+        gaussian = lambda x,center,a: a * np.exp(-((x - center) ** 2) / (2 * sigma**2))
+        gaussian_interf=lambda x,t,phi,center,a:gaussian(x,center,a)*np.exp(1j*(t*(x-center)+phi))
         signal=np.zeros_like(freqs,dtype=complex)
         for name in self.beams.keys():
             phi=self.beams[name].get_currentPhase().coef[0] 
@@ -393,7 +397,12 @@ class PhaseCycling(QtCore.QThread):
             center=self.beams[name].get_delayCarrier()
             print('Center is at %.2e PHz'%center)
             print('t and phi for beam %s is %.2f fs and %.2f rad'%(name,t,phi))
-            signal = signal + gaussian_interf(freqs,t,phi,center)
+            signal = signal + gaussian_interf(freqs,t,phi,center,amplitudes[name])
+        signal += signal + gaussian_interf(freqs,
+                                           self.beams['C'].get_currentPhase().coef[1],
+                                           self.beams['A'].get_currentPhase().coef[0]-self.beams['B'].get_currentPhase().coef[0]-self.beams['C'].get_currentPhase().coef[0]+self.beams['LO'].get_currentPhase().coef[0],
+                                           center,
+                                           amplitudes['FWM'])
         signal=np.abs(signal)**2
 
         return signal.astype(float)
