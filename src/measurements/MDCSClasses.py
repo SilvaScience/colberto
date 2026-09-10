@@ -295,3 +295,109 @@ class BoxcarGeometry(QtCore.QThread):
         scaling = 0.8 + 0.2 * np.random.rand()   # random scaling factor
         spec = scaling * (noise + gaussian - 50)
         self.spec = spec.astype(float)
+
+class PhaseCycling(QtCore.QThread):
+    """
+        Class defining a phase cycling procedure.
+        QtCore.signals:
+        - sendProgress: float representing the progress of the measurement.
+        - sendSpectrum: wavelength and intensity detected by the spectrometer.
+        - sendBeam: signal to the beam explorer
+        - sendPhaseCycling: 
+
+    """
+    sendProgress = QtCore.pyqtSignal(float)
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendPhaseCycling = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendBeams = QtCore.pyqtSignal(object)
+
+    def __init__(self, devices, beams, demo=False):
+        '''
+            Initializes a phase cycling procedure 
+                - devices: the devices dictionnary holding at least a spectrometer and a SLM
+                - beam_name: all the beams name
+                - beam: dictionnary of all the beams
+                - demo: is demo or not
+        ''' 
+
+        super(PhaseCycling, self).__init__()
+        self.spectrometer = devices['spectrometer']
+        self.SLM = devices['SLM']
+
+        self.wls = self.spectrometer.get_wavelength()
+        self.spectra = [] # preallocate spec array
+        self.terminate = False
+        self.isDemo = demo
+        self.beams = beams
+        self.operations = np.array([1,-1,-1,1,-1,1,1,-1])
+        self.CEPs = {
+            'A':  np.pi*np.array([0,0,0,0,0,0,0,0]),
+            'B':  np.pi*np.array([0,0,1,1,0,0,1,1]),
+            'C':  np.pi*np.array([0,0,0,0,1,1,1,1]),
+            'LO': np.pi*np.array([0,1,0,1,0,1,0,1])
+        }
+
+    def run(self):
+        '''
+            Takes the spectra needed for the phase cycling procedure.
+        '''
+        self.intensity = np.zeros(len(self.wls))
+        self.specs = []
+        for i in range(len(self.operations)):
+            if not self.terminate:
+                image_output = None
+                for name in self.beams.keys():
+                    self.coeffs = self.beams[name].get_currentPhase().coef
+                    self.coeffs[0] = self.CEPs[name][i]
+                    self.beams[name].set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                    beam_image = self.beams[name].makeGrating()
+                    if image_output is None:
+                        image_output = beam_image.copy()
+                    else:
+                        image_output += beam_image
+                
+                self.sendBeams.emit((self.beams))
+                self.SLM.write_image(image_output)
+
+                time.sleep(0.03)
+                if not self.isDemo:
+                    self.spec=np.array(self.spectrometer.get_intensities())
+                else:
+                    self.spec=self.fake_spectrum()
+                self.sendSpectrum.emit(self.wls, self.spec)
+                self.specs.append(self.spec.copy())
+        
+        # Total signal
+        self.heterodyne_signal= np.zeros_like(self.wls, dtype=float)
+        for i in range(len(self.operations)):
+            self.heterodyne_signal += self.operations[i] * self.specs[i]
+
+        self.sendPhaseCycling.emit(self.wls, self.heterodyne_signal)
+        self.sendProgress.emit(100)
+        self.stop()
+
+    def fake_spectrum(self):
+        """
+            Returns a spectrum typical of those found in phase cycling measurements.
+        """
+        wls = self.wls*1e-9                           # 1D array
+        freqs=co.waveToAngFreqPHz(wls)
+        sigma = 0.10*np.abs(np.max(freqs)-np.min(freqs))
+        amplitude = 500 * 2000 / (sigma * np.sqrt(2 * np.pi))
+        gaussian = lambda x,center: amplitude * np.exp(-((x - center) ** 2) / (2 * sigma**2))
+        gaussian_interf=lambda x,t,phi,center:gaussian(x,center)*np.exp(1j*(t*(x-center)+phi))
+        signal=np.zeros_like(freqs,dtype=complex)
+        for name in self.beams.keys():
+            phi=self.beams[name].get_currentPhase().coef[0] 
+            t=self.beams[name].get_currentPhase().coef[1] 
+            center=self.beams[name].get_delayCarrier()
+            print('Center is at %.2e PHz'%center)
+            print('t and phi for beam %s is %.2f fs and %.2f rad'%(name,t,phi))
+            signal = signal + gaussian_interf(freqs,t,phi,center)
+        signal=np.abs(signal)**2
+
+        return signal.astype(float)
+
+    def stop(self):
+        self.terminate = True
+        print(time.strftime('%H:%M:%S') + ' Request Stop')

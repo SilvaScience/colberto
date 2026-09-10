@@ -31,7 +31,7 @@ from GUI.CameraDisplay import CameraDisplay
 from GUI.AcquisitionSettings import AcquisitionSettings
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.MDCSClasses import AcquireLO, BoxcarGeometry
+from measurements.MDCSClasses import AcquireLO, BoxcarGeometry, PhaseCycling
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, AcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from measurements.TGFROGClasses import TGFROGMeasurement, TGFROGRetrievalWorker
@@ -172,6 +172,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.MDCS_secondary_delay_min_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_secondary_delay_min_value')
         self.MDCS_secondary_delay_max_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_secondary_delay_max_value')
         self.MDCS_secondary_delay_step_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_secondary_delay_step_value')
+        self.MDCS_singlePhaseCycle_button = self.findChild(QtWidgets.QPushButton, 'Measurement_singlephasecycle')
         self.MDCS_getLO_button = self.findChild(QtWidgets.QPushButton, 'Measurement_getLO_button')
         self.MDCS_acquire_button = self.findChild(QtWidgets.QPushButton, 'Measurement_acquire_button')
         self.MDCS_LO_plot = self.findChild(pg.PlotWidget, 'Local_oscillator_plot')
@@ -407,6 +408,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.PulseCharacterization.start_button.clicked.connect(self.tgfrogAcquireMeasurement)
         self.PulseCharacterization.retrieve_button.clicked.connect(self.tgfrogRetrieveMeasurement)
         # Measurement tab connect events
+        self.MDCS_singlePhaseCycle_button.clicked.connect(self.singlePhaseCycling)
         self.MDCS_getLO_button.clicked.connect(self.getLOSpectrum)
         self.MDCS_acquire_button.clicked.connect(self.MDCSacquireMeasurement)
         # SLM display connections
@@ -1251,7 +1253,18 @@ class MainInterface(QtWidgets.QMainWindow):
         self.tgfrog_retrieval_worker.finished.connect(lambda: pc.set_retrieval_running(False))
         pc.set_retrieval_running(True)
         self.tgfrog_retrieval_worker.start()
-
+    def singlePhaseCycling(self):
+        '''
+            Launches a single phase cycling procedure with the parameters stored in the beams
+        '''
+        if not self.measurement_busy:
+            self.measurement_busy = True
+            self.measurement=PhaseCycling(self.devices,self.DataHandling.get_beams(),demo=self.MDCS_demo_mode_checkbox.isChecked())
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendPhaseCycling.connect(self.LOspectrumPlot.set_data)
+            self.measurement.sendBeams.connect(self.DataHandling.set_multiple_beams)
+            self.measurement.start()
     def getLOSpectrum(self):
         if not self.measurement_busy:
             self.measurement_busy = True
@@ -1262,7 +1275,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.sendSpectrum.connect(self.LOspectrumPlot.set_data)
             self.measurement.sendLOData.connect(self.DataHandling.add_calibration)
             self.measurement.sendProgress.connect(self.set_progress)
-            self.measurement.sendBeam.connect(self.DataHandling.set_beam)
+            self.measurement.sendBeams.connect(self.DataHandling.set_beam)
             self.measurement.start()
     
     def MDCSacquireMeasurement(self):

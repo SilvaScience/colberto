@@ -2842,6 +2842,19 @@ p, li { white-space: pre-wrap; }
             <string>Get LO</string>
            </property>
           </widget>
+          <widget class="QPushButton" name="Measurement_singlephasecycle">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>170</y>
+             <width>101</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Phase Cycle now</string>
+           </property>
+          </widget>
          </widget>
          <widget class="GraphicsLayoutWidget" name="Measurement_plot" native="true">
           <property name="enabled">
