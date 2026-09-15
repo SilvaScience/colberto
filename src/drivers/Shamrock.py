@@ -60,7 +60,7 @@ class Shamrock(QtCore.QThread):
             self.parameter_dict['grating'] = value
             self.grating = value
 
-    def get_hardware_parameters(self):
+    def get_hardware_parameters(self, hardware_params):
         """
             Returns the hardware parameters of the monochromator
             output:

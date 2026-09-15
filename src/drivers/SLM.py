@@ -37,9 +37,9 @@ class Slm(QtCore.QThread):
     name = 'SLM_Meadowlark'
     type= 'SLM'
 
-    def __init__(self):
+    def __init__(self, path_config):
         super(Slm, self).__init__()
-        self.slm_worker= SLMWorker()
+        self.slm_worker= SLMWorker(path_config)
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
         self.slm_worker.sendFlag.connect(self.set_phaseShown)
@@ -199,11 +199,9 @@ class SLMWorker(QtCore.QThread):
     imageSLM = QtCore.pyqtSignal(np.ndarray)
     sendFlag = QtCore.pyqtSignal(bool)
     
-    def __init__(self):
+    def __init__(self, path_config):
+
         super(SLMWorker, self).__init__() # Elevates this thread to be independent.
-
-        path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
-
         # Create a ConfigParser object
         config = CaseInsensitiveConfig()
         # Read the INI file
