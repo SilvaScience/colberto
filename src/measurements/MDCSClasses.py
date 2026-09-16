@@ -359,7 +359,7 @@ class PhaseCycling(QtCore.QThread):
                 self.sendBeams.emit((self.beams))
                 self.SLM.write_image(image_output)
 
-                time.sleep(0.03)
+                time.sleep(1)
                 if not self.isDemo:
                     self.spec=np.array(self.spectrometer.get_intensities())
                 else:
