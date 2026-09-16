@@ -156,8 +156,16 @@ class BeamWidget(QWidget):
         self.phase_coeff_table.setHorizontalHeaderLabels(headers)
 
         self.phase_coeff_table.blockSignals(True) # Avoid going into set_phase_manually
-        [self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef)]
-        [self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) for i,coeff in enumerate(self.beam.get_currentPhase(units_to_return='fs').coef)]
+        for i,coeff in enumerate(self.beam.get_optimalPhase(units_to_return='fs').coef):
+            if i==0:
+                self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%.4f'%coeff)) #So that units of pi are well transfered
+            else:
+                self.phase_coeff_table.setItem(0,i,QTableWidgetItem('%d'%coeff)) 
+        for i,coeff in enumerate(self.beam.get_currentPhase(units_to_return='fs').coef):
+            if i==0:
+                self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%.4f'%coeff)) #So that units of pi are well transfered
+            else:
+                self.phase_coeff_table.setItem(1,i,QTableWidgetItem('%d'%coeff)) 
         self.phase_coeff_table.blockSignals(False)
         self.plot_phase()
     def plot_phase(self):
