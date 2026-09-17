@@ -24,12 +24,12 @@ class AcquireLO(QtCore.QThread):
         - sendSpectrum : wavelength and intensity detected by the spectrometer
         - sendProgress: float representing the progress of the measurement.
         - sendLOData: wavelength and intensity of the local oscillator
-        - sendBeam: signal to the beam explorer
+        - sendBeams: signal to the beam explorer
     """
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendProgress = QtCore.pyqtSignal(float)
     sendLOData = QtCore.pyqtSignal(tuple)
-    sendBeam = QtCore.pyqtSignal(object)
+    sendBeams = QtCore.pyqtSignal(object)
 
     def __init__(self, devices, beam_name, beam):
         '''
@@ -53,7 +53,7 @@ class AcquireLO(QtCore.QThread):
         '''
         self.wls = self.spectrometer.get_wavelength()
         self.beam.set_currentPhase(P(np.array([0, 0])), mode='relative', unit='fs')
-        self.sendBeam.emit((self.beam_name, self.beam))
+        self.sendBeams.emit((self.beam_name, self.beam))
         image_output = self.beam.makeGrating()
         self.SLM.write_image(image_output)
 
@@ -75,7 +75,7 @@ class BoxcarGeometry(QtCore.QThread):
         Runs a MDCS measurement in the origial boxcar geometry
             - sendProgress: float representing the progress of the measurement.
             - sendSpectrum: wavelength and intensity detected by the spectrometer.
-            - sendBeam: signal to the beam explorer
+            - sendBeams: signal to the beam explorer and DataHandling
             - sendCrossCorrelation: wavelength, delay and intensity for the Delay_scan_plot
             - sendCrossCorrelationData: wavelength, delay and intensity for DataHandling calibration
             - sendCrossCorrelationRegion: delay and intensity (wavelength integrated) for the Delay_fit_plot
@@ -86,14 +86,14 @@ class BoxcarGeometry(QtCore.QThread):
     sendProgress = QtCore.pyqtSignal(float)
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
     sendPhaseCycling = QtCore.pyqtSignal(np.ndarray, np.ndarray)
-    sendBeam = QtCore.pyqtSignal(object)
+    sendBeams = QtCore.pyqtSignal(object)
     sendMDCSPlot = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     sendMDCSRaw = QtCore.pyqtSignal(tuple)
     sendSave = QtCore.pyqtSignal()
     sendFourierReal = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
     sendFourierImag = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
 
-    def __init__(self, devices, measurement_type, t_LO, t_scanned, t_secondary, beam_name, beam, LO_spectrum, filename, comments, phase_cycling=True, demo=False):
+    def __init__(self, devices, measurement_type, t_LO, t_scanned, t_secondary, beams, LO_spectrum, filename, comments, phase_cycling=True, demo=False):
         '''
             Initializes the semporal beam calibration measurement.
                 - devices: the devices dictionnary holding at least a spectrometer and a SLM
@@ -101,16 +101,13 @@ class BoxcarGeometry(QtCore.QThread):
                 - t_LO: delay between LO and the last light-matter interaction in fs
                 - t_scanned: np.arange(delay_min, delay_max, delay_step, dtype=int) of the scanned time
                 - t_secondary: np.arange(delay_min, delay_max, delay_step, dtype=int) of the secondary time
-                - beam_name: all the beams name
-                - beam: dictionnary of all the beams
+                - beams: dictionnary of all the beams
                 - delay_min: set in the GUI in fs^2
                 - demo: is demo or not
         ''' 
 
         super(BoxcarGeometry, self).__init__()
         self.spectrometer = devices['spectrometer']
-        self.SLM = devices['SLM']
-
         self.wls = self.spectrometer.get_wavelength()
         self.spectra = [] # preallocate spec array
         self.terminate = False
@@ -120,9 +117,7 @@ class BoxcarGeometry(QtCore.QThread):
         self.t_scanned = t_scanned
         self.t_secondary = t_secondary
         self.LO_spectrum = LO_spectrum
-        #self.intensities = [[] for _ in range(len(self.t_secondary))]
 
-        # replaces: self.intensities = [[] for _ in range(len(self.t_secondary))]
         self.intensities = np.full(
             (len(self.t_secondary), len(self.t_scanned), len(self.wls)),
             np.nan,
@@ -139,14 +134,22 @@ class BoxcarGeometry(QtCore.QThread):
             'intensities' : self.intensities
         }
         self.isPhaseCycling = phase_cycling
+        self.beams=beams
         self.isDemo = demo
-        self.beam_name = beam_name
-        self.beam = beam
         self.flag = 0
         self.prev_spec = None
         self.filename = filename[:filename.rfind('/') + 1] + 'MDCS'
         logger.info(filename[:filename.rfind('/') + 1] + 'MDCS')
         self.comments = comments
+        self.phaseCycling=PhaseCycling(devices,self.beams,demo=self.isDemo)
+        self.phaseCycling.sendProgress.connect(self.set_phasecycle_progress)
+        self.phaseCycling.sendSpectrum.connect(self.sendSpectrum.emit) 
+        self.phaseCycling.sendPhaseCycling.connect(self.receive_heterodyne_signal)
+        self.phaseCycling.sendBeams.connect(self.sendBeams.emit)
+        self.phasecycleprogress=0
+        self.heterodyne_signal_received=False
+        self.scan_progress=0
+
 
     def run(self):
         '''
@@ -157,10 +160,19 @@ class BoxcarGeometry(QtCore.QThread):
                 self.timing(i)
                 for j in range(len(self.t_scanned)):
                     if not self.terminate:
-                        self.phase_cycling(j)
 
-                        self.intensities[i, j, :] = self.intensity #self.intensities[i].append(self.intensity)
-                        #print(self.intensities)
+                        for name in self.beams.keys():
+                            self.coeffs = self.beams[name].get_currentPhase().coef
+                            self.coeffs = np.array([0, self.group_delay[name][j]])
+                            self.beams[name].set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                        self.sendBeams.emit((self.beams))
+                        self.phaseCycling.update_beams(self.beams)
+                        self.phaseCycling.start()
+                        while not self.heterodyne_signal_received:
+                            time.sleep(0.03)
+
+                        self.intensities[i, j, :] = self.last_heterodyne_signal 
+                        self.heterodyne_signal_received=False
 
                         self.measurement_data = {
                             'type' : self.measurement_type,
@@ -172,14 +184,14 @@ class BoxcarGeometry(QtCore.QThread):
                             'intensities' : self.intensities #np.array(self.intensities)
                         }
                         #self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j+1], np.array(self.intensities[i]).T)
-                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], np.abs(self.intensities[i, :j + 1, :].T))
+                        self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], self.intensities[i, :j + 1, :].T)
 
                         self.sendMDCSRaw.emit(('MDCS_raw_data', self.measurement_data))
-                        self.sendProgress.emit(((i * len(self.t_scanned)) + (j + 1)) / (len(self.t_secondary) * len(self.t_scanned)) * 100)
+                        self.set_scan_progress(i,j)
                 self.sendSave.emit()
         self.sendProgress.emit(100)
         self.stop()
-        print(self.measurement_type+' measurement '+time.strftime('%H:%M:%S')+' finished')
+        logger.info(self.measurement_type+' measurement '+time.strftime('%H:%M:%S')+' finished')
 
     def timing(self, i):
         '''
@@ -227,74 +239,39 @@ class BoxcarGeometry(QtCore.QThread):
         for key in self.group_delay:
             self.group_delay[key] *= -1
 
-    def phase_cycling(self, j=None):
+    def update_total_progress(self):
         '''
-            Takes the eight spectra needed for the phase cycling procedure.
-                - j: Iteration index of the scanned delay. Default is None and does not apply additionnal delay to the beams
+            Updates the top level thread about the progress of the MDCS scan
         '''
-        self.intensity = np.zeros(len(self.wls))
-        if getattr(self, "isPhaseCycling", True):
-            operations = np.array([1,-1,-1,1,-1,1,1,-1])
-        else:
-            operations = np.array([1])  # single step, no phase cycling
-
-        self.cep = {
-            'A':  np.pi*np.array([0,0,0,0,0,0,0,0]),
-            'B':  np.pi*np.array([0,0,1,1,0,0,1,1]),
-            'C':  np.pi*np.array([0,0,0,0,1,1,1,1]),
-            'LO': np.pi*np.array([0,1,0,1,0,1,0,1])
-        }
-
-        self.specs = []
-        for i in range(len(operations)):
-            image_output = None
-
-            for name in self.beam_name:
-                if j is None:
-                    self.coeffs = np.array([self.cep[name][i]])
-                else:
-                    self.coeffs = np.array([self.cep[name][i], self.group_delay[name][j]])
-                self.beam[name].set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
-                beam_image = self.beam[name].makeGrating()
-                if image_output is None:
-                    image_output = beam_image.copy()
-                else:
-                    image_output += beam_image
-            
-            self.sendBeam.emit((self.beam))
-            self.SLM.write_image(image_output)
-
-            if not self.isDemo:
-                self.spec=np.array(self.spectrometer.get_intensities())
-                time.sleep(0.03)
-                self.sendSpectrum.emit(self.wls, self.spec)
-            else:
-                self.fake_spectrum()
-            self.specs.append(self.spec.copy())
-        
-        # Total signal
-        self.heterodyne_signal= np.zeros_like(self.wls, dtype=float)
-        for i in range(len(operations)):
-            self.heterodyne_signal += operations[i] * self.specs[i]
-
-        self.sendPhaseCycling.emit(self.wls, self.heterodyne_signal)
+        self.sendProgress.emit(self.phasecycleprogress+self.scan_progress)
     
+    def set_phasecycle_progress(self,phasecycleprogress):
+        '''
+            Update the internal tracking of the progress of the phase cycling procedure
+        '''
+        self.phasecycleprogress=phasecycleprogress / (len(self.t_secondary) * len(self.t_scanned)) 
+    
+    def set_scan_progress(self,i,j):
+        '''
+            Updates the progress of the whole scan excluding the current phase cycling step
+        ''' 
+        self.scan_progress=((i * len(self.t_scanned)) + (j + 1)) / (len(self.t_secondary) * len(self.t_scanned)) * 100
+        self.update_total_progress()
+    
+    def receive_heterodyne_signal(self,wls,heterodyne_signal):
+        '''
+            Receives the heterodyne signal from the phase cycling procedure, stores it and emits it
+        '''
+        self.wls=wls
+        self.last_heterodyne_signal=heterodyne_signal
+        self.sendPhaseCycling.emit(self.wls, self.last_heterodyne_signal)
+        self.heterodyne_signal_received=True
+
+
     def stop(self):
         self.terminate = True
         print(time.strftime('%H:%M:%S') + ' Request Stop')
 
-    def fake_spectrum(self):
-        t1 = time.time()
-        wls = self.wls                           # 1D array
-        n = len(wls)                             # number of points
-        sigma = 40.0
-        amplitude = 500 * 2000 / (sigma * np.sqrt(2 * np.pi))
-        center = 620.0                           # Gaussian center wavelength
-        gaussian = amplitude * np.exp(-((wls - center) ** 2) / (2 * sigma**2))
-        noise = np.random.randint(0, 50, n)
-        scaling = 0.8 + 0.2 * np.random.rand()   # random scaling factor
-        spec = scaling * (noise + gaussian - 50)
-        self.spec = spec.astype(float)
 
 class PhaseCycling(QtCore.QThread):
     """
@@ -302,7 +279,7 @@ class PhaseCycling(QtCore.QThread):
         QtCore.signals:
         - sendProgress: float representing the progress of the measurement.
         - sendSpectrum: wavelength and intensity detected by the spectrometer.
-        - sendBeam: signal to the beam explorer
+        - sendBeams: signal to the beam explorer
         - sendPhaseCycling: 
 
     """
@@ -315,8 +292,7 @@ class PhaseCycling(QtCore.QThread):
         '''
             Initializes a phase cycling procedure 
                 - devices: the devices dictionnary holding at least a spectrometer and a SLM
-                - beam_name: all the beams name
-                - beam: dictionnary of all the beams
+                - beams: dictionnary of all the beams as output by DataHandling.get_beams()
                 - demo: is demo or not
         ''' 
 
@@ -343,6 +319,7 @@ class PhaseCycling(QtCore.QThread):
         '''
         self.intensity = np.zeros(len(self.wls))
         self.specs = []
+        self.terminate = False
         for i in range(len(self.operations)):
             if not self.terminate:
                 image_output = None
@@ -366,13 +343,15 @@ class PhaseCycling(QtCore.QThread):
                     self.spec=self.fake_spectrum()
                 self.sendSpectrum.emit(self.wls, self.spec)
                 self.specs.append(self.spec.copy())
+            self.sendProgress.emit(i/len(self.operations)*100)
         
         # Total signal
-        self.heterodyne_signal= np.zeros_like(self.wls, dtype=float)
-        for i in range(len(self.operations)):
-            self.heterodyne_signal += self.operations[i] * self.specs[i]
+        if not self.terminate:
+            self.heterodyne_signal= np.zeros_like(self.wls, dtype=float)
+            for i in range(len(self.operations)):
+                self.heterodyne_signal += self.operations[i] * self.specs[i]
 
-        self.sendPhaseCycling.emit(self.wls, self.heterodyne_signal)
+            self.sendPhaseCycling.emit(self.wls, self.heterodyne_signal)
         self.sendProgress.emit(100)
         self.stop()
 
@@ -395,8 +374,6 @@ class PhaseCycling(QtCore.QThread):
             phi=self.beams[name].get_currentPhase().coef[0] 
             t=self.beams[name].get_currentPhase().coef[1] 
             center=self.beams[name].get_delayCarrier()
-            print('Center is at %.2e PHz'%center)
-            print('t and phi for beam %s is %.2f fs and %.2f rad'%(name,t,phi))
             signal = signal + gaussian_interf(freqs,t,phi,center,amplitudes[name])
         signal += signal + gaussian_interf(freqs,
                                            self.beams['C'].get_currentPhase().coef[1],
@@ -407,6 +384,14 @@ class PhaseCycling(QtCore.QThread):
 
         return signal.astype(float)
 
+    def update_beams(self,beams):
+        '''
+            Updates the beams inside the phase cycling procedure.
+            input:
+                - beams: dictionnary of all the beams as output by DataHandling.get_beams()
+        '''
+        self.beams=beams
+
     def stop(self):
         self.terminate = True
-        print(time.strftime('%H:%M:%S') + ' Request Stop')
+        logger.info(time.strftime('%H:%M:%S') + ' Request Stop')

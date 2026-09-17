@@ -1282,7 +1282,6 @@ class MainInterface(QtWidgets.QMainWindow):
             scannedDelay = np.arange(float(self.MDCS_scanned_delay_min_value.text()), float(self.MDCS_scanned_delay_max_value.text()), float(self.MDCS_scanned_delay_step_value.text()), dtype=int)
             secondaryDelay = np.arange(float(self.MDCS_secondary_delay_min_value.text()), float(self.MDCS_secondary_delay_max_value.text()), float(self.MDCS_secondary_delay_step_value.text()), dtype=int)
             beam_dict = self.DataHandling.get_beams()
-            beam_name = list(beam_dict.keys())
             self._cached_filename = None
             if 'LO_data' in self.DataHandling.calibration:
                 LO_spectrum = self.DataHandling.calibration['LO_data']
@@ -1291,7 +1290,6 @@ class MainInterface(QtWidgets.QMainWindow):
                     float(self.MDCS_TLO_delay_value.text()),
                     scannedDelay,
                     secondaryDelay,
-                    beam_name,
                     beam_dict,
                     LO_spectrum['spec'],
                     self.filename, 
@@ -1301,7 +1299,7 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.measurement.sendProgress.connect(self.set_progress)
                 self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
                 self.measurement.sendPhaseCycling.connect(self.LOspectrumPlot.set_data)
-                self.measurement.sendBeam.connect(self.DataHandling.set_multiple_beams)
+                self.measurement.sendBeams.connect(self.DataHandling.set_multiple_beams)
                 self.measurement.sendMDCSPlot.connect(self.MDCSplot.set_data)
                 self.measurement.sendMDCSRaw.connect(self.DataHandling.add_calibration)
                 self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
