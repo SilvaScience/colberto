@@ -150,7 +150,7 @@ class AcquisitionSettings(QtWidgets.QWidget):
 
         # ---- monochromator ----
         self.center_wavelength = QtWidgets.QDoubleSpinBox()
-        self.center_wavelength.setRange(200, 1100)
+        self.center_wavelength.setRange(0, 3000)
         self.center_wavelength.setDecimals(2)
         self.center_wavelength.setSuffix(' nm')
         self.center_wavelength.setToolTip('Wavelength at the centre of the sensor. Moves the grating.')
