@@ -2499,7 +2499,7 @@ p, li { white-space: pre-wrap; }
             <x>20</x>
             <y>20</y>
             <width>461</width>
-            <height>261</height>
+            <height>271</height>
            </rect>
           </property>
           <property name="font">
@@ -2853,6 +2853,123 @@ p, li { white-space: pre-wrap; }
            </property>
            <property name="text">
             <string>Phase Cycle now</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="Measurement_scanned_phase_label">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>210</y>
+             <width>111</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Phase scan (pi rad) :</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Measurement_scanned_phase_max_value">
+           <property name="geometry">
+            <rect>
+             <x>240</x>
+             <y>210</y>
+             <width>101</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>1</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Measurement_scanned_phase_min_value">
+           <property name="geometry">
+            <rect>
+             <x>130</x>
+             <y>210</y>
+             <width>101</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>-1</string>
+           </property>
+          </widget>
+          <widget class="QLineEdit" name="Measurement_scanned_phase_step_value">
+           <property name="geometry">
+            <rect>
+             <x>350</x>
+             <y>210</y>
+             <width>101</width>
+             <height>22</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>0.1</string>
+           </property>
+          </widget>
+          <widget class="QLabel" name="Delay_reference_beam_name_label_2">
+           <property name="geometry">
+            <rect>
+             <x>20</x>
+             <y>240</y>
+             <width>121</width>
+             <height>16</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Reference Beam name:</string>
+           </property>
+          </widget>
+          <widget class="QComboBox" name="Measurement_scanned_phase_ref_beam">
+           <property name="geometry">
+            <rect>
+             <x>140</x>
+             <y>240</y>
+             <width>81</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QComboBox::AdjustToContentsOnFirstShow</enum>
+           </property>
+           <property name="frame">
+            <bool>true</bool>
+           </property>
+           <item>
+            <property name="text">
+             <string>A</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>B</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>C</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>LO</string>
+            </property>
+           </item>
+          </widget>
+          <widget class="QPushButton" name="Measurement_phase_scan_acquire_button">
+           <property name="geometry">
+            <rect>
+             <x>350</x>
+             <y>240</y>
+             <width>101</width>
+             <height>21</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Acquire</string>
            </property>
           </widget>
          </widget>

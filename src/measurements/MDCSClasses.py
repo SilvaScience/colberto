@@ -76,12 +76,10 @@ class BoxcarGeometry(QtCore.QThread):
             - sendProgress: float representing the progress of the measurement.
             - sendSpectrum: wavelength and intensity detected by the spectrometer.
             - sendBeams: signal to the beam explorer and DataHandling
-            - sendCrossCorrelation: wavelength, delay and intensity for the Delay_scan_plot
-            - sendCrossCorrelationData: wavelength, delay and intensity for DataHandling calibration
-            - sendCrossCorrelationRegion: delay and intensity (wavelength integrated) for the Delay_fit_plot
-            - sendCrossCorrelationFit: fit of the Delay_fit_plot
-            - sendCrossCorrelationFitData: delay and intensity for DataHandling calibration
-            - sendCrossCorrelationDelay: fitted delay for DataHandling calibration
+            - sendPhaseCycling: signal of the latest phase cycling heterodyne spectrum
+            - sendMDCSPlot: signal containing a tuple of wavelength, scanned time and heterodyne spectra for plotting purposes
+            - sendMDCSRaw: signal containing a tuple of wavelength, scanned time and heterodyne spectra to be stored in datahandling. It includes metadata about the measurement
+            - sendSave: signal that riggers data saving
     '''
     sendProgress = QtCore.pyqtSignal(float)
     sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
@@ -320,12 +318,15 @@ class PhaseCycling(QtCore.QThread):
         self.intensity = np.zeros(len(self.wls))
         self.specs = []
         self.terminate = False
+        self.old_CEP={}
+        for name in self.beams.keys():
+            self.old_CEP[name]=self.beams[name].get_currentPhase().coef[0]
         for i in range(len(self.operations)):
             if not self.terminate:
                 image_output = None
                 for name in self.beams.keys():
                     self.coeffs = self.beams[name].get_currentPhase().coef
-                    self.coeffs[0] = self.CEPs[name][i]
+                    self.coeffs[0] =self.old_CEP[name] + self.CEPs[name][i]
                     self.beams[name].set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
                     beam_image = self.beams[name].makeGrating()
                     if image_output is None:
@@ -336,7 +337,7 @@ class PhaseCycling(QtCore.QThread):
                 self.sendBeams.emit((self.beams))
                 self.SLM.write_image(image_output)
 
-                time.sleep(1)
+                time.sleep(0.2)
                 if not self.isDemo:
                     self.spec=np.array(self.spectrometer.get_intensities())
                 else:
@@ -344,7 +345,17 @@ class PhaseCycling(QtCore.QThread):
                 self.sendSpectrum.emit(self.wls, self.spec)
                 self.specs.append(self.spec.copy())
             self.sendProgress.emit(i/len(self.operations)*100)
-        
+        # Reset beams to CEP before the phase cycling procedure 
+        for name in self.beams.keys():
+            self.coeffs = self.beams[name].get_currentPhase().coef
+            self.coeffs[0] = self.old_CEP[name]
+            self.beams[name].set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+            beam_image = self.beams[name].makeGrating()
+            if image_output is None:
+                image_output = beam_image.copy()
+            else:
+                image_output += beam_image
+        self.sendBeams.emit((self.beams))
         # Total signal
         if not self.terminate:
             self.heterodyne_signal= np.zeros_like(self.wls, dtype=float)
@@ -395,3 +406,140 @@ class PhaseCycling(QtCore.QThread):
     def stop(self):
         self.terminate = True
         logger.info(time.strftime('%H:%M:%S') + ' Request Stop')
+
+class PhaseScan(QtCore.QThread):
+    '''
+        Runs a phase scan measurement over the selected reference beam for global phase offset measurement
+            - sendProgress: float representing the progress of the measurement.
+            - sendSpectrum: wavelength and intensity detected by the spectrometer.
+            - sendBeams: signal to the beam explorer and DataHandling
+            - sendPhaseCycling: signal of the latest phase cycling heterodyne spectrum
+            - sendPhaseScanPlot: Signal the latest data used in the phase scan for plotting purposes
+            - sendPhaseScanRaw: Sends the final phase scan dataset for saving purposes 
+            - sendSave: signal that riggers data saving
+    '''
+    sendProgress = QtCore.pyqtSignal(float)
+    sendSpectrum = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendPhaseCycling = QtCore.pyqtSignal(np.ndarray, np.ndarray)
+    sendBeams = QtCore.pyqtSignal(object)
+    sendPhaseScanPlot = QtCore.pyqtSignal(np.ndarray, np.ndarray, np.ndarray)
+    sendPhaseScanRaw = QtCore.pyqtSignal(tuple)
+    sendSave = QtCore.pyqtSignal()
+
+    def __init__(self, devices,phase_scan, ref_beam_name, beams, filename, comments, phase_cycling=True, demo=False):
+        '''
+            Initializes the semporal beam calibration measurement.
+                - devices: the devices dictionnary holding at least a spectrometer and a SLM
+                - phase_scan: np.arange(phase_min, phase_max, phase_step, dtype=float) of the scanned phase
+                - ref_beam_name: Name of the beam whose phase will be scanned
+                - beams: dictionnary of all the beams
+                - phase_cycling: Wether to cycle the phase or not (default is True and a phase cycle procedure is executed)
+                - demo: is demo or not
+        ''' 
+
+        super(PhaseScan, self).__init__()
+        self.spectrometer = devices['spectrometer']
+        self.wls = self.spectrometer.get_wavelength()
+        self.spectra = [] # preallocate spec array
+        self.terminate = False
+        self.acquire_measurement = True
+        self.phase_scanned= phase_scan 
+        self.ref_beam_name=ref_beam_name
+        self.intensities = np.full(
+            (len(self.phase_scanned), len(self.wls)),
+            np.nan,
+            dtype=float
+        )
+        
+        self.measurement_data={
+            'type' : 'Phase Scan',
+            'phase_scanned' : self.phase_scanned,
+            'ref_beam_name' : self.ref_beam_name,
+            'wavelengths' : self.wls,
+            'heterodyne_spectrum' : self.intensities
+        }
+        self.isPhaseCycling = phase_cycling
+        self.beams=beams
+        self.isDemo = demo
+        self.flag = 0
+        self.prev_spec = None
+        self.filename = filename[:filename.rfind('/') + 1] + 'MDCS'
+        logger.info(filename[:filename.rfind('/') + 1] + 'MDCS')
+        self.comments = comments
+        self.phaseCycling=PhaseCycling(devices,self.beams,demo=self.isDemo)
+        self.phaseCycling.sendProgress.connect(self.set_phasecycle_progress)
+        self.phaseCycling.sendSpectrum.connect(self.sendSpectrum.emit) 
+        self.phaseCycling.sendPhaseCycling.connect(self.receive_heterodyne_signal)
+        self.phaseCycling.sendBeams.connect(self.sendBeams.emit)
+        self.phasecycleprogress=0
+        self.heterodyne_signal_received=False
+        self.scan_progress=0
+
+
+    def run(self):
+        '''
+            Runs the MDCS measurement and send the data in DataHandling after each iterations.
+        '''
+        if not self.terminate:  # check whether stopping measurement is called
+            for i,phase in enumerate(self.phase_scanned):
+                if not self.terminate:
+                    self.coeffs = self.beams[self.ref_beam_name].get_currentPhase().coef
+                    self.coeffs[0] = phase
+                    self.beams[self.ref_beam_name].set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
+                    self.sendBeams.emit((self.beams))
+                    self.phaseCycling.update_beams(self.beams)
+                    self.phaseCycling.start()
+                    while not self.heterodyne_signal_received:
+                        time.sleep(0.03)
+
+                    self.intensities[i, :] = self.last_heterodyne_signal 
+                    self.heterodyne_signal_received=False
+
+                    self.measurement_data={
+                        'type' : 'Phase Scan',
+                        'phase_scanned' : self.phase_scanned,
+                        'ref_beam_name' : self.ref_beam_name,
+                        'wavelengths' : self.wls,
+                        'heterodyne_spectrum' : self.intensities
+                    }
+                    self.sendPhaseScanPlot.emit(self.wls, self.phase_scanned[:i + 1], self.intensities[:i + 1, :].T)
+
+                    self.sendPhaseScanRaw.emit(('MDCS_phase_scan', self.measurement_data))
+                    self.set_scan_progress(i)
+        self.sendSave.emit()
+        self.sendProgress.emit(100)
+        self.stop()
+        logger.info('Phase scan'+' measurement '+time.strftime('%H:%M:%S')+' finished')
+
+    def update_total_progress(self):
+        '''
+            Updates the top level thread about the progress of the MDCS scan
+        '''
+        self.sendProgress.emit(self.phasecycleprogress+self.scan_progress)
+    
+    def set_phasecycle_progress(self,phasecycleprogress):
+        '''
+            Update the internal tracking of the progress of the phase cycling procedure
+        '''
+        self.phasecycleprogress=phasecycleprogress / (len(self.phase_scanned)) 
+    
+    def set_scan_progress(self,i):
+        '''
+            Updates the progress of the whole scan excluding the current phase cycling step
+        ''' 
+        self.scan_progress= i / (len(self.phase_scanned)) * 100
+        self.update_total_progress()
+    
+    def receive_heterodyne_signal(self,wls,heterodyne_signal):
+        '''
+            Receives the heterodyne signal from the phase cycling procedure, stores it and emits it
+        '''
+        self.wls=wls
+        self.last_heterodyne_signal=heterodyne_signal
+        self.sendPhaseCycling.emit(self.wls, self.last_heterodyne_signal)
+        self.heterodyne_signal_received=True
+
+
+    def stop(self):
+        self.terminate = True
+        print(time.strftime('%H:%M:%S') + ' Request Stop')

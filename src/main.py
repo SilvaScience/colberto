@@ -31,7 +31,7 @@ from GUI.CameraDisplay import CameraDisplay
 from GUI.AcquisitionSettings import AcquisitionSettings
 from DataHandling.DataHandling import DataHandling
 from measurements.MeasurementClasses import AcquireMeasurement,RunMeasurement,BackgroundMeasurement, ViewMeasurement
-from measurements.MDCSClasses import AcquireLO, BoxcarGeometry, PhaseCycling
+from measurements.MDCSClasses import AcquireLO, BoxcarGeometry, PhaseCycling, PhaseScan
 from measurements.CalibrationClasses import VerticalBeamCalibrationMeasurement, SpectralBeamCalibrationMeasurement, FitSpectralBeamCalibration, AcquireBackground, ChirpCalibrationMeasurement, FitTemporalBeamCalibration, DelayCalibrationMeasurement
 from measurements.Calibration_Classes import Measure_LUT_PhasetoGreyscale,Generate_LUT_PhasetoGreyscale
 from measurements.TGFROGClasses import TGFROGMeasurement, TGFROGRetrievalWorker
@@ -175,6 +175,11 @@ class MainInterface(QtWidgets.QMainWindow):
         self.MDCS_singlePhaseCycle_button = self.findChild(QtWidgets.QPushButton, 'Measurement_singlephasecycle')
         self.MDCS_getLO_button = self.findChild(QtWidgets.QPushButton, 'Measurement_getLO_button')
         self.MDCS_acquire_button = self.findChild(QtWidgets.QPushButton, 'Measurement_acquire_button')
+        self.MDCS_phasescan_acquire_button = self.findChild(QtWidgets.QPushButton, 'Measurement_phase_scan_acquire_button')
+        self.MDCS_scanned_phase_min_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_scanned_phase_min_value')
+        self.MDCS_scanned_phase_max_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_scanned_phase_max_value')
+        self.MDCS_scanned_phase_step_value = self.findChild(QtWidgets.QLineEdit, 'Measurement_scanned_phase_step_value')
+        self.MDCS_phase_reference_beam_name_box = self.findChild(QtWidgets.QComboBox,'Measurement_scanned_phase_ref_beam')
         self.MDCS_LO_plot = self.findChild(pg.PlotWidget, 'Local_oscillator_plot')
         self.MDCS_2D_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_plot')
         self.MDCS_Fourier_real_plot = self.findChild(pg.GraphicsLayoutWidget, 'Measurement_result_real_plot')
@@ -411,6 +416,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.MDCS_singlePhaseCycle_button.clicked.connect(self.singlePhaseCycling)
         self.MDCS_getLO_button.clicked.connect(self.getLOSpectrum)
         self.MDCS_acquire_button.clicked.connect(self.MDCSacquireMeasurement)
+        self.MDCS_phasescan_acquire_button.clicked.connect(self.MDCS_PhaseScan)
         # SLM display connections
         self.devices['SLM'].slm_worker.imageSLM.connect(self.slm_display_plot.set_data)
         test_image=beam_image_gen()
@@ -1279,6 +1285,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement.start()
     
     def MDCSacquireMeasurement(self):
+        if not self.measurement_busy:
             scannedDelay = np.arange(float(self.MDCS_scanned_delay_min_value.text()), float(self.MDCS_scanned_delay_max_value.text()), float(self.MDCS_scanned_delay_step_value.text()), dtype=int)
             secondaryDelay = np.arange(float(self.MDCS_secondary_delay_min_value.text()), float(self.MDCS_secondary_delay_max_value.text()), float(self.MDCS_secondary_delay_step_value.text()), dtype=int)
             beam_dict = self.DataHandling.get_beams()
@@ -1308,6 +1315,28 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.measurement.start()
             else:
                 logger.warning('%s Get the local oscillotor plot before running an acquisition.'%datetime.datetime.now())
+
+    def MDCS_PhaseScan(self):
+        if not self.measurement_busy:
+            scanned_phase= np.pi*np.arange(float(self.MDCS_scanned_phase_min_value.text()), float(self.MDCS_scanned_phase_max_value.text()), float(self.MDCS_scanned_phase_step_value.text()), dtype=float)
+            beam_dict = self.DataHandling.get_beams()
+            self._cached_filename = None
+            self.measurement = PhaseScan(self.devices, 
+                scanned_phase,
+                self.MDCS_phase_reference_beam_name_box.currentText(),
+                beam_dict,
+                self.filename, 
+                self.comments_edit.toPlainText(),
+                phase_cycling=self.MDCS_phase_cycling_checkbox.isChecked(),
+                demo=self.MDCS_demo_mode_checkbox.isChecked())
+            self.measurement.sendProgress.connect(self.set_progress)
+            self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
+            self.measurement.sendPhaseCycling.connect(self.LOspectrumPlot.set_data)
+            self.measurement.sendBeams.connect(self.DataHandling.set_multiple_beams)
+            self.measurement.sendPhaseScanPlot.connect(self.MDCSplot.set_data)
+            self.measurement.sendPhaseScanRaw.connect(self.DataHandling.add_calibration)
+            self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
+            self.measurement.start()
 
     def stop_measurement(self):
         # stop measurement
