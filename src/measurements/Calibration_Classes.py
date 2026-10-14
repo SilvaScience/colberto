@@ -71,8 +71,26 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
         self.measurement_type = 'Lut_Calibration'
 
         self.monobeam=Beam(self.SLM.get_width(),self.SLM.get_height())
-        self.monobeam.set_gratingPeriod(grating_period)
+        self.monobeam.set_gratingPeriod(self._even_grating_period(grating_period))
         self.central_wavelength = central_wavelength
+
+    @staticmethod
+    def _even_grating_period(grating_period):
+        '''
+            Rounds the calibration stripe pattern's period to the nearest even number of pixels.
+            The two-level pattern (generate_1Dstripes) relies on an exact 50/50 duty cycle for the
+            even diffraction orders (2, 4, ...) to cancel exactly; sampling an odd period on integer
+            pixels can only ever split it unevenly (e.g. 7 vs 8 pixels for period=15), leaking a
+            small amount of light into order 2 that would otherwise bias the phase-to-greyscale
+            inversion (see the 2026-08-13 Shapper calibration wiki discussion).
+        '''
+        period = int(round(grating_period))
+        even_period = period if period % 2 == 0 else period + 1
+        if even_period != grating_period:
+            logger.warning('%s LUT calibration grating period %s is not an even number of pixels; '
+                            'rounding to %d to keep the calibration stripe pattern at an exact 50%% duty cycle.'
+                            % (datetime.datetime.now(), grating_period, even_period))
+        return even_period
 
     def run(self):
         logger.info('%s Run LUT File Calibration Measurement' % datetime.datetime.now())
@@ -148,6 +166,7 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
         sendPhase = QtCore.pyqtSignal(np.ndarray, np.ndarray)
         sendProgress = QtCore.pyqtSignal(float)
         sendParameter = QtCore.pyqtSignal(str, float)
+        sendSavedPath = QtCore.pyqtSignal(str)
 
         def __init__(self, devices, parameter, region, grayscale, intensity):
             '''
@@ -348,6 +367,7 @@ class Generate_LUT_PhasetoGreyscale(QtCore.QThread):
                     f.write(f"{int(g)}\t{int(round(v))}\n")
 
             print(f"LUT saved to: {output_file}")
+            self.sendSavedPath.emit(output_file)
         
         def generate_phase_greyscale_LUT(self, wave, phase_shift_array, greyscale_values):
             """
