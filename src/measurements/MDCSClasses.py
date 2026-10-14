@@ -46,6 +46,7 @@ class AcquireLO(QtCore.QThread):
         self.LO_spectrum = []
         self.beam_name = beam_name
         self.beam = beam
+        self.timetag=time.strftime('%H:%M:%S')
 
     def run(self):
         '''
@@ -63,10 +64,11 @@ class AcquireLO(QtCore.QThread):
         self.LO_data = {
             'spec' : self.LO_spectrum,
             'wavelengths' : self.wls,
+            'timetag': self.timetag
             }
         self.sendLOData.emit(('LO_data', self.LO_data))
         self.sendSpectrum.emit(self.wls, self.LO_spectrum)
-        logger.info(time.strftime('%H:%M:%S') + ' Finished')
+        logger.info(self.timetag+ ' Finished')
         self.sendProgress.emit(100)
         self.terminate = True
 
@@ -129,7 +131,8 @@ class BoxcarGeometry(QtCore.QThread):
             't_secondary' : self.t_secondary,
             'wavelengths' : self.wls,
             'LO_spectrum' : self.LO_spectrum,
-            'intensities' : self.intensities
+            'intensities' : self.intensities,
+            'beams' : beams
         }
         self.isPhaseCycling = phase_cycling
         self.beams=beams
@@ -147,6 +150,7 @@ class BoxcarGeometry(QtCore.QThread):
         self.phasecycleprogress=0
         self.heterodyne_signal_received=False
         self.scan_progress=0
+        self.timetag=time.strftime('%H:%M:%S')
 
 
     def run(self):
@@ -179,17 +183,20 @@ class BoxcarGeometry(QtCore.QThread):
                             't_secondary' : self.t_secondary,
                             'wavelengths' : self.wls,
                             'LO_spectrum' : self.LO_spectrum,
-                            'intensities' : self.intensities #np.array(self.intensities)
+                            'intensities' : self.intensities,
+                            'comments' : self.comments,
+                            'beams' : self.beams,
+                            'timetag' : self.timetag
                         }
                         #self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j+1], np.array(self.intensities[i]).T)
                         self.sendMDCSPlot.emit(self.wls, self.t_scanned[:j + 1], self.intensities[i, :j + 1, :].T)
 
-                        self.sendMDCSRaw.emit(('MDCS_raw_data', self.measurement_data))
+                        self.sendMDCSRaw.emit(('MDCS_raw_data_'+self.timetag, self.measurement_data))
                         self.set_scan_progress(i,j)
                 self.sendSave.emit()
         self.sendProgress.emit(100)
         self.stop()
-        logger.info(self.measurement_type+' measurement '+time.strftime('%H:%M:%S')+' finished')
+        logger.info(self.measurement_type+' measurement '+self.timetag+' finished')
 
     def timing(self, i):
         '''
@@ -450,13 +457,18 @@ class PhaseScan(QtCore.QThread):
             np.nan,
             dtype=float
         )
+        self.timetag=time.strftime('%H:%M:%S')
+        self.comments=comments
         
         self.measurement_data={
             'type' : 'Phase Scan',
             'phase_scanned' : self.phase_scanned,
             'ref_beam_name' : self.ref_beam_name,
             'wavelengths' : self.wls,
-            'heterodyne_spectrum' : self.intensities
+            'heterodyne_spectrum' : self.intensities,
+            'comments' : self.comments,
+            'beams' : beams,
+            'timetag' : self.timetag
         }
         self.isPhaseCycling = phase_cycling
         self.beams=beams
@@ -500,16 +512,19 @@ class PhaseScan(QtCore.QThread):
                         'phase_scanned' : self.phase_scanned,
                         'ref_beam_name' : self.ref_beam_name,
                         'wavelengths' : self.wls,
-                        'heterodyne_spectrum' : self.intensities
+                        'heterodyne_spectrum' : self.intensities,
+                        'comments' : self.comments,
+                        'beams' : self.beams,
+                        'timetag' : self.timetag
                     }
                     self.sendPhaseScanPlot.emit(self.wls, self.phase_scanned[:i + 1], self.intensities[:i + 1, :].T)
 
-                    self.sendPhaseScanRaw.emit(('MDCS_phase_scan', self.measurement_data))
+                    self.sendPhaseScanRaw.emit(('Phase_scan_'+self.timetag, self.measurement_data))
                     self.set_scan_progress(i)
         self.sendSave.emit()
         self.sendProgress.emit(100)
         self.stop()
-        logger.info('Phase scan'+' measurement '+time.strftime('%H:%M:%S')+' finished')
+        logger.info('Phase scan'+' measurement '+self.timetag+' finished')
 
     def update_total_progress(self):
         '''

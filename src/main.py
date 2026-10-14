@@ -1279,7 +1279,7 @@ class MainInterface(QtWidgets.QMainWindow):
             self.measurement = AcquireLO(self.devices, beam_name, beam)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.sendSpectrum.connect(self.LOspectrumPlot.set_data)
-            self.measurement.sendLOData.connect(self.DataHandling.add_calibration)
+            self.measurement.sendLOData.connect(self.DataHandling.add_measurement)
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendBeams.connect(self.DataHandling.set_beam)
             self.measurement.start()
@@ -1289,16 +1289,20 @@ class MainInterface(QtWidgets.QMainWindow):
             scannedDelay = np.arange(float(self.MDCS_scanned_delay_min_value.text()), float(self.MDCS_scanned_delay_max_value.text()), float(self.MDCS_scanned_delay_step_value.text()), dtype=int)
             secondaryDelay = np.arange(float(self.MDCS_secondary_delay_min_value.text()), float(self.MDCS_secondary_delay_max_value.text()), float(self.MDCS_secondary_delay_step_value.text()), dtype=int)
             beam_dict = self.DataHandling.get_beams()
-            self._cached_filename = None
-            if 'LO_data' in self.DataHandling.calibration:
-                LO_spectrum = self.DataHandling.calibration['LO_data']
+            # Get last LO spectrum taken
+            LO_data_on_file=[]
+            for name in self.DataHandling.measurements.keys():
+                if 'LO_data' in name:
+                    LO_data_on_file.append(name)
+            if len(LO_data_on_file)!=0:
+                LO_data= self.DataHandling.measurements[sorted(LO_data_on_file)[0]]
                 self.measurement = BoxcarGeometry(self.devices, 
                     self.MDCS_measurement_type_box.currentText(),
                     float(self.MDCS_TLO_delay_value.text()),
                     scannedDelay,
                     secondaryDelay,
                     beam_dict,
-                    LO_spectrum['spec'],
+                    LO_data['spec'],
                     self.filename, 
                     self.comments_edit.toPlainText(),
                     phase_cycling=self.MDCS_phase_cycling_checkbox.isChecked(),
@@ -1308,8 +1312,8 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.measurement.sendPhaseCycling.connect(self.LOspectrumPlot.set_data)
                 self.measurement.sendBeams.connect(self.DataHandling.set_multiple_beams)
                 self.measurement.sendMDCSPlot.connect(self.MDCSplot.set_data)
-                self.measurement.sendMDCSRaw.connect(self.DataHandling.add_calibration)
-                self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
+                self.measurement.sendMDCSRaw.connect(self.DataHandling.add_measurement)
+                self.measurement.sendSave.connect(lambda: self.save_data(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
                 self.measurement.sendFourierReal.connect(self.MDCSFourierRealPlot.set_data)
                 self.measurement.sendFourierImag.connect(self.MDCSFourierImagPlot.set_data)
                 self.measurement.start()
@@ -1320,7 +1324,6 @@ class MainInterface(QtWidgets.QMainWindow):
         if not self.measurement_busy:
             scanned_phase= np.pi*np.arange(float(self.MDCS_scanned_phase_min_value.text()), float(self.MDCS_scanned_phase_max_value.text()), float(self.MDCS_scanned_phase_step_value.text()), dtype=float)
             beam_dict = self.DataHandling.get_beams()
-            self._cached_filename = None
             self.measurement = PhaseScan(self.devices, 
                 scanned_phase,
                 self.MDCS_phase_reference_beam_name_box.currentText(),
@@ -1329,13 +1332,14 @@ class MainInterface(QtWidgets.QMainWindow):
                 self.comments_edit.toPlainText(),
                 phase_cycling=self.MDCS_phase_cycling_checkbox.isChecked(),
                 demo=self.MDCS_demo_mode_checkbox.isChecked())
+            print(self.comments_edit.toPlainText())
             self.measurement.sendProgress.connect(self.set_progress)
             self.measurement.sendSpectrum.connect(self.DataHandling.concatenate_data)
             self.measurement.sendPhaseCycling.connect(self.LOspectrumPlot.set_data)
             self.measurement.sendBeams.connect(self.DataHandling.set_multiple_beams)
             self.measurement.sendPhaseScanPlot.connect(self.MDCSplot.set_data)
-            self.measurement.sendPhaseScanRaw.connect(self.DataHandling.add_calibration)
-            self.measurement.sendSave.connect(lambda: self.save_calibration(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
+            self.measurement.sendPhaseScanRaw.connect(self.DataHandling.add_measurement)
+            self.measurement.sendSave.connect(lambda: self.save_data(filename_prefix=self.filename, use_prompt=False, save_dir=self.save_folder_path))
             self.measurement.start()
 
     def stop_measurement(self):
@@ -1436,10 +1440,45 @@ class MainInterface(QtWidgets.QMainWindow):
 
         # Convert calibration data to safe dict
         calibration_dict = DataHandling.calibration_to_dict(self.DataHandling.calibration)
+        
+        data_to_save = {
+            "beams": beam_dicts,
+            "calibration": calibration_dict,
+        }
+
+        if use_prompt:
+            HDF5Helper.save_to_hdf5_with_prompt(data_to_save, default_filename=filename_prefix)
+        else:
+            if save_dir is None:
+                raise ValueError("save_dir must be provided if use_prompt=False")
+            
+            # Create filename ONCE, reuse on later saves
+            if not hasattr(self, "_cached_filename") or self._cached_filename is None:
+                timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+                self._cached_filename = f"{filename_prefix}_{timestamp}.h5"
+
+            default_filename = self._cached_filename
+
+            HDF5Helper.save_to_hdf5(data_to_save, save_dir, default_filename)
+
+    def save_data(self, filename_prefix="Filename", use_prompt=True, save_dir=None):
+        """
+        Save all Beam objects, calibration data and measurements
+        """
+
+        # Convert all Beam objects to safe dictionaries
+        beam_dicts = {name: Beam.beam_to_dict(beam) for name, beam in self.DataHandling.beams.items()}
+
+        # Convert calibration data to safe dict
+        calibration_dict = DataHandling.calibration_to_dict(self.DataHandling.calibration)
+        
+        # Add something to convert data to safe dict as well
+        measurements_dict = DataHandling.calibration_to_dict(self.DataHandling.measurements)
 
         data_to_save = {
             "beams": beam_dicts,
-            "calibration": calibration_dict
+            "calibration": calibration_dict,
+            "measurements": measurements_dict
         }
 
         if use_prompt:
