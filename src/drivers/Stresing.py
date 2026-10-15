@@ -281,13 +281,14 @@ class StresingCamera(QtCore.QThread):
             self.center_wavelength,self.grating_lines_per_mm=self.monochromator.get_monochromator_parameters()[:2]
             self.grating_index,self.mirror=self.monochromator.get_grating_indices()
             num_pixels = self.hardware_params['num_pixels']
+
             if self.hardware_params['calibrated']:
 
                 wl_center = self.center_wavelength
                 m_order = 1
                 px = self.px0
                 grating_key=str(self.grating_index)
-                # calibration from notebook
+
                 f=self.hardware_params[grating_key]['f']
                 delta=self.hardware_params[grating_key]['delta']
                 gamma=self.hardware_params[grating_key]['gamma']
@@ -302,40 +303,32 @@ class StresingCamera(QtCore.QThread):
                 psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
                 eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
-                self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+                self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * (n ** 2)
 
             else:
                 # Calculate linear dispersion (nm/mm)
-                # dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
-                #
-                # # Center pixel
-                # center_pixel = num_pixels // 2
-                #
-                # # Pixel index array
-                # pixel_indices = np.arange(num_pixels)
-                #
-                # # Wavelength at each pixel
-                # self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-                # # Refine the calibration using a mercury spectral lamp
-                # self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + self.hardware_params['calibrationSlope']*self.wavelengths + self.hardware_params['calibrationOffset']
+                focal_length_mm = self.hardware_params.get('focal_length_mm', 150)
+                pixel_size_mm = self.hardware_params.get('pixel_size_mm', 24e-3)
 
-                if self.center_wavelength == 500:
-                    # print('center wavelength = 500')
-                    self.wavelengths = np.arange(num_pixels)
-                if self.center_wavelength > 500:
-                    # print('center wavelength > 500')
-                    self.wavelengths = np.arange(num_pixels) + (self.center_wavelength - 500)
-                if self.center_wavelength < 500:
-                    # print('center wavelength < 500')
-                    self.wavelengths = np.arange(num_pixels) + (self.center_wavelength - 500)
+                dispersion = 1e6 / (focal_length_mm * self.grating_lines_per_mm)
 
-                self.wavelengths = self.hardware_params['calibrationThirdOrder'] * (self.wavelengths ** 3) + \
-                                   self.hardware_params['calibrationSecondOrder'] * (self.wavelengths ** 2) + \
-                                   self.hardware_params['calibrationFirstOrder'] * (self.wavelengths) + \
-                                   self.hardware_params['calibrationOffset']
+                # Center pixel
+                center_pixel = num_pixels // 2
+
+                # Pixel index array
+                pixel_indices = np.arange(num_pixels)
+
+                # Wavelength at each pixel
+                self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
+                # Refine the calibration using a mercury spectral lamp
+                #self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + self.hardware_params['calibrationSlope']*self.wavelengths + self.hardware_params['calibrationOffset']
         else:
             self.wavelengths = self.hardware_params['num_pixels']
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength' % datetime.datetime.now())
+
+    def update_wavelength_axis(self):
+        """Updates the wavelength array."""
+        self.calculate_wavelength_array()
 
     def attach_to_monochromator(self,monochromator):
         """
@@ -440,7 +433,9 @@ class StresingCamera(QtCore.QThread):
     def get_intensities(self):
         self.acquire_spectrum()
         self.spec = np.array(self.spectrum[13:-1])
-        self.spec = self.spec[::-1]
+
+        # self.spec = self.spec[::-1] # this makes the wavelength array backwards for WFU camera
+
         #self.spec[:12] = 0 # Removes the first indexes (special pixels of the camera)
         """ Publish the same data the caller gets, so a live view can follow the acquisition without
         going through DataHandling. """

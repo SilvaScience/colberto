@@ -409,23 +409,42 @@ class AcquisitionSettings(QtWidgets.QWidget):
     def apply_monochromator(self):
         """
             Moves the grating and the centre wavelength. Both are slow mechanical moves, so they are
-            applied on their own button rather than with the trigger settings.
+            applied on their own button rather than with the trigger settings. Also updates parameter tree
+            and wavelength axis.
         """
         if self.monochromator is None or not hasattr(self.monochromator, 'set_parameter'):
             return
         if callable(self.is_busy) and self.is_busy():
             self.mono_status.setText('A measurement is running. Stop it before moving the grating.')
             return
+
         grating = self.grating_choice.currentData()
         port = self.exit_port.currentData()
+        target_wl = self.center_wavelength.value()
+
         try:
             """ Only moved when it actually changes: both are slow mechanical moves, and the grating
             in particular takes seconds to settle. """
             if grating is not None and grating != int(getattr(self.monochromator, 'grating', 0)):
                 self.monochromator.set_parameter('grating', grating)
-            self.monochromator.set_parameter('central_wave', self.center_wavelength.value())
+            self.monochromator.set_parameter('central_wave', target_wl)
+
+            if hasattr(self.monochromator, 'center_wl'):
+                self.monochromator.center_wl = target_wl
+
+            # Sync values back to left parameter tree using both common keys
+            if callable(self.parameter_changed):
+                self.parameter_changed('central_wave', target_wl)
+
             if port is not None and port != int(getattr(self.monochromator, 'mirror', -1)):
                 self.monochromator.set_parameter('mirror', port)
+
+            # 3. Recalculate spectrometer wavelength axis array
+            if hasattr(self.spectrometer, 'calculate_wavelength_array'):
+                self.spectrometer.calculate_wavelength_array()
+            elif hasattr(self.spectrometer, 'update_wavelength_axis'):
+                self.spectrometer.update_wavelength_axis()
+
         except Exception as e:
             logger.error('Could not move the monochromator: %s', e)
             self.mono_status.setText('Could not move: %s' % e)
