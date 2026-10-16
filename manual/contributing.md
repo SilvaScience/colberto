@@ -21,7 +21,7 @@ Follow common [Python DocStrings guidelines](https://www.doxygen.nl/manual/docbl
 4. You can then locate your environnement using which `which python` in Linux or `where python` in Windows and import it into your IDE (e.g. VCode with Python pluggin)
 ## Updating python environnement
 
-When developping new features in your branch, it is very likely that you will need to add python packages. You can do this using `conda install packagename`. You will then need to update the required package list by naviguating to /dependencies/ and using the command `conda env export -e > environment.yml`. This will dump your current package list into the file so that the packages will be appended to the project requirements. Don't forget to add requirements.txt to your commit.
+When developping new features in your branch, it is very likely that you will need to add python packages. You can do this using `conda install packagename`. You will then need to update the required package list by naviguating to /dependencies/ and using the command `conda env export -e > environment.yml`. This will dump your current package list into the file so that the packages will be appended to the project requirements. Don't forget to add `environment.yml` to your commit (and `requirements.txt` if you keep it in sync).
 
 ## Naming Conventions
 In this project, we follow standard Python naming conventions to ensure that our code is readable and consistent. Below are the guidelines for naming functions and classes:
@@ -30,8 +30,11 @@ In this project, we follow standard Python naming conventions to ensure that our
 - `/dependencies` : Put conda dependencies list here
 - `/src` : This is where the code goes and is further divided into subcategories
     - `/src/drivers` : Let's put all the driver modules in here e.g. SLM.py or Streising.py etc...
-    - `/src/gui`: Code related to the graphical user interface
+    - `/src/GUI`: Code related to the graphical user interface, including the `.ui` files loaded at startup
     - `/src/compute`: Code that perform internal various computations such as fitting, computing quantitie etc...
+    - `/src/DataHandling`: Buffering, saving and loading of spectra, parameters, calibrations and beams
+    - `/src/measurements`: The measurement and calibration routines run as their own threads
+    - `/src/engine`: Threading helpers shared by the rest of the code
 - `/samples` : Code showing how to use the different modules using `import modulename.` Keep same subdirectory structure as `/src`
 - `/docs`: The output of `doxygen doxygen.conf` spits the HTML documentation there. Open the `index.html` in your browser to view it.
 - `/manual`: The additional manual pages we write to complement the API doc [generated automatically by doxygen](#documentation).
@@ -63,9 +66,14 @@ The log file location is configured in `main.py` and points to a `main.log` file
 The SLM Calibration is located in the utilities tab of the main interface.
 To calibrate the SLM for various wavelengths, one needs to create a Phase to Grayscale LUT file. 
 This is done in two steps:
-1. Measure_LUT_PhasetoGreyscale: Displays a pattern on the SLM where half of the SLM is set to a grayscale value of zero, and the other half of the SLM scans through the grayscale values (0-255). The spectrum of the beam is taken after each pattern. 
-2. Generate_LUT_PhasetoGreyscale: Analyzes the measured spectrum to determine the phase shift from the reference (where both sides of the SLM are at a greyscale value of zero). This is done by taking a Fourier transform of the spectrum and calculating the phase difference using the real and imaginary components. 
+Both classes live in `src/measurements/Calibration_Classes.py`.
+1. `Measure_LUT_PhasetoGreyscale`: Displays a binary stripe pattern on the SLM (`Beam.makeStripes()`) whose amplitude is stepped through the whole grayscale range (0-255 for 8 bits, 0-1023 for 10 bits, from `SLM.get_depth()`). A spectrum is taken at each step and the intensity of the first diffraction order is integrated over a 100 nm window centred on the laser wavelength. The result is the normalized oscillating curve `I_norm`, stored in DataHandling under `calibration['LUT_calib']`.
+2. `Generate_LUT_PhasetoGreyscale`: Analyzes that curve between the two grayscale values the user identified as phase 0 and phase 2*pi. The phase is recovered from the normalized intensity with `2*arcsin(sqrt(I))` on each side of the maximum, then the relation is inverted by interpolation to give the voltage required for a linear phase ramp, and written to a `.lut` file.
+
+The step-by-step procedure is described in [LUT calibration](calibrations/lut_calibration.md).
 
 ### Spectrometer Selection 
 
-This feature allows multiple spectrometers to be stored within a dictionary class, 'spectrometers', so that the user can switch between the active spectrometer. There is a drop down menu on the quick control section of the GUI. When a different spectrometer is selected from the dropdown menu, it updates the device dictionary with the active spectrometer and changes the associated spectral length (aka pixel number) is updated. One thing to note is that you should not switch spectrometers when the devices are busy. 
+This feature allows multiple spectrometers to be stored within a dictionary, `spectrometers`, so that the user can switch between the active spectrometer. There is a drop down menu on the quick control section of the GUI. When a different spectrometer is selected from the dropdown menu, `on_spectrometer_changed` updates the device dictionary with the active spectrometer, resizes the DataHandling buffers to the new spectral length (aka pixel number), rebuilds the parameter tree and reconnects the Camera and Acquisition panels. DataHandling itself is kept, so beams and calibrations survive the switch; only the background, which belongs to the detector it was taken on, is dropped. One thing to note is that you should not switch spectrometers when the devices are busy.
+
+See [Cameras, spectrometer and monochromator](camera_spectrometer.md) for the full picture. 
