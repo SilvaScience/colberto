@@ -303,7 +303,8 @@ class StresingCamera(QtCore.QThread):
                 psi = np.arcsin(m_order * wl_center / (2 * d_grating * np.cos(gamma / 2)))
                 eta = np.arctan(n * x_pixel * np.cos(delta) / (f + n * x_pixel * np.sin(delta)))
 
-                self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * (n ** 2)
+                self.wavelengths = ((d_grating / m_order) * (np.sin(psi - 0.5 * gamma) + np.sin(psi + 0.5 * gamma + eta))) + curvature * n ** 2
+                # print(self.wavelengths)
 
             else:
                 # Calculate linear dispersion (nm/mm)
@@ -320,10 +321,14 @@ class StresingCamera(QtCore.QThread):
 
                 # Wavelength at each pixel
                 self.wavelengths = self.center_wavelength + (pixel_indices - center_pixel) * dispersion * pixel_size_mm
-                # Refine the calibration using a mercury spectral lamp
-                #self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + self.hardware_params['calibrationSlope']*self.wavelengths + self.hardware_params['calibrationOffset']
+                #Refine the calibration using a mercury spectral lamp
+                self.wavelengths = self.hardware_params['calibrationThirdOrder']*self.wavelengths**2 + \
+                                   self.hardware_params['calibrationSlope']*self.wavelengths + \
+                                   self.hardware_params['calibrationOffset']
+
         else:
-            self.wavelengths = self.hardware_params['num_pixels']
+            num_pixels = self.hardware_params.get('num_pixels', 1010)
+            self.wavelengths = np.arange(num_pixels)
             logger.warning('%s No grating found attached to Stresing. Returning pixels indices instead of wavelength' % datetime.datetime.now())
 
     def update_wavelength_axis(self):

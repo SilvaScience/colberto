@@ -23,7 +23,10 @@ def load_instruments():
     """
     # set devices dict
     devices=defaultdict(dict)
-    # initialize cryostat
+
+    # -------------------------------------------------------------------------
+    # Initialize crostat
+    # -------------------------------------------------------------------------
     try:
         cryostat = CryoPasqal() # launch cryostat interface
         devices['cryostat'] = cryostat # store in global device dict.
@@ -34,7 +37,9 @@ def load_instruments():
         logger.error('%s Pascal Cryostat initialization failed at interface startup. Error type %s' % (datetime.datetime.now(),str(e)))
         logger.info('%s CryoDemo connected' % datetime.datetime.now())
 
-    # initialize SLM
+    # -------------------------------------------------------------------------
+    # Initialize SLM
+    # -------------------------------------------------------------------------
     try:
         #path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
         path_config = (r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_WFU.ini")
@@ -48,7 +53,7 @@ def load_instruments():
         logger.info('%s SLMDemo connected' % datetime.datetime.now())
 
     # -------------------------------------------------------------------------
-    # 3. Initialize SP2150 Monochromator & Stresing Camera (WFU Path)
+    # Initialize SP2150 Monochromator & Stresing Camera
     # -------------------------------------------------------------------------
     spectrometers = {}
 
@@ -69,7 +74,7 @@ def load_instruments():
             stresing_params = {
                 'pixel_size_mm': 24e-3,
                 'num_pixels': 1010,
-                'calibrated': False,
+                'calibrated': True,
                 'calibrationThirdOrder': 0,
                 'calibrationSecondOrder': 0,
                 'calibrationFirstOrder': 0.9891,
@@ -108,58 +113,47 @@ def load_instruments():
             stresing_params = {
                 'pixel_size_mm': 24e-3,
                 'num_pixels': 1010,
-                'calibrated': False,
+                'calibrated': True,
                 'calibrationThirdOrder': -3e-5,
                 'calibrationSlope': 0.9891,
                 'calibrationOffset': -51.163
             }
 
-            # grating_params = {
-            #     'focal_length_mm': 150,  # should be 150
-            #     'f': np.float64(330000000.08),
-            #     'delta': np.float64(-0.7775441817634736),
-            #     'gamma': np.float64(0.7313712629429233),
-            #     'n0': np.float64(511.0),
-            #     'offset_adjust': 0.0,
-            #     'd_grating': np.float64(3333.3333333333335),
-            #     'x_pixel': 24000.0,
-            #     'curvature': np.float64(-9.999764504749403e-07),
-            # }
-
             grating_params_sp2150 = {
                 '1': {
-                    ### NOT CALIBRATED ###  ###300 g/mm Blaze = 300 nm ###
+                    ### Calibrated!! ###  ### 300 g/mm Blaze = 300 nm ###
                     'focal_length_mm': 150,
-                    'f': np.float64(150000000.0),      # Nominal 150 mm in nm
-                    'delta': np.float64(0.0),          # No detector tilt assumed
-                    'gamma': np.float64(0.2269),       # Nominal Acton inclusion angle (~13.0 degrees in rad)
-                    'n0': np.float64(505.5),           # Center pixel of 1010 px sensor
+                    'f': np.float64(162398161.2027362),      # Nominal 150 mm in nm
+                    'delta': np.float64(-0.09993658218059505),          # No detector tilt assumed
+                    'gamma': np.float64(0.3499999999999999),       # Nominal Acton inclusion angle (~13.0 degrees in rad)
+                    'n0': np.float64(497.2),           # Center pixel of 1010 px sensor
                     'offset_adjust': 0.0,
-                    'd_grating': np.float64(3333.3333333333335), # 1e6 / 300 g/mm
-                    'x_pixel': 24000.0,                # 24 um pixel pitch in nm
-                    'curvature': np.float64(0.0),      # Zero initial field curvature
-                },
-                '2': {
-                    ### NOT CALIBRATED ###  ###300 g/mm Blaze = 500 nm ###
-                    'focal_length_mm': 150,
-                    'f': np.float64(150000000.0),  # Update after calibration notebook run
-                    'delta': np.float64(0.0),
-                    'gamma': np.float64(0.2269),
-                    'n0': np.float64(505.5),
-                    'offset_adjust': 0.0,
-                    'd_grating': np.float64(333.3333333333335),
+                    'd_grating': np.float64(3333.3333333333335),
                     'x_pixel': 24000.0,
-                    'curvature': np.float64(0.0),
-                }
+                    'curvature': np.float64(1.1093791606114813e-06),
+                }, ### [162398161.2027362, -0.09993658218059505, 0.3499999999999999, 497.2, 0.0, 3333.3333333333335, 24000.0, 1.1093791606114813e-06]
+
+                '2': {
+                    ### CALIBRATED!! ###  ###300 g/mm Blaze = 500 nm ###
+                    'focal_length_mm': 150,
+                    'f': np.float64(162502227.2266555),  # Update after calibration notebook run
+                    'delta': np.float64(-0.09999999994609458),
+                    'gamma': np.float64(0.3499999999999999),
+                    'n0': np.float64(496.4),
+                    'offset_adjust': 0.0,
+                    'd_grating': np.float64(3333.3333333333335),
+                    'x_pixel': 24000.0,
+                    'curvature': np.float64(6.343720796893214e-08),
+
+                } ## [162502227.2266555, -0.09999999994609458, 0.3499999999999999, 496.4, 0.0, 3333.3333333333335, 24000.0, 6.343720796893214e-08]
             }
-            # Wrap under 'Stresing' key expected by attach_to_monochromator
+
             grating_params = {
                 'Stresing': grating_params_sp2150
             }
 
             port = 'COM4'
 
-            # 1. Connect Monochromator
             print(f"Connecting SP2150 Monochromator on {port}...")
             try:
                 Monochrom = SpectraPro2300i(grating_params, port=port)
@@ -172,7 +166,6 @@ def load_instruments():
 
             devices['Monochrom'] = Monochrom
 
-            # 2. Connect Stresing Camera & Attach
             print("Initializing Stresing Camera...")
             try:
                 camera = StresingCamera(stresing_params, path_config)
@@ -188,7 +181,7 @@ def load_instruments():
         logger.error(f'Initialization block error: {e}')
 
     # -------------------------------------------------------------------------
-    # 4. Initialize Auxiliary Cameras
+    # Initialize Auxiliary Cameras
     # -------------------------------------------------------------------------
     pixis_params = {
         'pixel_size_mm':26e-3,
