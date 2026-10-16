@@ -435,11 +435,13 @@ class AcquisitionSettings(QtWidgets.QWidget):
             # Sync values back to left parameter tree using both common keys
             if callable(self.parameter_changed):
                 self.parameter_changed('central_wave', target_wl)
+            if callable(self.parameter_changed):
+                self.parameter_changed('grating', grating)
 
             if port is not None and port != int(getattr(self.monochromator, 'mirror', -1)):
                 self.monochromator.set_parameter('mirror', port)
 
-            # 3. Recalculate spectrometer wavelength axis array
+            # Recalculate spectrometer wavelength axis array
             if hasattr(self.spectrometer, 'calculate_wavelength_array'):
                 self.spectrometer.calculate_wavelength_array()
             elif hasattr(self.spectrometer, 'update_wavelength_axis'):
