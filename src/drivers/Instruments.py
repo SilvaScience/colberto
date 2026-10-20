@@ -71,31 +71,100 @@ def load_instruments():
 
         if config_name == "config_UdeM.ini":
             print('Udem Settings Chosen')
-            stresing_params = {
-                'pixel_size_mm': 24e-3,
-                'num_pixels': 1010,
+                # initialize Cameras
+            stresing_params={
+                'pixel_size_mm':24e-3,
+                'num_pixels':1010,
                 'calibrated': True,
-                'calibrationThirdOrder': 0,
-                'calibrationSecondOrder': 0,
-                'calibrationFirstOrder': 0.9891,
+                'calibrationThirdOrder': -3e-5,
+                'calibrationSlope': 0.9891,
                 'calibrationOffset': -51.163
             }
-
-            grating_params_pixis = {
+            pixis_params = {
+                'pixel_size_mm':26e-3,
+                'num_pixels':1024,
+                'calibrated':True,
+                'calibrationSlope':0,
+                'calibrationOffset':0
+            }
+            grating_params_stresing={
+                '1':{#NOT CALIBRATED
+                'focal_length_mm':300,
+                'f':np.float64(305381928.6149399),
+                'delta':np.float64(0.11432112488955509),
+                'gamma':np.float64(0.5337955112241486),
+                'n0':np.float64(539.4), # Central pixel
+                'offset_adjust':0,
+                'd_grating':833.3333333333334,
+                'x_pixel':24000.0,
+                'curvature':np.float64(5.736575254871788e-07),
+                },
+                '2':{#NOT CALIBRATED
+                'focal_length_mm':300,
+                'f':np.float64(305381928.6149399),
+                'delta':np.float64(0.11432112488955509),
+                'gamma':np.float64(0.5337955112241486),
+                'n0':np.float64(539.4), # Central pixel
+                'offset_adjust':0,
+                'd_grating':833.3333333333334,
+                'x_pixel':24000.0,
+                'curvature':np.float64(5.736575254871788e-07),
+                },
+                '3':{#'[np.float64(305859374.99999994), np.float64(0.021862966763817993), np.float64(0.5415310171886933), np.float64(507.0), 0, 3333.3333333333335, 26000.0, np.float64(5.378365208238061e-07)]'
+                'focal_length_mm':300,
+                'f':np.float64(305859374.99999994),
+                'delta':np.float64(0.021862966763817993),
+                'gamma':np.float64(0.5415310171886933),
+                'n0':np.float64(507.0),
+                'offset_adjust':0,
+                'd_grating': 3333.333333333333,
+                'x_pixel':26000,
+                'curvature':np.float64(0.0),
+                'blaze':np.float64(2000),
+                },
+            }
+            gratings_params_pixis ={ 
+                '1':{#'[np.float64(300000000.0), np.float64(0.5), np.float64(0.1), np.float64(507.14285714285717), 0, 833.3333333333334, 26000.0, np.float64(0.0)]'
                     'focal_length_mm':300,
                     'f':np.float64(300000000.0),
-                    'delta':np.float64(0.06),
-                    'gamma':np.float64(0.5),
-                    'n0':np.float64(516.6), # Central pixel
+                    'delta':np.float64(0.5),
+                    'gamma':np.float64(0.1),
+                    'n0':np.float64(507.14285714285717),# Central pixel
                     'offset_adjust':0,
                     'd_grating':833.3333333333334,
                     'x_pixel':26000,
                     'curvature':np.float64(0.0),
-                }
+                    'blaze':np.float64(300),
+                    },
+                '2':{#'[np.float64(296772481.19608825), np.float64(-0.1011307412781098), np.float64(0.5254178460808079), np.float64(498.85714285714283), 0, 833.3333333333334, 26000.0, np.float64(4.8015347380556125e-08)]'
+                    'focal_length_mm':300,
+                    'f':np.float64(296772481.19608825),
+                    'delta':np.float64(-0.1011307412781098),
+                    'gamma':np.float64(0.5254178460808079),
+                    'n0':np.float64(498.85714285714283),
+                    'offset_adjust':0,
+                    'd_grating':833.3333333333334,
+                    'x_pixel':26000,
+                    'curvature':np.float64(0.0),
+                    'blaze':np.float64(750),
+                    },
+                '3':{#'[np.float64(305859374.99999994), np.float64(0.021862966763817993), np.float64(0.5415310171886933), np.float64(507.0), 0, 3333.3333333333335, 26000.0, np.float64(5.378365208238061e-07)]'
+                    'focal_length_mm':300,
+                    'f':np.float64(305859374.99999994),
+                    'delta':np.float64(0.021862966763817993),
+                    'gamma':np.float64(0.5415310171886933),
+                    'n0':np.float64(507.0),
+                    'offset_adjust':0,
+                    'd_grating': 3333.333333333333,
+                    'x_pixel':26000,
+                    'curvature':np.float64(0.0),
+                    'blaze':np.float64(2000),
+                    },
+            }
             spectrometer_port='COM5'
             grating_params = {
-                'Stresing': stresing_params,
-                'Pixis': grating_params_pixis
+                'Stresing':grating_params_stresing,
+                'Pixis': gratings_params_pixis
             }
 
             try:
@@ -164,18 +233,18 @@ def load_instruments():
                 logger.error('SP2150 initialization failed: %s' % str(e))
                 print(f"Monochromator initialization failed ({e}), loaded Demo.")
 
-            devices['Monochrom'] = Monochrom
+        devices['Monochrom'] = Monochrom
 
-            print("Initializing Stresing Camera...")
-            try:
-                camera = StresingCamera(stresing_params, path_config)
-                camera.attach_to_monochromator(Monochrom)
-                spectrometers['Stresing'] = camera
-                logger.info('Stresing camera connected successfully.')
-                print("Stresing Camera connected and attached successfully.")
-            except Exception as e:
-                logger.warning(f'Stresing camera failed to connect: {e}')
-                print(f"Stresing camera failed: {e}")
+        print("Initializing Stresing Camera...")
+        try:
+            camera = StresingCamera(stresing_params, path_config)
+            camera.attach_to_monochromator(Monochrom)
+            spectrometers['Stresing'] = camera
+            logger.info('Stresing camera connected successfully.')
+            print("Stresing Camera connected and attached successfully.")
+        except Exception as e:
+            logger.warning(f'Stresing camera failed to connect: {e}')
+            print(f"Stresing camera failed: {e}")
 
     except Exception as e:
         logger.error(f'Initialization block error: {e}')
@@ -183,15 +252,6 @@ def load_instruments():
     # -------------------------------------------------------------------------
     # Initialize Auxiliary Cameras
     # -------------------------------------------------------------------------
-    pixis_params = {
-        'pixel_size_mm':26e-3,
-        'num_pixels':1024,
-        'calibrated':True,
-        'calibrationThirdOrder':0,
-        'calibrationSlope':0,
-        'calibrationOffset':0
-    }
-
     try:
         camera = Pixis(pixis_params)
         spectrometers['Pixis'] = camera
