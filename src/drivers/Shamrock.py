@@ -85,4 +85,12 @@ class Shamrock(QtCore.QThread):
         """
         return self.central_wave, self.grating_dispersions[self.grating]
 
+    def get_grating_indices(self):
+        """
+            Returns the index of the current grating
+            output:
+                - grating index (int): the index of the grating currently used. As the Shamrock only has one, it will always return 1
+                - mirror index(int): the output port the internal mirror is redirecting light to (0 or 1). As the Shamrock has a single output port, it will always return 0
 
+        """
+        return 1,0
