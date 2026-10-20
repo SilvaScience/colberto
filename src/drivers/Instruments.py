@@ -41,8 +41,8 @@ def load_instruments():
     # Initialize SLM
     # -------------------------------------------------------------------------
     try:
-        #path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
-        path_config = (r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_WFU.ini")
+        path_config = Path(r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_UdeM.ini")
+        #path_config = (r"C:\Program Files\Meadowlark Optics\Blink 1920 HDMI\config_WFU.ini")
         SLM = Slm(path_config)
         devices['SLM'] = SLM
         logger.info('%s SLM connected' % datetime.datetime.now())
@@ -62,8 +62,8 @@ def load_instruments():
         folder_path_config = Path(r"C:\Program Files\Stresing\Escam")
 
         # Choose the configuration file
-        # config_name = "config_UdeM.ini"
-        config_name = "config.ini" # WFU path
+        config_name = "config_UdeM.ini"
+        #config_name = "config.ini" # WFU path
 
         # Full path to the configuration file
         path_config = folder_path_config / config_name
@@ -92,14 +92,14 @@ def load_instruments():
                     'x_pixel':26000,
                     'curvature':np.float64(0.0),
                 }
-
+            spectrometer_port='COM5'
             grating_params = {
                 'Stresing': stresing_params,
                 'Pixis': grating_params_pixis
             }
 
             try:
-                Monochrom = SpectraPro2300i(grating_params)
+                Monochrom = SpectraPro2300i(grating_params,port=spectrometer_port)
                 logger.info('%s SpectraPro2300i connected' % datetime.datetime.now())
             except Exception as e:
                 Monochrom = SpectraPro2300iDemo(grating_params)
@@ -152,12 +152,12 @@ def load_instruments():
                 'Stresing': grating_params_sp2150
             }
 
-            port = 'COM4'
+            spectrometer_port = 'COM4'
 
-            print(f"Connecting SP2150 Monochromator on {port}...")
+            print(f"Connecting SP2150 Monochromator on {spectrometer_port}...")
             try:
-                Monochrom = SpectraPro2300i(grating_params, port=port)
-                logger.info('SP2150 Monochromator connected on %s' % port)
+                Monochrom = SpectraPro2300i(grating_params, port=spectrometer_port)
+                logger.info('SP2150 Monochromator connected on %s' % spectrometer_port)
                 print("Monochromator connected successfully.")
             except Exception as e:
                 Monochrom = SpectraPro2300iDemo(grating_params)
