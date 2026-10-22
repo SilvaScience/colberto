@@ -310,10 +310,7 @@ class Beam:
         if indices is None:
             indices=self.indices
         phase_polynomial=self.get_currentPhase(mode=mode, TaylorPrefactorFlag='add')
-        print('Beams get_sampledCurrentPhase: ',phase_polynomial)
-
         compression_polynomial=phase_polynomial.copy()
-        print('Beams get_sampledCurrentPhase: ', compression_polynomial)
         if len(phase_polynomial.coef)>1:
             delay_polynomial=P([0,phase_polynomial.coef[1]])
             compression_polynomial.coef[1]=0
@@ -425,7 +422,6 @@ class Beam:
             return phaseGratingImage
         numberVerticalPixels=self.SLMHeight
         phaseProfile=self.get_sampledCurrentPhase(mode='absolute')
-        print('Beams makeGrating phase profile: ', phaseProfile)
         for i,phase in enumerate(phaseProfile):
             phaseGratingImage[:,i]=self.generate_1Dgrating(self.get_gratingAmplitude(),self.get_gratingPeriod(),phase,num=numberVerticalPixels)
         phaseGratingImage=np.array(phaseGratingImage)
