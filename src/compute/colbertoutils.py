@@ -21,11 +21,23 @@ def waveToFreq(wave):
     """ 
     return c/wave
 
+def waveToPHzFreq(wave):
+    """
+    Converts vacuum wavelengths (m) to frequency in PHz
+    """ 
+    return waveToFreq(wave)*1e-15
+
 def waveToAngFreq(wave):
     """
     Converts vacuum wavelengths (m) to angular frequency in rad.Hz
     """ 
     return 2*pi*c/wave
+
+def waveToAngFreqPHz(wave):
+    """
+    Converts vacuum wavelengths (m) to angular frequency in rad.PHz
+    """ 
+    return FreqtoFreqPHz(waveToAngFreq(wave))
 
 def angFreqToWave(angFreq):
     """
@@ -33,18 +45,65 @@ def angFreqToWave(angFreq):
     """ 
     return 2*pi*c/angFreq
 
+def angFreqPHzToWave(angFreqPHz):
+    """
+    Converts angular frequency in rad.PHz to vacuum wavelengths (m)
+    """ 
+    return angFreqToWave(FreqPHztoFreq(angFreqPHz))
+
+def FreqPHztoFreq(freqPHz):
+    """
+    Converts PHz to Hz
+    """
+    return freqPHz*1e15
+
+def angFreqPHztoangFreq(angfreqPHz):
+    """
+    Converts rad PHz to rad Hz
+    """
+    return FreqPHztoFreq(angfreqPHz)
+
+def FreqtoFreqPHz(freq):
+    """
+    Converts Hz to PHz
+    """
+    return freq*1e-15
+
+def angFreqtoangFreqPHz(angFreq):
+    """
+    Converts rad Hz to rad PHz
+    """
+    return FreqtoFreqPHz(angFreq)
+
 def angFreqToFreq(angFreq):
     """
     Converts angular frequency in rad.Hz to frequency (Hz)
     """ 
     return waveToFreq(angFreqToWave(angFreq))
 
-def angFreqToeV(angFreq):
+def angFreqPHzToFreq(angFreqPHz):
+    """
+    Converts angular frequency in rad.PHz to frequency (Hz)
+    """ 
+    return angFreqToFreq(FreqPHztoFreq(angFreqPHz))
+
+def angFreqPHzToFreq(angFreqPHz):
     """
     Converts angular frequency in rad.Hz to frequency (Hz)
     """ 
+    return angFreqToFreq()
+
+def angFreqToeV(angFreq):
+    """
+    Converts angular frequency in rad.Hz to energy (eV)
+    """ 
     return waveToeV(angFreqToWave(angFreq))
 
+def angFreqPHzToeV(angFreqPHz):
+    """
+    Converts angular frequencies in rad.PHz to energy (eV)
+    """
+    return angFreqToeV(FreqPHztoFreq(angFreqPHz))
 
 def peak_finder(Data,height):
     ''' This function takes a 1-D array and finds all local maxima by simple comparison of neighboring values. 
