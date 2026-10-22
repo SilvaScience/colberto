@@ -213,6 +213,13 @@ class SLMWorker(QtCore.QThread):
         self.target_fps = 30
         self.slm = None
         self.driver_name = config.get("SLM0","driverName")
+        try:
+            self.slm_display_name= config.get("SLM0","slmDisplayName")
+        except Exception as e:
+            if self.driver_name == 'Slm_Meadowlark_optics':
+                logger.info('%s Display name not found in SLM configuration file. Not a problem since 8 bit driver is used'%(datetime.datetime.now()))
+            else:
+                logger.error('%s Display name not found in SLM configuration file. Exception %s'%(datetime.datetime.now(),str(e)))
         self.c_wrapper = config.get("SLM0","cWrapper")
         self.image_Gen = config.get("SLM0","imageGen")
         self.lut_File = config.get("SLM0","lutFile")
@@ -295,7 +302,10 @@ class SLMWorker(QtCore.QThread):
             Instantiate the SLM driver and create the SDK
         """
         module = importlib.import_module(f"src.drivers.{self.driver_name}")
-        self.slm = module.SLM(self.c_wrapper, self.image_Gen)
+        if self.driver_name=='Slm_Meadowlark_optics_10bit':
+            self.slm = module.SLM(self.c_wrapper, self.image_Gen,self.slm_display_name)
+        else:
+            self.slm = module.SLM(self.c_wrapper, self.image_Gen)
         self.slm.sendFlag.connect(self.set_phaseShown)
         self.slm.create_sdk()
         return self.slm
