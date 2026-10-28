@@ -61,7 +61,7 @@ class SpectraPro2300i(QtCore.QThread):
         
         self.parameter_display_dict['central_wave']['val'] = self.center_wl
         self.parameter_display_dict['central_wave']['unit'] = ' nm'
-        self.parameter_display_dict['central_wave']['min'] = 200.00
+        self.parameter_display_dict['central_wave']['min'] = 0.00
         self.parameter_display_dict['central_wave']['max'] = 1100.00
         self.parameter_display_dict['central_wave']['read'] = False
         
