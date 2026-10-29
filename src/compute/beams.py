@@ -273,7 +273,7 @@ class Beam:
                 - indices (nd.array of int) : Indices at which to sample the 
                 - mode (string): Specifies if the phase returned is relative to the optimal phase profile ('relative', default) or absolute ('absolute')
                 - units_to_return (str 'fs' or 's'): Specifies the units in which to return the polynomial. Polynomial is stored internally in units of femtoseconds
-                - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add') or divided ('remove') by the Taylor series prefactor
+                - TaylorPrefactorFlag: specify if the phase needs to by multiplied ('add', will give the coefficients going to the SLM) or divided ('remove') by the Taylor series prefactor
             output:
                 - (Numpy Polynomial): The current relative or absolute spectral phase taking arguments in angular frequency (rad.Hz)
         '''
