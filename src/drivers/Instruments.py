@@ -25,7 +25,7 @@ def load_instruments():
     devices=defaultdict(dict)
 
     # -------------------------------------------------------------------------
-    # Initialize crostat
+    # Initialize cryostat
     # -------------------------------------------------------------------------
     try:
         cryostat = CryoPasqal() # launch cryostat interface
