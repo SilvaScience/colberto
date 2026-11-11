@@ -55,7 +55,7 @@ class AcquireLO(QtCore.QThread):
         self.beam.set_currentPhase(P(np.array([0, 0])), mode='relative', unit='fs')
         self.sendBeams.emit((self.beam_name, self.beam))
         image_output = self.beam.makeGrating()
-        self.SLM.write_image(image_output)
+        self.SLM.write_image(image_output, wait=True)
 
         self.LO_spectrum = np.array(self.spectrometer.get_intensities())
         self.sendProgress.emit(50)
@@ -335,7 +335,7 @@ class PhaseCycling(QtCore.QThread):
                         image_output += beam_image
                 
                 self.sendBeams.emit((self.beams))
-                self.SLM.write_image(image_output)
+                self.SLM.write_image(image_output, wait=True)
 
                 time.sleep(0.2)
                 if not self.isDemo:
