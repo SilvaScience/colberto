@@ -1,7 +1,27 @@
 # Spatial Light Modulator (SLM)
 
 Colberto uses a Spatial light modulator at its heart to shape pulses in the spectral domain. Here is how it is interfaced. The ribbon shield CAD file can be found in the hardware folder. 
+## Configuring the SLM
 
+The SLM is controlled like a secondary display. If you want to also show the SLM phase pattern on a secondary display, set it to mirror the SLM's from the Windows Settings (System> Display).
+
+The SLM configuration is loaded at the application startup. It requires the following parameters:
+```
+[SLM0]
+driverName = Slm_Meadowlark_optics|Slm_Meadowlark_optics_10bit
+cWrapper = C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_wrapper.dll
+imageGen = C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen.dll
+lutFile = C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\LUT Files\\19x12_10bit_linearVoltage.lut
+slmDisplayName = DISPLAY1 # Only required for 10 bit version. Specify the display where the SLM image should be shown
+
+rgb = 1
+isEightBitImage = 0
+height = 1200
+width = 1920
+depth = 10
+bytesPerPixel = 4
+```
+## Python implementation of SLM control in COLBERTo
 Controlling the SLM involves three parts:
 - The driver [SLM](\ref Slm_Meadowlark_optics.SLM) hosts the DLLs that directly control the SLM and implements them in methods of the SLM class. You have to choose the config file and modify the path accordingly in the SLM.py worker. Commonly used functions are 
     - [create_sdk](\ref Slm_Meadowlark_optics.SLM#create_sdk) to create the software window on a secondary monitor (like the SLM) where the phase image will be displayed and load DLLs
