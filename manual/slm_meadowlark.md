@@ -39,5 +39,17 @@ Controlling the SLM involves three parts:
     - It starts the SLM worker by calling its constructor [SLMWorker](\ref SLM.SLMWorker#SLMWorker), connecting to its signals to build the parameters display dict to be shown in the UI and starting the thread.
     - The display on the SLM is changed by feeding an image to [write_image](\ref SLM.Slm#write_image). This will eventually trigger the update_image_from_array"()" which will update the internal GUI display of the image in the SLM tab.
         - By default, this method expects a float-64 image with numbers between 0 and 2*pi. However, a raw uint8 image can be provided and will be correctly displayed if the `imagetype` argument is set to `'raw'` instead of `'phase'`.
+## Synchronisation
+To synchronize other operations with the display of an image by the SLM, a `ready` signal is sent from the driver all the up to the SLM instantiation and through the workers.
+When an image is sent to the SLM to be displayed, all classes and workers along the signal chain have a `phaseShown` attribute flipped to `False` starting from the driver running in the SLMWorker thread.
+This value is relayed through the signal chain by emitting it through the `ready` signal.
+The SLM driver running in the SLMWorker thens send the image to be displayed, sleeps for 60ms and then flips the `phaseShown` attributes of the signal chain to `True` by sending it through the `ready` signal.
+From the GUI, you can check that the SLM has had the time to correctly apply the image using
+```python
+self.SLM.write_image(image_output)
+while not self.SLM.phaseShown:
+    time.sleep(1e-3)
+```
+The loop will break when the SLM has applied the image.
 
 

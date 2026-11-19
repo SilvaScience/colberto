@@ -11,6 +11,7 @@ from pathlib import Path
 import logging
 import datetime
 import numpy as np
+import time
 logger = logging.getLogger(__name__)
 awareness = ctypes.c_int()
 errorCode = ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
@@ -110,7 +111,7 @@ class SLM(QtCore.QThread):
     slm.write_image(image_data, is_8_bit=True)
     slm.delete_sdk()
 '''
-    sendFlag = QtCore.pyqtSignal(bool)
+    ready= QtCore.pyqtSignal(bool)
 
     def __init__(self, cWrapper, imageGen, display_name):
 
@@ -145,6 +146,10 @@ class SLM(QtCore.QThread):
         #self.blink_dll.Get_COMFound.restype = ctypes.c_int # Absent of the new dll file
 
         self.slm_monitor = self.find_monitor(display_name)
+        cv2.namedWindow("SLM", cv2.WINDOW_NORMAL)
+        cv2.moveWindow("SLM", self.slm_monitor.x, self.slm_monitor.y)
+        cv2.setWindowProperty("SLM", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        self.phaseShow=False
 
     def create_sdk(self):
         """Loads the DLLs and creates the window in the off-screen required to send the image to the SLM """
@@ -163,19 +168,18 @@ class SLM(QtCore.QThread):
                 the array size will match the SLM dimensions
         """
 
+        self.phaseShown=False
+        self.ready.emit(self.phaseShown)
+        logger.info("SLM Driver phaseShown is %s"%str(self.phaseShown))
         image_bgra = self.phase_to_bgra(image_data)
 
         # Print the phase on the SLM
-        m = self.slm_monitor
-        cv2.namedWindow("SLM", cv2.WINDOW_NORMAL)
-        cv2.moveWindow("SLM", m.x, m.y)
-        cv2.setWindowProperty("SLM", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow("SLM", image_bgra)
-        cv2.waitKey(30)
-
+        cv2.waitKey(60)
         # Flag to confirm the phase on the device
-        phaseShown = True
-        self.sendFlag.emit(phaseShown)
+        self.phaseShown = True
+        self.ready.emit(self.phaseShown)
+        logger.info("SLM Driver phaseShown is %s"%str(self.phaseShown))
 
     def find_monitor(self, name):
         monitors = get_monitors()
