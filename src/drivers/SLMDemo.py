@@ -157,18 +157,13 @@ class SLMDemo(QtCore.QThread):
         self.parameter_display_dict['is8bit']['val'] = is8bit
         self.parameter_dict['is8bit'] = is8bit
 
-    def write_image(self,image,imagetype='phase',wait=False,timeout_s=2.0):
+    def write_image(self,image,imagetype='phase'):
         """
             Feeds the image into the Worker to be displayed as soon as the SLM is ready
-                image: (2d.array of float) The image
+                image: (2d.array of float) The image 
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
-                wait, timeout_s: same signature as Slm.write_image, so that the measurements run in demo mode too.
-                    There is no liquid crystal to wait for here, so they have no effect.
-            output:
-                (bool) always True
         """
         self.slm_worker.change_image(image,imagetype=imagetype)
-        return True
 
 
 

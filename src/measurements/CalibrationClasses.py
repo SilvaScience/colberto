@@ -160,7 +160,7 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
                 #Take the data
                 self.monobeam.set_beamHorizontalDelimiters([column-self.column_width//2,column+self.column_width//2])
                 image_output=self.monobeam.makeGrating()                
-                self.SLM.write_image(image_output, wait=True)
+                self.SLM.write_image(image_output)
                 self.take_spectrum(i)
                 if self.isDemo:
                     fakeSpectrum=self.fakeSignal(self.wls,column,self.column_width)
@@ -304,7 +304,7 @@ class AcquireBackground(QtCore.QThread):
 
     def run(self):
         image_output = np.zeros((self.SLM.get_height(),self.SLM.get_width()))              
-        self.SLM.write_image(image_output, wait=True)
+        self.SLM.write_image(image_output)
 
         self.wls = self.spectrometer.get_wavelength()
         self.background = np.array(self.spectrometer.get_intensities())
@@ -418,7 +418,7 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                             self.beam.set_currentPhase(P(self.coeffs), mode='relative', unit='fs')
                             self.send_beam.emit((self.beam_name, self.beam))
                             image_output = self.beam.makeGrating()                
-                            self.SLM.write_image(image_output, wait=True)
+                            self.SLM.write_image(image_output)
                             self.take_spectrum(i)
                             self.intensities.append(self.spec)
                             self.sendProgress.emit(i/len(self.chirp)*100)
@@ -716,7 +716,7 @@ class DelayCalibrationMeasurement(QtCore.QThread):
                             self.sec_image = self.secBeam.makeGrating()
                             image_output = self.ref_image+self.sec_image
 
-                            self.SLM.write_image(image_output, wait=True)
+                            self.SLM.write_image(image_output)
                             self.take_spectrum(i)
                             self.intensities.append(self.spec)
                             self.sendProgress.emit(i/len(self.delay)*100)

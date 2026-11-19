@@ -175,7 +175,7 @@ class TGFROGMeasurement(QtCore.QThread):
             self.sendBeam.emit((self.probeBeamName, self.probeBeam))
             probe_image = self.probeBeam.makeGrating()
 
-            self.SLM.write_image(grating_image + probe_image, wait=True)
+            self.SLM.write_image(grating_image + probe_image)
             self.take_spectrum(i)
             self.intensities.append(self.spec)
             self.sendProgress.emit(i / len(self.delay) * 100)
