@@ -310,7 +310,6 @@ class Beam:
         if indices is None:
             indices=self.indices
         phase_polynomial=self.get_currentPhase(mode=mode, TaylorPrefactorFlag='add')
-
         compression_polynomial=phase_polynomial.copy()
         if len(phase_polynomial.coef)>1:
             delay_polynomial=P([0,phase_polynomial.coef[1]])
