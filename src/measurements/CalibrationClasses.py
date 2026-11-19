@@ -78,10 +78,7 @@ class VerticalBeamCalibrationMeasurement(QtCore.QThread):
                 self.monobeam.set_beamVerticalDelimiters([0, row])
                 image_output=self.monobeam.makeGrating()                
                 self.SLM.write_image(image_output)
-                i=0
                 while not self.SLM.phaseShown:
-                    i=i+1
-                    print("SLEEPING %d"%i)
                     time.sleep(1e-3)
                 self.take_spectrum(i)
                 self.intensities[i]=np.sum(self.spec) if not self.isDemo else self.demoIntensities[i] 
@@ -161,6 +158,8 @@ class SpectralBeamCalibrationMeasurement(QtCore.QThread):
                 self.monobeam.set_beamHorizontalDelimiters([column-self.column_width//2,column+self.column_width//2])
                 image_output=self.monobeam.makeGrating()                
                 self.SLM.write_image(image_output)
+                while not self.SLM.phaseShown:
+                    time.sleep(1e-3)
                 self.take_spectrum(i)
                 if self.isDemo:
                     fakeSpectrum=self.fakeSignal(self.wls,column,self.column_width)
@@ -305,6 +304,8 @@ class AcquireBackground(QtCore.QThread):
     def run(self):
         image_output = np.zeros((self.SLM.get_height(),self.SLM.get_width()))              
         self.SLM.write_image(image_output)
+        while not self.SLM.phaseShown:
+            time.sleep(1e-3)
 
         self.wls = self.spectrometer.get_wavelength()
         self.background = np.array(self.spectrometer.get_intensities())
@@ -419,6 +420,8 @@ class ChirpCalibrationMeasurement(QtCore.QThread):
                             self.send_beam.emit((self.beam_name, self.beam))
                             image_output = self.beam.makeGrating()                
                             self.SLM.write_image(image_output)
+                            while not self.SLM.phaseShown:
+                                time.sleep(1e-3)
                             self.take_spectrum(i)
                             self.intensities.append(self.spec)
                             self.sendProgress.emit(i/len(self.chirp)*100)
@@ -717,6 +720,8 @@ class DelayCalibrationMeasurement(QtCore.QThread):
                             image_output = self.ref_image+self.sec_image
 
                             self.SLM.write_image(image_output)
+                            while not self.SLM.phaseShown:
+                                time.sleep(1e-3)
                             self.take_spectrum(i)
                             self.intensities.append(self.spec)
                             self.sendProgress.emit(i/len(self.delay)*100)
