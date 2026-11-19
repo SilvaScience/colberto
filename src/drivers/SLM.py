@@ -19,6 +19,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from ctypes import *
 import time
+import threading
 import sys
 import os
 import configparser
@@ -31,6 +32,11 @@ import tkinter as tk
 from tkinter import filedialog
 
 logger = logging.getLogger(__name__)
+
+# Time (ms) given to the liquid crystal, once the image is displayed, before the diffracted light is considered stable.
+# Provisional value: measure it with samples/drivers/slm_settling.py and set `settleMs` in the SLM0 section of the
+# configuration file of the site (it depends on the SLM, the driver and the transitions that are displayed).
+DEFAULT_SETTLE_MS = 60.0
 
 class Slm(QtCore.QThread):
     """ Interface to the SLM worker thread."""
@@ -163,14 +169,24 @@ class Slm(QtCore.QThread):
         self.parameter_display_dict['is8bit']['val'] = is8bit
         self.parameter_dict['is8bit'] = is8bit
 
-    def write_image(self,image,imagetype='phase'):
+    def write_image(self,image,imagetype='phase',wait=False,timeout_s=2.0):
         """
             Feeds the image into the Worker to be displayed as soon as the SLM is ready and freezes the main thread until it is.
                 image: (2d.array of float) The image 
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
+                wait (bool, default False): if True, blocks the calling thread until this image is displayed and the
+                    liquid crystal had the settling time (see SLMWorker.wait_displayed) to respond, so that a
+                    measurement started right after sees the new pattern. For the measurement threads only: never use
+                    it from the GUI thread, which would freeze the interface.
+                timeout_s (float): longest wait for the image to be displayed when wait is True
+            output:
+                (bool) True, or False if wait is True and the image was not displayed in time
         """
         self.phaseShown = False
-        self.slm_worker.change_image(image,imagetype=imagetype)
+        seq = self.slm_worker.change_image(image,imagetype=imagetype)
+        if wait:
+            return self.slm_worker.wait_displayed(seq, timeout_s)
+        return True
 
     def load_LUT(self, LUT_path=None):
         if LUT_path is None:
@@ -234,16 +250,35 @@ class SLMWorker(QtCore.QThread):
         self.new_image_available = False 
         self.phaseShown = False
 
+        """ Synchronisation with the threads that request images (measurements, GUI).
+            Every requested image gets a sequence number. The worker publishes the number of the last image it has
+            displayed, and wait_displayed() lets a caller wait for its own image. """
+        self._wake = threading.Event()                  # set when an image is requested, wakes the worker
+        self._lock = threading.Lock()                   # protects current_image and _seq_asked
+        self._seq_asked = 0                             # number of the last image requested
+        self.seq_shown = 0                              # number of the last image displayed
+        self.t_shown = 0.0                              # time.perf_counter() at the end of that display
+        self._shown_cond = threading.Condition()        # notified each time seq_shown changes
+        self._t_last_write_end = 0.0
+        try:
+            settle_ms = float(config.get("SLM0","settleMs",fallback=DEFAULT_SETTLE_MS))
+        except ValueError:
+            logger.error('%s settleMs is not a number in the SLM configuration file, using %s ms'%(datetime.datetime.now(),DEFAULT_SETTLE_MS))
+            settle_ms = DEFAULT_SETTLE_MS
+        self.settle_s = max(settle_ms,0.0)/1000.0
+
     def run(self):
         '''
         - Begin by initializing the sdk to connect to the SLM with the function -->  create_slm_sdk()
         - Load the callibration file with --> load_lut("path")
         - Get the SLM parameter using the function get_parameter() and emit a signal to SLMDemo()
         - Principal loop
-            - Initialize a chronometer to be use to the frameRate specification with time.time()
-                - FrameRate condition. If the time between the initialisation of the image and the writing is less than 30hz sleep for the remaining time 
-            - Checks if the image has been changed and if it is ready to be updated, otherwise measures the temperature.
-            
+            - Sleeps until an image is requested (change_image sets the wake event), or for one second at most, which
+              lets the loop measure the temperature and notice a stop request.
+            - FrameRate condition: if the previous write ended less than 1/target_fps ago, waits for the remaining time.
+              An image that arrives after a quiet period is therefore written at once.
+            - Writes the newest image, then publishes its sequence number so that wait_displayed() can release the callers.
+
         '''
         try:
             # 1) Connect to the SDK
@@ -262,7 +297,6 @@ class SLMWorker(QtCore.QThread):
         # 2) Get the slm parameter 
         self.get_parameter()
         self.get_temperature()
-        self.start_time = time.time()
         while not self.terminate:
             elapsed = time.time() - self.start_time
             time.sleep(1e-3)
@@ -281,17 +315,51 @@ class SLMWorker(QtCore.QThread):
         """
             Stores an image in the Worker and signals that a new image is ready to be displayed as soon as the SLM is ready.
             input:
-                image: (2d.array of float) The image 
+                image: (2d.array of float) The image
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
+            output:
+                (int) sequence number of the image, to be given to wait_displayed()
         """
 
         if imagetype=='phase':
             digital_image=self.slm.normalize_phase_image(image)
         if imagetype=='raw':
             digital_image=image
-        self.current_image=digital_image
-        self.new_image_available=True
+        with self._lock:
+            self.current_image=digital_image
+            self._seq_asked += 1
+            seq = self._seq_asked
         self.phaseShown = False
+        self._wake.set()
+        return seq
+
+    def wait_displayed(self,seq,timeout_s=2.0):
+        """
+            Blocks the calling thread until the image numbered `seq` has been displayed and the liquid crystal had
+            `settle_s` (settleMs in the configuration file) after that display to respond.
+            To be called from a measurement thread, never from the GUI thread.
+            It does not raise on a timeout: an exception that leaves QThread.run aborts the whole application under PyQt5.
+            input:
+                seq: (int) sequence number given by change_image()
+                timeout_s: (float) longest wait for the image to be displayed
+            output:
+                (bool) True once the image is displayed and settled, False if the display did not happen in time
+        """
+        t_start = time.perf_counter()
+        deadline = t_start + timeout_s
+        with self._shown_cond:
+            while self.seq_shown < seq:
+                remaining = deadline - time.perf_counter()
+                if remaining <= 0 or not self.isRunning():
+                    logger.error('%s SLM image %d not displayed after %.1f s (last displayed: %d, worker running: %s)'
+                                 %(datetime.datetime.now(),seq,time.perf_counter()-t_start,self.seq_shown,self.isRunning()))
+                    return False
+                self._shown_cond.wait(min(remaining,0.1))
+            t_shown = self.t_shown
+        rest = self.settle_s - (time.perf_counter() - t_shown)
+        if rest > 0:
+            time.sleep(rest)
+        return True
 
     def create_slm_sdk(self):
         """
@@ -330,14 +398,17 @@ class SLMWorker(QtCore.QThread):
         #self.temperature=self.slm.get_slm_temp()
         #self.slmParamsTemperature.emit(int(self.temperature))
     
-    def write_image_slm(self):
+    def write_image_slm(self,image=None):
         '''
-            Takes as an input a phase image (float from 0 to 2pi) and displays it on the SLM
+            Displays a digital image on the SLM and sends it to the GUI display.
             input:
-                image: (nd.array of uint8) The digital image (0 to 255 uint 8 3 channel RGB)
+                image: (nd.array) The digital image, already converted by change_image. The worker gives the image it
+                    has read together with its sequence number; if None, the latest image is used.
         '''
-        self.imageSLM.emit(self.current_image)
-        self.slm.write_image(self.current_image)
+        if image is None:
+            image = self.current_image
+        self.imageSLM.emit(image)
+        self.slm.write_image(image)
     
     def load_lut(self, lut_path):
         """ Load lut file in the SDK Meadowlark."""
