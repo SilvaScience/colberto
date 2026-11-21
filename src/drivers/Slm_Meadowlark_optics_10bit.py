@@ -170,7 +170,6 @@ class SLM(QtCore.QThread):
 
         self.phaseShown=False
         self.ready.emit(self.phaseShown)
-        logger.info("SLM Driver phaseShown is %s"%str(self.phaseShown))
         image_bgra = self.phase_to_bgra(image_data)
 
         # Print the phase on the SLM
@@ -179,7 +178,6 @@ class SLM(QtCore.QThread):
         # Flag to confirm the phase on the device
         self.phaseShown = True
         self.ready.emit(self.phaseShown)
-        logger.info("SLM Driver phaseShown is %s"%str(self.phaseShown))
 
     def find_monitor(self, name):
         monitors = get_monitors()
