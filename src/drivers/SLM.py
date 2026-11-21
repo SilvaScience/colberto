@@ -163,14 +163,19 @@ class Slm(QtCore.QThread):
         self.parameter_display_dict['is8bit']['val'] = is8bit
         self.parameter_dict['is8bit'] = is8bit
 
-    def write_image(self,image,imagetype='phase'):
+    def write_image(self,image,imagetype='phase',wait=True):
         """
             Feeds the image into the Worker to be displayed as soon as the SLM is ready and freezes the main thread until it is.
                 image: (2d.array of float) The image 
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
+                wait (bool, default True): Flag that sends the thread to sleep until the image is correctly displayed on the SLM.
         """
         self.phaseShown = False
         self.slm_worker.change_image(image,imagetype=imagetype)
+        if wait:
+            while not self.phaseShown:
+                time.sleep(5e-3)
+
 
     def load_LUT(self, LUT_path=None):
         if LUT_path is None:

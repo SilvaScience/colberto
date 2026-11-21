@@ -44,12 +44,7 @@ To synchronize other operations with the display of an image by the SLM, a `read
 When an image is sent to the SLM to be displayed, all classes and workers along the signal chain have a `phaseShown` attribute flipped to `False` starting from the driver running in the SLMWorker thread.
 This value is relayed through the signal chain by emitting it through the `ready` signal.
 The SLM driver running in the SLMWorker thens send the image to be displayed, sleeps for 60ms and then flips the `phaseShown` attributes of the signal chain to `True` by sending it through the `ready` signal.
-From the GUI, you can check that the SLM has had the time to correctly apply the image using
-```python
-self.SLM.write_image(image_output)
-while not self.SLM.phaseShown:
-    time.sleep(1e-3)
-```
-The loop will break when the SLM has applied the image.
+
+When writing an image to the SLM using `SLM.write_image()` the thread from which this was called will be frozen until the image is applied. You can override this by adding the `wait = False` flag to this call. This can be useful when the SLM is busy doing something else (e.g. Loading its LUT file at startup) but you still want to send it an image to display right after.
 
 

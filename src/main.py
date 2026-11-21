@@ -428,7 +428,7 @@ class MainInterface(QtWidgets.QMainWindow):
         self.beam_explorer.beams_changed.connect(self.DataHandling.set_multiple_beams)
         self.beam_explorer.phase_image.connect(self.devices['SLM'].write_image)
         self.show_beam_explorer_pushbutton.clicked.connect(self.show_beam_explorer)
-        self.devices['SLM'].write_image(test_image)
+        self.devices['SLM'].write_image(test_image, wait=False)
         # Save/load calibration
         self.save_calibration_pushbutton.clicked.connect(lambda: self.save_calibration(filename_prefix="Filename", use_prompt=True, save_dir=None))
         self.load_calibration_pushbutton.clicked.connect(self.load_calibration)
