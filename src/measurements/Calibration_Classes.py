@@ -85,7 +85,6 @@ class Measure_LUT_PhasetoGreyscale(QtCore.QThread):
                 image = self.generate_calibration_image(self.GreyScale_Vals[n])  # Generate Image for SLM
 
                 self.SLM.write_image(image)
-                time.sleep(0.01)
                 logger.info(f'%s Image Sent n={n} {datetime.datetime.now()}')
                 progress = n/len(self.GreyScale_Vals)*100
 

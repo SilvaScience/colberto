@@ -10,6 +10,7 @@ from ctypes import *
 from pathlib import Path
 import logging
 import datetime
+import time
 import numpy as np
 from PyQt5 import QtCore
 logger = logging.getLogger(__name__)
@@ -107,7 +108,7 @@ class SLM(QtCore.QThread):
     slm.write_image(image_data, is_8_bit=True)
     slm.delete_sdk()
 '''
-    sendFlag = QtCore.pyqtSignal(bool)
+    ready = QtCore.pyqtSignal(bool)
 
     def __init__(self, cWrapper, imageGen):
 
@@ -159,11 +160,13 @@ class SLM(QtCore.QThread):
                 the array size will match the SLM dimensions
             - is_8_bit: If an RGB array is passed, should be set to 0 otherwise should be 1.
         """
+        self.phaseShown=False
+        self.ready.emit(phaseShown)
         self.blink_dll.Write_image(image_data.ctypes.data_as(POINTER(c_ubyte)), c_uint(1))
-
+        time.sleep(60e-3)
         # Flag to confirm the phase on the device
-        phaseShown = True
-        self.sendFlag.emit(phaseShown)
+        self.phaseShown = True
+        self.ready.emit(self.phaseShown)
 
     def load_lut(self, file_path):
         """

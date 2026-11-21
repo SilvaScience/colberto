@@ -36,17 +36,18 @@ class Slm(QtCore.QThread):
     """ Interface to the SLM worker thread."""
     name = 'SLM_Meadowlark'
     type= 'SLM'
+    ready = QtCore.pyqtSignal(bool)
 
     def __init__(self, path_config):
         super(Slm, self).__init__()
         self.slm_worker= SLMWorker(path_config)
         self.slm_worker.slmParamsSignal.connect(self.handle_slm_params)
         self.slm_worker.slmParamsTemperature.connect(self.handle_slm_temperature)
-        self.slm_worker.sendFlag.connect(self.set_phaseShown)
         logger.info('%s SLM worker initialized'%datetime.datetime.now())
         self.slm_worker.start()
         logger.info('%s SLM worker running'%datetime.datetime.now())
         self.phaseShown = False
+        self.slm_worker.ready.connect(self.set_phaseShown)
         
         # set parameter dict
         self.parameter_dict = defaultdict()
@@ -162,14 +163,19 @@ class Slm(QtCore.QThread):
         self.parameter_display_dict['is8bit']['val'] = is8bit
         self.parameter_dict['is8bit'] = is8bit
 
-    def write_image(self,image,imagetype='phase'):
+    def write_image(self,image,imagetype='phase',wait=True):
         """
-            Feeds the image into the Worker to be displayed as soon as the SLM is ready
+            Feeds the image into the Worker to be displayed as soon as the SLM is ready and freezes the main thread until it is.
                 image: (2d.array of float) The image 
                 imagetype (str 'phase' (default) or 'raw') Data type in the image. Phase are float from 0 to 2*pi and raw are uint8 from 0 to 255
+                wait (bool, default True): Flag that sends the thread to sleep until the image is correctly displayed on the SLM.
         """
         self.phaseShown = False
         self.slm_worker.change_image(image,imagetype=imagetype)
+        if wait:
+            while not self.phaseShown:
+                time.sleep(5e-3)
+
 
     def load_LUT(self, LUT_path=None):
         if LUT_path is None:
@@ -183,6 +189,8 @@ class Slm(QtCore.QThread):
 
     def set_phaseShown(self, phaseShown):
         self.phaseShown = phaseShown
+        self.ready.emit(self.phaseShown)
+        logger.info("SLM interface phaseShown is %s"%str(self.phaseShown))
     
     def check_phaseShown(self):
         if self.phaseShown == True:
@@ -196,7 +204,7 @@ class SLMWorker(QtCore.QThread):
     slmParamsSignal = QtCore.pyqtSignal(int, int, int, int, int)
     slmParamsTemperature = QtCore.pyqtSignal(int)
     imageSLM = QtCore.pyqtSignal(np.ndarray)
-    sendFlag = QtCore.pyqtSignal(bool)
+    ready = QtCore.pyqtSignal(bool)
     
     def __init__(self, path_config):
 
@@ -208,9 +216,16 @@ class SLMWorker(QtCore.QThread):
     
         #parameter 
         self.terminate= False
-        self.target_fps = 30
+        self.temperature_update_time=300e-3
         self.slm = None
         self.driver_name = config.get("SLM0","driverName")
+        try:
+            self.slm_display_name= config.get("SLM0","slmDisplayName")
+        except Exception as e:
+            if self.driver_name == 'Slm_Meadowlark_optics':
+                logger.info('%s Display name not found in SLM configuration file. Not a problem since 8 bit driver is used'%(datetime.datetime.now()))
+            else:
+                logger.error('%s Display name not found in SLM configuration file. Exception %s'%(datetime.datetime.now(),str(e)))
         self.c_wrapper = config.get("SLM0","cWrapper")
         self.image_Gen = config.get("SLM0","imageGen")
         self.lut_File = config.get("SLM0","lutFile")
@@ -222,7 +237,6 @@ class SLMWorker(QtCore.QThread):
         self.bytes_per_pixel = int(config.get("SLM0","bytesPerPixel"))
         self.current_image = np.zeros((self.width,self.height,3))
         self.new_image_available = False 
-        self.frame_duration = 1/self.target_fps
         self.phaseShown = False
 
     def run(self):
@@ -255,22 +269,18 @@ class SLMWorker(QtCore.QThread):
         self.get_temperature()
         self.start_time = time.time()
         while not self.terminate:
-            ## Calculer le temps écoulé
             elapsed = time.time() - self.start_time
-            ## Si on veut viser 30Hz, on attends le reste du temps
             time.sleep(1e-3)
-            if elapsed >= self.frame_duration:
-                if self.new_image_available:
-                    try:
-                        self.write_image_slm()
-                        self.start_time = time.time()
-                        self.new_image_available=False
-                    except Exception as e:
-                        logger.error('Error when displaying image at the SLM %s'%e)
-                        raise
-                else:
-                    self.get_temperature()
-                    self.start_time = time.time()
+            if self.new_image_available:
+                try:
+                    self.write_image_slm()
+                    self.new_image_available=False
+                except Exception as e:
+                    logger.error('Error when displaying image at the SLM %s'%e)
+                    raise
+            if elapsed >=self.temperature_update_time:
+                self.get_temperature()
+                self.start_time = time.time()
                 
     def change_image(self,image,imagetype='phase'):
         """
@@ -293,8 +303,11 @@ class SLMWorker(QtCore.QThread):
             Instantiate the SLM driver and create the SDK
         """
         module = importlib.import_module(f"src.drivers.{self.driver_name}")
-        self.slm = module.SLM(self.c_wrapper, self.image_Gen)
-        self.slm.sendFlag.connect(self.set_phaseShown)
+        if self.driver_name=='Slm_Meadowlark_optics_10bit':
+            self.slm = module.SLM(self.c_wrapper, self.image_Gen,self.slm_display_name)
+        else:
+            self.slm = module.SLM(self.c_wrapper, self.image_Gen)
+        self.slm.ready.connect(self.set_phaseShown)
         self.slm.create_sdk()
         return self.slm
     
@@ -341,7 +354,8 @@ class SLMWorker(QtCore.QThread):
 
     def set_phaseShown(self, phaseShown):
         self.phaseShown = phaseShown
-        self.sendFlag.emit(phaseShown)
+        logger.info("Worker phaseShown is %s"%str(self.phaseShown))
+        self.ready.emit(phaseShown)
     
     def close(self):
         """

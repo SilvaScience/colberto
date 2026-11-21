@@ -16,6 +16,7 @@ from collections import deque
 import shutil
 import threading
 import logging
+from compute.beams import Beam
 import datetime
 from numpy.polynomial import Polynomial as P
 """TO DOs: 
@@ -67,6 +68,8 @@ class DataHandling(QtCore.QThread):
 
         # initialize Calibration dict
         self.calibration = {}
+        # initialize measurement dict
+        self.measurements= {}
 
         # initialize BufferWorker
         """ The worker writes the buffer in its own thread. save_data() has to know when that write
@@ -300,6 +303,15 @@ class DataHandling(QtCore.QThread):
         # to be used from calibration scripts. Each calibration should consist of a tuple of name and content
         calibration_name, calibration_value = calibration
         self.calibration[calibration_name] = calibration_value
+    def add_measurement(self,measurement):
+        """
+            Adds a measurement to the dataset.
+            input:
+            - measurement (tuple of str, Data): Key and Value of the measurement. Values are typical dict containing relevant 
+        """
+        measurement_name, measurement_value = measurement
+        self.measurements[measurement_name] = measurement_value
+
 
     def set_beam(self, name_and_beam):
         '''
@@ -380,6 +392,8 @@ class DataHandling(QtCore.QThread):
                     "domain": v.domain,  # numpy array, no .tolist()
                     "window": v.window  # numpy array, no .tolist()
                 }
+            elif isinstance(v,Beam):
+                safe_dict[k] = Beam.beam_to_dict(v)
             else:
                 safe_dict[k] = str(v)
         return safe_dict
@@ -400,6 +414,8 @@ class DataHandling(QtCore.QThread):
                 )
             elif isinstance(v, dict):
                 restored[k] = DataHandling.dict_to_calibration(v)
+            elif isinstance(v,Beam):
+                restored[k] = Beam.dict_to_beam(v)
             else:
                 restored[k] = v
         return restored

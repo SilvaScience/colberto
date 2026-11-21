@@ -1,7 +1,27 @@
 # Spatial Light Modulator (SLM)
 
 Colberto uses a Spatial light modulator at its heart to shape pulses in the spectral domain. Here is how it is interfaced. The ribbon shield CAD file can be found in the hardware folder. 
+## Configuring the SLM
 
+The SLM is controlled like a secondary display. If you want to also show the SLM phase pattern on a secondary display, set it to mirror the SLM's from the Windows Settings (System> Display).
+
+The SLM configuration is loaded at the application startup. It requires the following parameters:
+```
+[SLM0]
+driverName = Slm_Meadowlark_optics|Slm_Meadowlark_optics_10bit
+cWrapper = C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\Blink_C_wrapper.dll
+imageGen = C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\SDK\\ImageGen.dll
+lutFile = C:\\Program Files\\Meadowlark Optics\\Blink 1920 HDMI\\LUT Files\\19x12_10bit_linearVoltage.lut
+slmDisplayName = DISPLAY1 # Only required for 10 bit version. Specify the display where the SLM image should be shown
+
+rgb = 1
+isEightBitImage = 0
+height = 1200
+width = 1920
+depth = 10
+bytesPerPixel = 4
+```
+## Python implementation of SLM control in COLBERTo
 Controlling the SLM involves three parts:
 - The driver [SLM](\ref Slm_Meadowlark_optics.SLM) hosts the DLLs that directly control the SLM and implements them in methods of the SLM class. You have to choose the config file and modify the path accordingly in the SLM.py worker. Commonly used functions are 
     - [create_sdk](\ref Slm_Meadowlark_optics.SLM#create_sdk) to create the software window on a secondary monitor (like the SLM) where the phase image will be displayed and load DLLs
@@ -19,5 +39,12 @@ Controlling the SLM involves three parts:
     - It starts the SLM worker by calling its constructor [SLMWorker](\ref SLM.SLMWorker#SLMWorker), connecting to its signals to build the parameters display dict to be shown in the UI and starting the thread.
     - The display on the SLM is changed by feeding an image to [write_image](\ref SLM.Slm#write_image). This will eventually trigger the update_image_from_array"()" which will update the internal GUI display of the image in the SLM tab.
         - By default, this method expects a float-64 image with numbers between 0 and 2*pi. However, a raw uint8 image can be provided and will be correctly displayed if the `imagetype` argument is set to `'raw'` instead of `'phase'`.
+## Synchronisation
+To synchronize other operations with the display of an image by the SLM, a `ready` signal is sent from the driver all the up to the SLM instantiation and through the workers.
+When an image is sent to the SLM to be displayed, all classes and workers along the signal chain have a `phaseShown` attribute flipped to `False` starting from the driver running in the SLMWorker thread.
+This value is relayed through the signal chain by emitting it through the `ready` signal.
+The SLM driver running in the SLMWorker thens send the image to be displayed, sleeps for 60ms and then flips the `phaseShown` attributes of the signal chain to `True` by sending it through the `ready` signal.
+
+When writing an image to the SLM using `SLM.write_image()` the thread from which this was called will be frozen until the image is applied. You can override this by adding the `wait = False` flag to this call. This can be useful when the SLM is busy doing something else (e.g. Loading its LUT file at startup) but you still want to send it an image to display right after.
 
 
